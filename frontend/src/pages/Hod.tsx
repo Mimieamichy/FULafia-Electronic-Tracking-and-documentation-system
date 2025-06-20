@@ -61,7 +61,7 @@ const HodDashboard = () => {
         <div className="flex items-center gap-4">
           <span className="text-gray-600">Tue April 2024</span>
           <Bell className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800 transition-colors" />
-          <Link to="/signin" title="Sign out">
+          <Link to="/" title="Sign out">
             <Power className="w-6 h-6 text-red-500 cursor-pointer hover:text-red-600 transition-colors" />
           </Link>
         </div>
