@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { Menu, Power, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
-
-import ViewProjectTopic from "./ViewProjectTopic";
-import AssignPGCoordinator from "./AssignPGCoordinator";
-import ProjectReview from "./ProjectReview";
+import HodDashboardOverview from "./HodDashboardOverview";
+import PgLecturerManagement from "./PgLecturerManagement";
+import StudentSessionManagement from "./StudentSessionManagement";
+import NotificationsTab from "./NotificationsTab";
 
 const HodDashboard = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'projectTopics' | 'assignPG' | 'projectReview'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'projectTopics' | 'assignPG' | 'notifications'>('home');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,9 +39,15 @@ const HodDashboard = () => {
             <ul className="space-y-3 text-gray-700">
               <li
                 className="hover:text-amber-700 cursor-pointer"
+                onClick={() => { setCurrentView('home'); setIsMenuOpen(false); }}
+              >
+                Home
+              </li>
+              <li
+                className="hover:text-amber-700 cursor-pointer"
                 onClick={() => { setCurrentView('projectTopics'); setIsMenuOpen(false); }}
               >
-                View Project Topics
+                View Students
               </li>
               <li
                 className="hover:text-amber-700 cursor-pointer"
@@ -51,9 +57,9 @@ const HodDashboard = () => {
               </li>
               <li
                 className="hover:text-amber-700 cursor-pointer"
-                onClick={() => { setCurrentView('projectReview'); setIsMenuOpen(false); }}
+                onClick={() => { setCurrentView('notifications'); setIsMenuOpen(false); }}
               >
-                View Project Review
+               Notifications
               </li>
             </ul>
           </div>
@@ -67,15 +73,10 @@ const HodDashboard = () => {
         </div>
       </header>
       <main className="container mx-auto px-4 py-8">
-        {currentView === 'home' && (
-          <>
-            <h1 className="text-2xl font-semibold text-gray-800 mb-4">Welcome, HOD</h1>
-            <p className="text-gray-600">Please select an action from the menu to proceed.</p>
-          </>
-        )}
-        {currentView === 'projectTopics' && <ViewProjectTopic />}
-        {currentView === 'assignPG' && <AssignPGCoordinator />}
-        {currentView === 'projectReview' && <ProjectReview />}
+        {currentView === 'home' && <HodDashboardOverview />}
+        {currentView === 'projectTopics' && <StudentSessionManagement />}
+        {currentView === 'assignPG' && <PgLecturerManagement />}
+        {currentView === 'notifications' && <NotificationsTab />}
       </main>
     </div>
   );

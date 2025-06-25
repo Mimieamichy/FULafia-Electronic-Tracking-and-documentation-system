@@ -8,7 +8,8 @@ import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import HodDashboard from "./pages/Hod";
+import HodDashboard from "./pages/hod/Hod";
+import DashboardShell from "./pages/DashboardShell";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,7 @@ const App = () => (
           
           <Route path="/" element={<SignIn />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/hod" element={<HodDashboard />} />
+          <Route path="/dashboard" element={<DashboardShell />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

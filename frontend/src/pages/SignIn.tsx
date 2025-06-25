@@ -3,38 +3,40 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "./AuthProvider";
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
+    role: "HOD", // Default role
   });
+
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { setRole } = useAuth();
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Admin sign in:", formData);
-    // For now, simulate successful admin login
-    navigate("/admin");
+    setRole(formData.role as "HOD" | "PG_COORD");
+    navigate("/dashboard");
   };
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side image */}
       <div
         className="hidden lg:flex lg:w-1/2"
         style={{
           backgroundImage: `url('/images/bg.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       ></div>
-      {/* Right side form */}
+
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="max-w-md w-full">
           <div className="mb-8">
@@ -71,6 +73,30 @@ const SignIn = () => {
                 >
                   {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">Select Role:</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="HOD"
+                    checked={formData.role === "HOD"}
+                    onChange={(e) => handleInputChange("role", e.target.value)}
+                  />
+                  HOD
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="PG_COORD"
+                    checked={formData.role === "PG_COORD"}
+                    onChange={(e) => handleInputChange("role", e.target.value)}
+                  />
+                  PG Coordinator
+                </label>
               </div>
             </div>
 
