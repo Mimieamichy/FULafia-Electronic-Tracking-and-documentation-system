@@ -1,7 +1,7 @@
 import { useState,  } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { useAuth } from "../AuthProvider";
+
 
 interface PGCoordinator {
   id: string;
@@ -10,7 +10,7 @@ interface PGCoordinator {
 }
 
 const PgCoordinatorTab = () => {
-  const { role } = useAuth(); // Access user role
+   // Access user role
   const [pgCords, setPgCords] = useState<PGCoordinator[]>([
     { id: "1", name: "Dr. Florence Okeke", role: "PG Coordinator" },
     { id: "2", name: "Prof. Musa Ibrahim", role: "PG Coordinator" },
@@ -39,14 +39,14 @@ const PgCoordinatorTab = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-800">PG Coordinators</h2>
-        {role === "HOD" && (
+        
           <Button
             onClick={() => setIsModalOpen(true)}
             className="bg-amber-700 text-white hover:bg-amber-800"
           >
             Add PG Coordinator
           </Button>
-        )}
+        
       </div>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">

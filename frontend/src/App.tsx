@@ -8,8 +8,9 @@ import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import HodDashboard from "./pages/hod/Hod";
+
 import DashboardShell from "./pages/DashboardShell";
+
 
 const queryClient = new QueryClient();
 

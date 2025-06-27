@@ -17,8 +17,7 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
     title: "",
     firstName: "",
     lastName: "",
-    userId: "",
-    phoneNo: "",
+    staffId: "",
     email: "",
     faculty: "",
     department: "",
@@ -51,8 +50,7 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
       title: "",
       firstName: "",
       lastName: "",
-      userId: "",
-      phoneNo: "",
+      staffId: "",
       email: "",
       faculty: "",
       department: "",
@@ -70,14 +68,7 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
             <DialogTitle className="text-2xl font-semibold text-gray-800">
               Add New HOD
             </DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="hover:bg-gray-100"
-            >
-              <X className="h-6 w-6" />
-            </Button>
+            
           </div>
         </DialogHeader>
 
@@ -123,25 +114,16 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">User ID:</label>
+              <label className="block text-gray-700 font-medium mb-2">Staff ID:</label>
               <Input
                 type="text"
-                value={formData.userId}
-                onChange={(e) => handleInputChange("userId", e.target.value)}
+                value={formData.staffId}
+                onChange={(e) => handleInputChange("staffId", e.target.value)}
                 className="w-full border-gray-300 rounded-full px-4 py-3"
                 required
               />
             </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Phone No:</label>
-              <Input
-                type="tel"
-                value={formData.phoneNo}
-                onChange={(e) => handleInputChange("phoneNo", e.target.value)}
-                className="w-full border-gray-300 rounded-full px-4 py-3"
-                required
-              />
-            </div>
+            
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
