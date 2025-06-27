@@ -24,7 +24,7 @@ const StudentSessionManagement = () => {
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
   // Search term
   const [search, setSearch] = useState("");
-  // Table data
+  // Table data with placeholder supervisors
   const [students, setStudents] = useState<StudentStage[]>([
     {
       id: "1",
@@ -42,7 +42,7 @@ const StudentSessionManagement = () => {
       id: "2",
       matNo: "220976765",
       fullName: "Jacob Philip",
-      topic: "Secure Online Auction System",
+      topic: "E-Commerce Platform",
       firstSem: 72,
       secondSem: null,
       thirdSem: null,
@@ -50,33 +50,28 @@ const StudentSessionManagement = () => {
       supervisor1: "Not Assigned",
       supervisor2: "Not Assigned",
     },
-    // ... more rows
+    // …more rows
   ]);
 
   // Pagination
   const [page, setPage] = useState(1);
   const itemsPerPage = 7;
 
-  // Defense stage
+  // Defense stage selector
   const [selectedDefense, setSelectedDefense] = useState(defenseOptions[3]);
   const handleSetDate = () => {
     alert(`Set date for ${selectedDefense}`);
   };
 
-  // Filtered list by search & degree
+  // Filter by search term (and optionally by degreeTab)
   const filtered = useMemo(() => {
-    return students.filter((s) => {
-      if (degreeTab && s.id) {
-        // If you had a degree field, you could filter by it here
-      }
-      const term = search.toLowerCase();
-      return (
-        s.matNo.includes(term) ||
-        s.fullName.toLowerCase().includes(term) ||
-        s.topic.toLowerCase().includes(term)
-      );
-    });
-  }, [students, search, degreeTab]);
+    const term = search.toLowerCase();
+    return students.filter((s) =>
+      s.matNo.includes(term) ||
+      s.fullName.toLowerCase().includes(term) ||
+      s.topic.toLowerCase().includes(term)
+    );
+  }, [students, search]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
@@ -88,10 +83,7 @@ const StudentSessionManagement = () => {
         {(["MSc", "PhD"] as const).map((dt) => (
           <button
             key={dt}
-            onClick={() => {
-              setDegreeTab(dt);
-              setPage(1);
-            }}
+            onClick={() => { setDegreeTab(dt); setPage(1); }}
             className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors duration-200 ${
               degreeTab === dt
                 ? "border-amber-700 text-amber-700"
@@ -103,12 +95,11 @@ const StudentSessionManagement = () => {
         ))}
       </div>
 
-      {/* Header, defense selector, search */}
+      {/* Header, defense selector & search */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h2 className="text-lg font-semibold text-gray-800">
           {degreeTab} Ready for {selectedDefense}
         </h2>
-
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
           <div className="flex items-center gap-2">
             <span className="text-gray-700">Defense:</span>
@@ -118,9 +109,7 @@ const StudentSessionManagement = () => {
               </SelectTrigger>
               <SelectContent>
                 {defenseOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -128,18 +117,12 @@ const StudentSessionManagement = () => {
               Set Date
             </Button>
           </div>
-
-          <div className="flex items-center gap-2 flex-1">
-            <Input
-              placeholder="Search by Mat. No, Name, or Topic"
-              className="flex-1"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+          <Input
+            placeholder="Search Mat. No, Name or Topic"
+            className="flex-1"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
         </div>
       </div>
 
@@ -150,7 +133,11 @@ const StudentSessionManagement = () => {
             <tr className="bg-gray-50">
               <th className="p-3 border">MAT NO.</th>
               <th className="p-3 border">Full Name</th>
-              <th className="p-3 border">Project Title</th>
+              <th className="p-3 border">Topic</th>
+              <th className="p-3 border">First Seminar</th>
+              <th className="p-3 border">Second Seminar</th>
+              <th className="p-3 border">Third Seminar</th>
+              <th className="p-3 border">External Defense</th>
               <th className="p-3 border">1st Supervisor</th>
               <th className="p-3 border">2nd Supervisor</th>
               <th className="p-3 border">Status</th>
@@ -162,6 +149,10 @@ const StudentSessionManagement = () => {
                 <td className="p-3 border">{s.matNo}</td>
                 <td className="p-3 border">{s.fullName}</td>
                 <td className="p-3 border">{s.topic}</td>
+                <td className="p-3 border">{s.firstSem ?? "—"}</td>
+                <td className="p-3 border">{s.secondSem ?? "—"}</td>
+                <td className="p-3 border">{s.thirdSem ?? "—"}</td>
+                <td className="p-3 border">{s.externalDefenseDate ?? "—"}</td>
                 <td className="p-3 border">{s.supervisor1}</td>
                 <td className="p-3 border">{s.supervisor2}</td>
                 <td className="p-3 border">
@@ -175,10 +166,9 @@ const StudentSessionManagement = () => {
                 </td>
               </tr>
             ))}
-
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center p-4 text-gray-500">
+                <td colSpan={10} className="text-center p-4 text-gray-500">
                   No students found.
                 </td>
               </tr>

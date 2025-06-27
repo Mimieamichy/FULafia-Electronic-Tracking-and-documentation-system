@@ -16,7 +16,7 @@ interface Lecturer {
   lastName: string;
   staffId: string;
   email: string;
-  phone: string;
+  
   department: string;
   faculty: string;
   password: string;
@@ -48,7 +48,7 @@ const LecturerTab = () => {
     lastName: "",
     staffId: "",
     email: "",
-    phone: "",
+   
     department: "",
     faculty: "",
     password: "",
@@ -63,7 +63,7 @@ const LecturerTab = () => {
       lastName: "",
       staffId: "",
       email: "",
-      phone: "",
+      
       department: "",
       faculty: "",
       password: "",
@@ -249,18 +249,7 @@ const LecturerTab = () => {
                 />
               </div>
 
-              {/* Phone */}
-              <div>
-                <label className="block text-gray-700 mb-1">Phone:</label>
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, phone: e.target.value }))
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                />
-              </div>
+              
 
               {/* Faculty */}
               <div>
