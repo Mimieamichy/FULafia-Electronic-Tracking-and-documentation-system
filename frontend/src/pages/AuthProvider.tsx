@@ -1,6 +1,7 @@
+// src/AuthProvider.tsx
 import { createContext, useState, ReactNode, useContext } from 'react';
 
-export type Role = 'HOD' | 'PG_COORD';
+export type Role = 'HOD' | 'PG_COORD' | 'SUPERVISOR' | 'STUDENT';
 
 interface AuthContextProps {
   role: Role;
@@ -9,13 +10,11 @@ interface AuthContextProps {
   setUserName: (n: string) => void;
 }
 
-// This is the actual context object:
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// This is the provider component:
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [role, setRole] = useState<Role>('PG_COORD');
-  const [userName, setUserName] = useState('John Doe');
+  const [role, setRole] = useState<Role>('PG_COORD');    // default can be adjusted
+  const [userName, setUserName] = useState<string>('John Doe');
 
   return (
     <AuthContext.Provider value={{ role, userName, setRole, setUserName }}>
@@ -24,7 +23,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook to consume the context:
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');

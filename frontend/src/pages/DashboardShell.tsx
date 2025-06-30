@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-import HodDashboardOverview from "./hod/HodDashboardOverview";
-import PgLecturerManagement from "./hod/PgLecturerManagement";
-import StudentSessionManagement from "./hod/StudentSessionManagement";
-import NotificationsTab from "./hod/NotificationsTab";
-import MyStudentListPage from "./hod/MyStudentListPage";
-import CreateSession from "./hod/CreateSession";
+import HodDashboardOverview from "./hod&pgc/HodDashboardOverview";
+import PgLecturerManagement from "./hod&pgc/PgLecturerManagement";
+import StudentSessionManagement from "./hod&pgc/StudentSessionManagement";
+import NotificationsTab from "./hod&pgc/NotificationsTab";
+import MyStudentListPage from "./hod&pgc/MyStudentListPage";
+import CreateSession from "./hod&pgc/CreateSession";
 
 export type DashboardView =
   | "overview"
