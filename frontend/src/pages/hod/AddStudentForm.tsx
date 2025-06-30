@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
+
 
 interface AddStudentFormProps {
   onClose?: () => void;
@@ -35,9 +35,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   const [department, setDepartment] = useState("");
   const [stage, setStage] = useState(stageOptions[0]);
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+ 
 
   const handleSubmit = () => {
     console.log({
@@ -48,8 +46,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       faculty,
       department,
       stage,
-      password,
-      confirmPassword,
+      
     });
 
     // Reset form
@@ -60,8 +57,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
     setFaculty("");
     setDepartment("");
     setStage(stageOptions[0]);
-    setPassword("");
-    setConfirmPassword("");
+   
     if (onClose) onClose();
   };
 
@@ -152,39 +148,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       </div>
 
       {/* Password */}
-      <div className="mb-4 relative">
-        <label className="block text-sm font-medium mb-1">Password</label>
-        <Input
-          type={showPassword ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="pr-10"
-        />
-        <span
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-9 text-gray-500 cursor-pointer"
-        >
-          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-        </span>
-      </div>
+      
 
-      {/* Confirm Password */}
-      <div className="mb-6 relative">
-        <label className="block text-sm font-medium mb-1">Confirm Password</label>
-        <Input
-          type={showPassword ? "text" : "password"}
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="pr-10"
-        />
-        <span
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-9 text-gray-500 cursor-pointer"
-        >
-          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-        </span>
-      </div>
-
+      
       {/* Starting Stage */}
       <div className="mb-6">
         <label className="block text-sm font-medium mb-1">Starting Stage</label>

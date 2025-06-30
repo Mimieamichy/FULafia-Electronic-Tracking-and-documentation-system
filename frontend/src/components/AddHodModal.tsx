@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { X, Eye, EyeOff } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,8 +21,7 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
     email: "",
     faculty: "",
     department: "",
-    password: "",
-    confirmPassword: ""
+    
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -34,10 +33,7 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
+    
     
     const hodData = {
       ...formData,
@@ -54,8 +50,7 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
       email: "",
       faculty: "",
       department: "",
-      password: "",
-      confirmPassword: ""
+      
     });
     onClose();
   };
@@ -168,45 +163,8 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Password:</label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  className="w-full border-gray-300 rounded-full px-4 py-3 pr-12"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Confirm Password:</label>
-            <div className="relative max-w-md">
-              <Input
-                type={showConfirmPassword ? "text" : "password"}
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                className="w-full border-gray-300 rounded-full px-4 py-3 pr-12"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500"
-              >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
+           
+          
           </div>
 
           <div className="flex justify-end pt-4">

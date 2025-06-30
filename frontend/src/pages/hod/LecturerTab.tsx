@@ -19,8 +19,7 @@ interface Lecturer {
   
   department: string;
   faculty: string;
-  password: string;
-  confirmPassword: string;
+ 
 }
 
 // Options for dropdowns
@@ -40,7 +39,7 @@ const LecturerTab = () => {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+ 
 
   const [form, setForm] = useState<Omit<Lecturer, "id">>({
     title: "",
@@ -51,8 +50,6 @@ const LecturerTab = () => {
    
     department: "",
     faculty: "",
-    password: "",
-    confirmPassword: "",
   });
 
   const openAdd = () => {
@@ -63,11 +60,8 @@ const LecturerTab = () => {
       lastName: "",
       staffId: "",
       email: "",
-      
       department: "",
       faculty: "",
-      password: "",
-      confirmPassword: "",
     });
     setModalOpen(true);
   };
@@ -89,17 +83,11 @@ const LecturerTab = () => {
       lastName,
       staffId,
       email,
-      password,
-      confirmPassword,
     } = form;
-    if (!title || !firstName || !lastName || !staffId || !email || !password) {
+    if (!title || !firstName || !lastName || !staffId || !email) {
       alert(
-        "Title, First Name, Last Name, Staff ID, Email, and Password required"
+        "Title, First Name, Last Name, Staff ID, and Email are required"
       );
-      return;
-    }
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
       return;
     }
     if (editingId) {
@@ -295,48 +283,9 @@ const LecturerTab = () => {
                 </Select>
               </div>
 
-              {/* Password */}
-              <div className="relative">
-                <label className="block text-gray-700 mb-1">Password:</label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, password: e.target.value }))
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 pr-10"
-                />
-                <span
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-9 text-gray-500 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </span>
-              </div>
+             
 
-              {/* Confirm Password */}
-              <div className="relative">
-                <label className="block text-gray-700 mb-1">
-                  Confirm Password:
-                </label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.confirmPassword}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      confirmPassword: e.target.value,
-                    }))
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 pr-10"
-                />
-                <span
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-9 text-gray-500 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </span>
-              </div>
+              
             </div>
 
             <div className="mt-6 text-sm text-gray-600">

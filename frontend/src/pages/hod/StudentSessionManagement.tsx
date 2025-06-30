@@ -1,8 +1,19 @@
-import { useState, useMemo } from "react";
+// pgc/StudentSessionManagement.tsx
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import AssignSupervisorModal from "./AssignSupervisorModal";
+import SetDefenseModal from "./SetDefenseModal";
+import { mockSaveDefense } from "@/lib/mockDefenseService";
+import { useAuth } from "../AuthProvider";
 
 interface StudentStage {
   id: string;
@@ -12,29 +23,84 @@ interface StudentStage {
   firstSem: number | null;
   secondSem: number | null;
   thirdSem: number | null;
-  externalDefenseDate: string | null;
+  externalDefenseDate: number | null;
   supervisor1: string;
   supervisor2: string;
 }
 
-const defenseOptions = ["First Seminar", "Second Seminar", "Third Seminar", "External Defense"];
+interface Session {
+  id: string;
+  name: string;
+}
+
+const defenseOptions = [
+  "First Seminar",
+  "Second Seminar",
+  "Third Seminar",
+  "External Defense",
+] as const;
+
+const stageFlow = [
+  "First Seminar",
+  "Second Seminar",
+  "Third Seminar",
+  "External Defense",
+] as const;
+
+// Mock sessions — swap for real fetch
+const sessionNames = [
+  "2023/2024",
+  "2024/2025",
+  "2025/2026",
+];
 
 const StudentSessionManagement = () => {
-  // Degree tab
+  const { role } = useAuth(); // 'HOD' or 'PGC'
+  const isHod = role === "HOD";
+
+  // Modal & selection state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [currentStudentId, setCurrentStudentId] = useState<string>("");
+  const [defenseModalOpen, setDefenseModalOpen] = useState(false);
+  const [defenseStage, setDefenseStage] = useState<string>(
+    defenseOptions[3]
+  );
+
+  // Session dropdown state
+  const [sessions, setSessions] = useState<Session[]>([]);
+
+  const [selectedSession, setSelectedSession] = useState<string>(sessionNames[0]);
+
+  // Panel candidates (stub)
+  const panelCandidates = [
+    "Dr. Florence Okeke",
+    "Prof. Musa Ibrahim",
+    "Engr. Christabel Henry",
+  ];
+  const handleDefenseSubmit = async (data: {
+    stage: string;
+    date: string;
+    time: string;
+    panel: string[];
+  }) => {
+    await mockSaveDefense(data);
+  };
+
+  // Degree tab & search
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
-  // Search term
   const [search, setSearch] = useState("");
-  // Table data with placeholder supervisors
+
+  // Students state
   const [students, setStudents] = useState<StudentStage[]>([
     {
       id: "1",
       matNo: "220976762",
       fullName: "Camilla Park",
       topic: "Secure Online Auction System",
-      firstSem: 75,
+      firstSem: 100,
       secondSem: 80,
       thirdSem: 90,
-      externalDefenseDate: null,
+      externalDefenseDate: 0,
       supervisor1: "Not Assigned",
       supervisor2: "Not Assigned",
     },
@@ -57,33 +123,72 @@ const StudentSessionManagement = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 7;
 
-  // Defense stage selector
-  const [selectedDefense, setSelectedDefense] = useState(defenseOptions[3]);
-  const handleSetDate = () => {
-    alert(`Set date for ${selectedDefense}`);
+  // Selected defense stage
+  const [selectedDefense, setSelectedDefense] = useState<string>(
+    defenseOptions[3]
+  );
+
+  // Assign supervisor handler
+  const handleAssign = (
+    studentId: string,
+    supType: "supervisor1" | "supervisor2",
+    lecturerName: string
+  ) => {
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === studentId ? { ...s, [supType]: lecturerName } : s
+      )
+    );
   };
 
-  // Filter by search term (and optionally by degreeTab)
+  // Advance student stage handler
+  const advanceStudentStage = (studentId: string) => {
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id !== studentId) return s;
+        const currentIndex = stageFlow.findIndex(
+          (st) => st === selectedDefense
+        );
+        const nextIndex = currentIndex + 1;
+        if (nextIndex >= stageFlow.length) return s; // already final
+        return s;
+      })
+    );
+  };
+
+  // Load mock sessions once
+ 
+  // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return students.filter((s) =>
-      s.matNo.includes(term) ||
-      s.fullName.toLowerCase().includes(term) ||
-      s.topic.toLowerCase().includes(term)
+    return students.filter(
+      (s) =>
+        s.matNo.includes(term) ||
+        s.fullName.toLowerCase().includes(term) ||
+        s.topic.toLowerCase().includes(term)
     );
   }, [students, search]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const paginated = filtered.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  // Number of columns (10 base + advance if HOD + 1 status)
+  const colCount = 10 + (isHod ? 1 : 0) + 1;
 
   return (
     <div className="space-y-6">
-      {/* Degree tabs */}
+      {/* Degree Tabs */}
       <div className="flex border-b border-gray-200">
         {(["MSc", "PhD"] as const).map((dt) => (
           <button
             key={dt}
-            onClick={() => { setDegreeTab(dt); setPage(1); }}
+            onClick={() => {
+              setDegreeTab(dt);
+              setPage(1);
+            }}
             className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors duration-200 ${
               degreeTab === dt
                 ? "border-amber-700 text-amber-700"
@@ -95,38 +200,80 @@ const StudentSessionManagement = () => {
         ))}
       </div>
 
-      {/* Header, defense selector & search */}
+      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h2 className="text-lg font-semibold text-gray-800">
           {degreeTab} Ready for {selectedDefense}
         </h2>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          {/* Defense Stage */}
           <div className="flex items-center gap-2">
             <span className="text-gray-700">Defense:</span>
-            <Select value={selectedDefense} onValueChange={(v) => { setSelectedDefense(v); setPage(1); }}>
+            <Select
+              value={selectedDefense}
+              onValueChange={(v) => {
+                setSelectedDefense(v);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder={selectedDefense} />
               </SelectTrigger>
               <SelectContent>
                 {defenseOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleSetDate} className="bg-amber-700 hover:bg-amber-800 text-white">
-              Set Date
-            </Button>
           </div>
+
+          {/* Search */}
           <Input
             placeholder="Search Mat. No, Name or Topic"
             className="flex-1"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
+
+          {/* Sessions Dropdown */}
+          <div className="flex items-center gap-2">
+  <span className="text-gray-700">Session:</span>
+  <Select
+    value={selectedSession}
+    onValueChange={(v) => setSelectedSession(v)}
+  >
+    <SelectTrigger className="w-48">
+      <SelectValue placeholder="Select session" />
+    </SelectTrigger>
+    <SelectContent>
+      {sessionNames.map((name) => (
+        <SelectItem key={name} value={name}>
+          {name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
         </div>
+
+        {/* Schedule Defense */}
+        <Button
+          className="bg-amber-700 hover:bg-amber-800 text-white"
+          onClick={() => {
+            setDefenseStage(selectedDefense);
+            setDefenseModalOpen(true);
+          }}
+        >
+          Schedule {selectedDefense}
+        </Button>
       </div>
 
-      {/* Table */}
+      {/* Students Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -140,35 +287,77 @@ const StudentSessionManagement = () => {
               <th className="p-3 border">External Defense</th>
               <th className="p-3 border">1st Supervisor</th>
               <th className="p-3 border">2nd Supervisor</th>
+              {isHod && <th className="p-3 border">Advance</th>}
               <th className="p-3 border">Status</th>
             </tr>
           </thead>
           <tbody>
-            {paginated.map((s, idx) => (
-              <tr key={s.id} className={idx % 2 === 0 ? "bg-amber-50" : "bg-white"}>
-                <td className="p-3 border">{s.matNo}</td>
-                <td className="p-3 border">{s.fullName}</td>
-                <td className="p-3 border">{s.topic}</td>
-                <td className="p-3 border">{s.firstSem ?? "—"}</td>
-                <td className="p-3 border">{s.secondSem ?? "—"}</td>
-                <td className="p-3 border">{s.thirdSem ?? "—"}</td>
-                <td className="p-3 border">{s.externalDefenseDate ?? "—"}</td>
-                <td className="p-3 border">{s.supervisor1}</td>
-                <td className="p-3 border">{s.supervisor2}</td>
-                <td className="p-3 border">
-                  <Button
-                    size="sm"
-                    className="bg-amber-700 hover:bg-amber-800 text-white"
-                    onClick={() => alert(`Assign supervisor for ${s.fullName}`)}
-                  >
-                    Assign
-                  </Button>
-                </td>
-              </tr>
-            ))}
+            {paginated.map((s, idx) => {
+              const done =
+                (selectedDefense === "First Seminar" && s.firstSem === 100) ||
+                (selectedDefense === "Second Seminar" && s.secondSem === 100) ||
+                (selectedDefense === "Third Seminar" && s.thirdSem === 100) ||
+                (selectedDefense === "External Defense" &&
+                  s.externalDefenseDate != null);
+
+              const stageIndex = stageFlow.indexOf(selectedDefense as any);
+              const notFinal = stageIndex < stageFlow.length - 1;
+
+              return (
+                <tr
+                  key={s.id}
+                  className={idx % 2 === 0 ? "bg-amber-50" : "bg-white"}
+                >
+                  <td className="p-3 border">{s.matNo}</td>
+                  <td className="p-3 border">{s.fullName}</td>
+                  <td className="p-3 border">{s.topic}</td>
+                  <td className="p-3 border">{s.firstSem ?? "—"}</td>
+                  <td className="p-3 border">{s.secondSem ?? "—"}</td>
+                  <td className="p-3 border">{s.thirdSem ?? "—"}</td>
+                  <td className="p-3 border">
+                    {s.externalDefenseDate ?? "—"}
+                  </td>
+                  <td className="p-3 border">{s.supervisor1}</td>
+                  <td className="p-3 border">{s.supervisor2}</td>
+
+                  {isHod && (
+                    <td className="p-3 border">
+                      {done && notFinal ? (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 text-white"
+                          onClick={() => advanceStudentStage(s.id)}
+                        >
+                          Approve Next
+                        </Button>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                  )}
+
+                  <td className="p-3 border">
+                    <Button
+                      size="sm"
+                      className="bg-amber-700 text-white"
+                      onClick={() => {
+                        setCurrentStudentId(s.id);
+                        setAssignModalOpen(true);
+                      }}
+                    >
+                      Assign
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={10} className="text-center p-4 text-gray-500">
+                <td
+                  colSpan={colCount}
+                  className="text-center p-4 text-gray-500"
+                >
                   No students found.
                 </td>
               </tr>
@@ -197,6 +386,22 @@ const StudentSessionManagement = () => {
           <ChevronRight />
         </button>
       </div>
+
+      {/* Modals */}
+      <AssignSupervisorModal
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        studentId={currentStudentId}
+        onSubmit={handleAssign}
+      />
+
+      <SetDefenseModal
+        isOpen={defenseModalOpen}
+        onClose={() => setDefenseModalOpen(false)}
+        defenseStage={defenseStage}
+        lecturers={panelCandidates}
+        onSubmit={handleDefenseSubmit}
+      />
     </div>
   );
 };
