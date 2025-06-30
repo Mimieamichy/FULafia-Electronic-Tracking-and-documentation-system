@@ -16,10 +16,9 @@ interface Lecturer {
   lastName: string;
   staffId: string;
   email: string;
-  
+  role: string; // Optional role field
   department: string;
   faculty: string;
- 
 }
 
 // Options for dropdowns
@@ -39,7 +38,6 @@ const LecturerTab = () => {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
- 
 
   const [form, setForm] = useState<Omit<Lecturer, "id">>({
     title: "",
@@ -47,7 +45,7 @@ const LecturerTab = () => {
     lastName: "",
     staffId: "",
     email: "",
-   
+    role: "",
     department: "",
     faculty: "",
   });
@@ -60,11 +58,25 @@ const LecturerTab = () => {
       lastName: "",
       staffId: "",
       email: "",
+      role: "",
       department: "",
       faculty: "",
     });
     setModalOpen(true);
   };
+  const roleOptions = [
+    
+    "Lecturer I",
+    "Lecturer II",
+    "Assistant Lecturer",
+    "Senior Lecturer",
+    "Visiting Lecturer",
+    "Adjunct Lecturer",
+    "Research Fellow",
+    "Provost",
+    "Dean",
+    "Director",
+  ];
 
   const openEdit = (lec: Lecturer) => {
     setEditingId(lec.id);
@@ -83,10 +95,22 @@ const LecturerTab = () => {
       lastName,
       staffId,
       email,
+      role,
+      department,
+      faculty,
     } = form;
-    if (!title || !firstName || !lastName || !staffId || !email) {
+    if (
+      !title ||
+      !firstName ||
+      !lastName ||
+      !staffId ||
+      !email ||
+      !role ||
+      !department ||
+      !faculty
+    ) {
       alert(
-        "Title, First Name, Last Name, Staff ID, and Email are required"
+        "Title, First Name, Last Name, Staff ID, Email, Role, Department, and Faculty are required"
       );
       return;
     }
@@ -236,8 +260,26 @@ const LecturerTab = () => {
                   className="w-full border border-gray-300 rounded px-3 py-2"
                 />
               </div>
-
-              
+              <div>
+                <label className="block text-gray-700 mb-1">Role:</label>
+                <Select
+                  value={form.role}
+                  onValueChange={(val) =>
+                    setForm((prev) => ({ ...prev, role: val }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-40 overflow-y-auto">
+                    {roleOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Faculty */}
               <div>
@@ -282,15 +324,11 @@ const LecturerTab = () => {
                   </SelectContent>
                 </Select>
               </div>
-
-             
-
-              
             </div>
 
             <div className="mt-6 text-sm text-gray-600">
-              By submitting, you agree to Terms of Use and acknowledge the Privacy
-              Policy.
+              By submitting, you agree to Terms of Use and acknowledge the
+              Privacy Policy.
             </div>
 
             <div className="flex justify-end gap-2 mt-4">
