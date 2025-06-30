@@ -11,7 +11,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
 import SupervisorDashboard from "./SupervisorDashboard";
 import MyStudentsPage from "./MyStudentsPage";
 import SupervisorNotifications from "./SupervisorNotifications";
@@ -24,11 +23,9 @@ export default function SupervisorDashboardShell() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [currentView, setCurrentView] = useState<SupervisorView>("dashboard");
-
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
-  // Close side menu on outside click
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -36,11 +33,9 @@ export default function SupervisorDashboardShell() {
       }
     };
     if (isMenuOpen) document.addEventListener("mousedown", onClick);
-    else document.removeEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [isMenuOpen]);
 
-  // Render current view
   const renderView = () => {
     switch (currentView) {
       case "dashboard":
@@ -57,12 +52,12 @@ export default function SupervisorDashboardShell() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm p-4 flex justify-between items-center relative">
+      <header className="bg-white shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center relative">
         {/* Hamburger */}
         <div className="flex items-center gap-4">
           <Menu
             className="w-6 h-6 text-gray-600 cursor-pointer"
-            onClick={() => setIsMenuOpen((o) => !o)}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
           />
         </div>
 
@@ -104,23 +99,19 @@ export default function SupervisorDashboardShell() {
           </div>
         )}
 
-        {/* Right Icons */}
+        {/* Right-side Controls */}
         <div className="flex items-center gap-4">
-          <span className="text-gray-600">Welcome, {role}</span>
-
-          {/* Notification Bell */}
+          <span className="hidden sm:inline text-gray-600">
+            Welcome, {role}
+          </span>
           <Bell
             className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
             onClick={() => setCurrentView("notifications")}
           />
-
-          {/* Reset Password */}
           <Lock
             className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
             onClick={() => setResetModalOpen(true)}
           />
-
-          {/* Logout */}
           <Power
             className="w-6 h-6 text-red-500 cursor-pointer hover:text-red-600"
             onClick={() => setLogoutModalOpen(true)}
@@ -129,7 +120,9 @@ export default function SupervisorDashboardShell() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">{renderView()}</main>
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {renderView()}
+      </main>
 
       {/* Reset Password Modal */}
       <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
@@ -156,19 +149,30 @@ export default function SupervisorDashboardShell() {
 
       {/* Logout Confirmation Modal */}
       <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-full mx-0 sm:mx-auto sm:rounded-lg">
           <DialogHeader>
-            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Confirm Logout
+            </DialogTitle>
           </DialogHeader>
+
           <p className="text-sm text-gray-600 mb-4">
             Are you sure you want to logout?
           </p>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setLogoutModalOpen(false)}>
+
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setLogoutModalOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Link to="/">
-              <Button className="bg-red-600 text-white">Logout</Button>
+
+            <Link to="/" className="w-full sm:w-auto">
+              <Button className="bg-red-600 text-white w-full sm:w-auto">
+                Logout
+              </Button>
             </Link>
           </DialogFooter>
         </DialogContent>

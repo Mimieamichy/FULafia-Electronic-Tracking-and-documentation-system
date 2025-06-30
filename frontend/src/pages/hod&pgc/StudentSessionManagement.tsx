@@ -48,11 +48,7 @@ const stageFlow = [
 ] as const;
 
 // Mock sessions — swap for real fetch
-const sessionNames = [
-  "2023/2024",
-  "2024/2025",
-  "2025/2026",
-];
+const sessionNames = ["2023/2024", "2024/2025", "2025/2026"];
 
 const StudentSessionManagement = () => {
   const { role } = useAuth(); // 'HOD' or 'PGC'
@@ -62,14 +58,14 @@ const StudentSessionManagement = () => {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
-  const [defenseStage, setDefenseStage] = useState<string>(
-    defenseOptions[3]
-  );
+  const [defenseStage, setDefenseStage] = useState<string>(defenseOptions[3]);
 
   // Session dropdown state
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  const [selectedSession, setSelectedSession] = useState<string>(sessionNames[0]);
+  const [selectedSession, setSelectedSession] = useState<string>(
+    sessionNames[0]
+  );
 
   // Panel candidates (stub)
   const panelCandidates = [
@@ -157,7 +153,7 @@ const StudentSessionManagement = () => {
   };
 
   // Load mock sessions once
- 
+
   // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
@@ -201,14 +197,15 @@ const StudentSessionManagement = () => {
       </div>
 
       {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-wrap">
         <h2 className="text-lg font-semibold text-gray-800">
           {degreeTab} Ready for {selectedDefense}
         </h2>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center w-full sm:w-auto">
           {/* Defense Stage */}
           <div className="flex items-center gap-2">
-            <span className="text-gray-700">Defense:</span>
+            <span className="text-gray-700 text-sm">Defense:</span>
             <Select
               value={selectedDefense}
               onValueChange={(v) => {
@@ -232,7 +229,7 @@ const StudentSessionManagement = () => {
           {/* Search */}
           <Input
             placeholder="Search Mat. No, Name or Topic"
-            className="flex-1"
+            className="w-full sm:w-64"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -240,42 +237,44 @@ const StudentSessionManagement = () => {
             }}
           />
 
-          {/* Sessions Dropdown */}
+          {/* Session Dropdown */}
           <div className="flex items-center gap-2">
-  <span className="text-gray-700">Session:</span>
-  <Select
-    value={selectedSession}
-    onValueChange={(v) => setSelectedSession(v)}
-  >
-    <SelectTrigger className="w-48">
-      <SelectValue placeholder="Select session" />
-    </SelectTrigger>
-    <SelectContent>
-      {sessionNames.map((name) => (
-        <SelectItem key={name} value={name}>
-          {name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+            <span className="text-gray-700 text-sm">Session:</span>
+            <Select
+              value={selectedSession}
+              onValueChange={(v) => setSelectedSession(v)}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select session" />
+              </SelectTrigger>
+              <SelectContent>
+                {sessionNames.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Schedule Defense */}
-        <Button
-          className="bg-amber-700 hover:bg-amber-800 text-white"
-          onClick={() => {
-            setDefenseStage(selectedDefense);
-            setDefenseModalOpen(true);
-          }}
-        >
-          Schedule {selectedDefense}
-        </Button>
+        {/* Schedule Defense Button */}
+        <div className="mt-2 sm:mt-0">
+          <Button
+            className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
+            onClick={() => {
+              setDefenseStage(selectedDefense);
+              setDefenseModalOpen(true);
+            }}
+          >
+            Schedule {selectedDefense}
+          </Button>
+        </div>
       </div>
 
       {/* Students Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-lg shadow-sm overflow-x-auto w-full">
+        <table className="min-w-[1000px] w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50">
               <th className="p-3 border">MAT NO.</th>
@@ -314,9 +313,7 @@ const StudentSessionManagement = () => {
                   <td className="p-3 border">{s.firstSem ?? "—"}</td>
                   <td className="p-3 border">{s.secondSem ?? "—"}</td>
                   <td className="p-3 border">{s.thirdSem ?? "—"}</td>
-                  <td className="p-3 border">
-                    {s.externalDefenseDate ?? "—"}
-                  </td>
+                  <td className="p-3 border">{s.externalDefenseDate ?? "—"}</td>
                   <td className="p-3 border">{s.supervisor1}</td>
                   <td className="p-3 border">{s.supervisor2}</td>
 
@@ -367,7 +364,7 @@ const StudentSessionManagement = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-end items-center gap-2">
+      <div className="flex justify-center sm:justify-end items-center flex-wrap gap-2 mt-4">
         <button
           onClick={() => setPage((p) => Math.max(p - 1, 1))}
           disabled={page === 1}
@@ -375,7 +372,7 @@ const StudentSessionManagement = () => {
         >
           <ChevronLeft />
         </button>
-        <span className="text-gray-700">
+        <span className="text-gray-700 text-sm">
           {page} / {totalPages}
         </span>
         <button

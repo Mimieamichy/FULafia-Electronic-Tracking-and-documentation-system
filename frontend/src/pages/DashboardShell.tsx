@@ -221,19 +221,29 @@ const DashboardShell = () => {
 
       {/* Logout Confirmation Modal */}
       <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-full mx-0 sm:mx-auto  sm:rounded-lg">
           <DialogHeader>
-            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Confirm Logout
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600">
+
+          <p className="text-sm text-gray-600 mt-2">
             Are you sure you want to logout?
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLogoutModalOpen(false)}>
+
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setLogoutModalOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Link to="/">
-              <Button className="bg-red-600 text-white">Logout</Button>
+            <Link to="/" className="w-full sm:w-auto">
+              <Button className="bg-red-600 text-white w-full sm:w-auto">
+                Logout
+              </Button>
             </Link>
           </DialogFooter>
         </DialogContent>

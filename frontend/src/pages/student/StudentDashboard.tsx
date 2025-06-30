@@ -8,20 +8,20 @@ export default function StudentDashboard() {
   const currentStage = "Proposal Defense"; // or "Chapter 1-3 Review", etc.
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">
+    <div className="px-4 py-6 max-w-2xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800 break-words">
         Welcome, {userName}
       </h1>
 
-      <div className="bg-white p-6 rounded-lg shadow space-y-4 max-w-xl">
+      <div className="bg-white p-6 rounded-lg shadow-md space-y-6 w-full">
         <div className="space-y-1">
-          <p className="text-gray-500 text-sm">Academic Session</p>
-          <p className="text-lg font-medium text-gray-800">{currentSession}</p>
+          <p className="text-sm text-gray-500">Academic Session</p>
+          <p className="text-lg font-semibold text-gray-800">{currentSession}</p>
         </div>
 
         <div className="space-y-1">
-          <p className="text-gray-500 text-sm">Current Research Stage</p>
-          <p className="text-lg font-medium text-gray-800">{currentStage}</p>
+          <p className="text-sm text-gray-500">Current Research Stage</p>
+          <p className="text-lg font-semibold text-gray-800">{currentStage}</p>
         </div>
 
         <div className="text-sm text-gray-600 pt-4">

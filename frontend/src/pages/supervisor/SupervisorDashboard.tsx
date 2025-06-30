@@ -1,4 +1,3 @@
-// src/supervisor/SupervisorDashboard.tsx
 import { useAuth } from "../AuthProvider";
 import { CalendarCheck, Users, Bell } from "lucide-react";
 
@@ -6,14 +5,14 @@ export default function SupervisorDashboard() {
   const { userName } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 sm:px-6">
       <h1 className="text-2xl font-bold text-gray-800">
         Welcome back, {userName}
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {/* Assigned Students */}
-        <div className="bg-white shadow rounded-lg p-6 flex flex-col items-start">
+        <div className="bg-white shadow rounded-xl p-6 flex flex-col items-start">
           <Users className="text-amber-700 mb-3" size={32} />
           <h2 className="text-lg font-semibold text-gray-800">
             Assigned Students
@@ -23,7 +22,7 @@ export default function SupervisorDashboard() {
         </div>
 
         {/* Upcoming Defenses */}
-        <div className="bg-white shadow rounded-lg p-6 flex flex-col items-start">
+        <div className="bg-white shadow rounded-xl p-6 flex flex-col items-start">
           <CalendarCheck className="text-amber-700 mb-3" size={32} />
           <h2 className="text-lg font-semibold text-gray-800">
             Upcoming Defenses
@@ -33,7 +32,7 @@ export default function SupervisorDashboard() {
         </div>
 
         {/* Notifications */}
-        <div className="bg-white shadow rounded-lg p-6 flex flex-col items-start">
+        <div className="bg-white shadow rounded-xl p-6 flex flex-col items-start">
           <Bell className="text-amber-700 mb-3" size={32} />
           <h2 className="text-lg font-semibold text-gray-800">Notifications</h2>
           <p className="text-3xl font-bold text-amber-700 mt-2">3</p>

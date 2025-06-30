@@ -1,6 +1,10 @@
-// src/supervisor/MyStudentsPage.tsx
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../AuthProvider";
@@ -20,7 +24,6 @@ type Student = {
   comments: { by: string; text: string }[];
 };
 
-// **Mock data** — replace with real fetch when ready
 const mockMyStudents: Student[] = [
   {
     id: "s1",
@@ -64,13 +67,13 @@ export default function MyStudentsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 sm:px-6">
       <h2 className="text-2xl font-semibold text-gray-800">My Students</h2>
 
       <div className="overflow-x-auto rounded-lg shadow bg-white">
         <table className="min-w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-100">
+            <tr className="bg-gray-100 text-sm">
               <th className="p-3 border">Name</th>
               <th className="p-3 border">Matric No</th>
               <th className="p-3 border">Topic</th>
@@ -92,42 +95,38 @@ export default function MyStudentsPage() {
                 >
                   {stu.name}
                 </td>
-                <td className="p-3 border">{stu.matNo}</td>
-                <td className="p-3 border">{stu.topic}</td>
-                <td className="p-3 border">{stu.stage}</td>
-                <td className="p-3 border">{stu.scores.proposal ?? "—"}</td>
-                <td className="p-3 border">{stu.scores.internal ?? "—"}</td>
-                <td className="p-3 border">{stu.scores.external ?? "—"}</td>
+                <td className="p-3 border text-sm">{stu.matNo}</td>
+                <td className="p-3 border text-sm">{stu.topic}</td>
+                <td className="p-3 border text-sm">{stu.stage}</td>
+                <td className="p-3 border text-sm">{stu.scores.proposal ?? "—"}</td>
+                <td className="p-3 border text-sm">{stu.scores.internal ?? "—"}</td>
+                <td className="p-3 border text-sm">{stu.scores.external ?? "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Modal: view PDF & comments */}
-      <Dialog
-        open={selected !== null}
-        onOpenChange={() => setSelectedIdx(null)}
-      >
-        <DialogContent className="max-w-2xl">
+      {/* Modal */}
+      <Dialog open={selected !== null} onOpenChange={() => setSelectedIdx(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selected?.name}'s Submission
             </DialogTitle>
           </DialogHeader>
+
           {selected && (
             <div className="space-y-6">
-              {/* PDF Download */}
+              {/* PDF Link */}
               <div className="p-4 border rounded bg-gray-50">
-                <p className="text-sm text-gray-600 mb-2">
-                  Download Submitted Work:
-                </p>
+                <p className="text-sm text-gray-600 mb-2">Download Submitted Work:</p>
                 <a
                   href={selected.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   download
-                  className="text-amber-700 underline"
+                  className="text-amber-700 underline break-all text-sm"
                 >
                   {selected.topic}.pdf
                 </a>
@@ -137,15 +136,12 @@ export default function MyStudentsPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Comments:</p>
                 {selected.comments.length === 0 ? (
-                  <p className="text-gray-500 italic text-sm">
-                    No comments yet.
-                  </p>
+                  <p className="text-gray-500 italic text-sm">No comments yet.</p>
                 ) : (
                   <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
                     {selected.comments.map((c, i) => (
                       <li key={i}>
-                        <span className="font-medium">by {c.by}:</span>{" "}
-                        {c.text}
+                        <span className="font-medium">by {c.by}:</span> {c.text}
                       </li>
                     ))}
                   </ul>
@@ -158,6 +154,7 @@ export default function MyStudentsPage() {
                   placeholder="Write your comment..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
+                  className="w-full"
                 />
                 <div className="flex justify-end">
                   <Button

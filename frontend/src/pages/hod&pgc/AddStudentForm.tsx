@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-
 interface AddStudentFormProps {
   onClose?: () => void;
 }
@@ -35,8 +34,6 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   const [department, setDepartment] = useState("");
   const [stage, setStage] = useState(stageOptions[0]);
 
- 
-
   const handleSubmit = () => {
     console.log({
       degree,
@@ -46,10 +43,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       faculty,
       department,
       stage,
-      
     });
 
-    // Reset form
     setMatNo("");
     setFirstName("");
     setLastName("");
@@ -57,16 +52,18 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
     setFaculty("");
     setDepartment("");
     setStage(stageOptions[0]);
-   
+
     if (onClose) onClose();
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-semibold mb-4">Add {degree} Student</h2>
+    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow p-6 sm:p-8">
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+        Add {degree} Student
+      </h2>
 
-      {/* Degree selector */}
-      <div className="mb-4">
+      {/* Degree */}
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-1">Degree</label>
         <Select
           value={degree}
@@ -85,8 +82,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
         </Select>
       </div>
 
-      {/* Matriculation Number */}
-      <div className="mb-4">
+      {/* Matric No */}
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-1">Matriculation No.</label>
         <Input
           value={matNo}
@@ -95,8 +92,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
         />
       </div>
 
-      {/* First & Last Name */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      {/* First and Last Name */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         <div>
           <label className="block text-sm font-medium mb-1">First Name</label>
           <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -108,50 +105,47 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       </div>
 
       {/* Email */}
-      <div className="mb-4">
+      <div className="mb-5">
         <label className="block text-sm font-medium mb-1">Email</label>
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </div>
 
-      {/* Faculty Dropdown */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Faculty</label>
-        <Select value={faculty} onValueChange={setFaculty}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select faculty" />
-          </SelectTrigger>
-          <SelectContent>
-            {facultyOptions.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Faculty & Department */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label className="block text-sm font-medium mb-1">Faculty</label>
+          <Select value={faculty} onValueChange={setFaculty}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select faculty" />
+            </SelectTrigger>
+            <SelectContent>
+              {facultyOptions.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Department</label>
+          <Select value={department} onValueChange={setDepartment}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departmentOptions.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Department Dropdown */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Department</label>
-        <Select value={department} onValueChange={setDepartment}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select department" />
-          </SelectTrigger>
-          <SelectContent>
-            {departmentOptions.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Password */}
-      
-
-      
-      {/* Starting Stage */}
+      {/* Stage */}
       <div className="mb-6">
         <label className="block text-sm font-medium mb-1">Starting Stage</label>
         <Select value={stage} onValueChange={setStage}>
@@ -169,15 +163,19 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-col sm:flex-row justify-end gap-3">
         {onClose && (
-          <Button variant="outline" onClick={onClose}>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={onClose}
+          >
             Cancel
           </Button>
         )}
         <Button
+          className="w-full sm:w-auto bg-amber-700 hover:bg-amber-800 text-white"
           onClick={handleSubmit}
-          className="bg-amber-700 hover:bg-amber-800 text-white"
         >
           Add Student
         </Button>

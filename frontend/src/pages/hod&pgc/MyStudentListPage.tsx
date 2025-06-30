@@ -65,37 +65,47 @@ const MyStudentListPage = () => {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-6">
         Assigned Students
       </h2>
 
       <div className="overflow-x-auto rounded-lg shadow bg-white">
-        <table className="min-w-full text-left border-collapse">
+        <table className="min-w-[600px] w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="p-3 border">Name</th>
-              <th className="p-3 border">Matric No</th>
-              <th className="p-3 border">Proposal</th>
-              <th className="p-3 border">Internal</th>
-              <th className="p-3 border">External</th>
+            <tr className="bg-gray-100 text-sm sm:text-base">
+              <th className="p-3 border whitespace-nowrap">Name</th>
+              <th className="p-3 border whitespace-nowrap">Matric No</th>
+              <th className="p-3 border whitespace-nowrap">Proposal</th>
+              <th className="p-3 border whitespace-nowrap">Internal</th>
+              <th className="p-3 border whitespace-nowrap">External</th>
             </tr>
           </thead>
           <tbody>
             {students.map((s, i) => (
-              <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-amber-50"}>
+              <tr
+                key={i}
+                className={i % 2 === 0 ? "bg-white" : "bg-amber-50"}
+              >
                 <td
-                  className="p-3 border text-amber-700 hover:underline cursor-pointer"
+                  className="p-3 border text-amber-700 hover:underline cursor-pointer whitespace-nowrap"
                   onClick={() => setSelectedStudentIndex(i)}
                 >
                   {s.name}
                 </td>
-                <td className="p-3 border">{s.matNo}</td>
-                <td className="p-3 border">{s.proposal ?? "—"}</td>
-                <td className="p-3 border">{s.internal ?? "—"}</td>
-                <td className="p-3 border">{s.external ?? "—"}</td>
+                <td className="p-3 border whitespace-nowrap">{s.matNo}</td>
+                <td className="p-3 border whitespace-nowrap">{s.proposal ?? "—"}</td>
+                <td className="p-3 border whitespace-nowrap">{s.internal ?? "—"}</td>
+                <td className="p-3 border whitespace-nowrap">{s.external ?? "—"}</td>
               </tr>
             ))}
+            {students.length === 0 && (
+              <tr>
+                <td colSpan={5} className="p-4 text-center text-gray-500">
+                  No students assigned.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -105,36 +115,40 @@ const MyStudentListPage = () => {
         open={selectedStudent !== null}
         onOpenChange={() => setSelectedStudentIndex(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-full sm:max-w-2xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg">
-              {selectedStudent?.name}'s Submission
+            <DialogTitle className="text-lg sm:text-xl">
+              {selectedStudent?.name}&apos;s Submission
             </DialogTitle>
           </DialogHeader>
 
           {selectedStudent && (
-            <div className="space-y-5">
+            <div className="space-y-6 mt-4">
               <div className="bg-gray-50 border rounded p-4">
-                <p className="text-sm text-gray-600 mb-1">Submitted PDF:</p>
+                <p className="text-sm sm:text-base text-gray-600 mb-2">
+                  Submitted PDF:
+                </p>
                 <a
                   href={selectedStudent.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   download
-                  className="text-amber-700 underline text-sm"
+                  className="text-amber-700 underline text-sm sm:text-base"
                 >
                   Download PDF
                 </a>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Comments:</p>
+              <div>
+                <p className="text-sm sm:text-base font-medium text-gray-700 mb-2">
+                  Comments:
+                </p>
                 {selectedStudent.comments.length === 0 ? (
-                  <p className="text-gray-500 text-sm italic">
+                  <p className="text-gray-500 italic text-sm sm:text-base">
                     No comments yet.
                   </p>
                 ) : (
-                  <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
+                  <ul className="list-disc pl-6 space-y-1 text-sm sm:text-base text-gray-800 max-h-48 overflow-y-auto">
                     {selectedStudent.comments.map((c, idx) => (
                       <li key={idx}>
                         <span className="font-medium text-amber-700">
@@ -152,10 +166,11 @@ const MyStudentListPage = () => {
                   placeholder="Write your comment..."
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  className="w-full min-h-[100px]"
                 />
                 <Button
                   onClick={handleCommentSubmit}
-                  className="bg-amber-700 text-white"
+                  className="w-full sm:w-auto bg-amber-700 text-white"
                 >
                   Submit Comment
                 </Button>

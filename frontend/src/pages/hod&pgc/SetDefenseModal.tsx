@@ -1,4 +1,3 @@
-// components/SetDefenseModal.tsx
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +8,8 @@ interface SetDefenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   defenseStage: string;
-  students: { id: string; fullName: string }[];        // to scope if needed
-  lecturers: string[];                                // panel candidates
+  students: { id: string; fullName: string }[];
+  lecturers: string[];
   onSubmit: (data: {
     stage: string;
     date: string;
@@ -32,45 +31,52 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const [saving, setSaving] = useState(false);
 
   if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+      <div className="w-full max-w-lg bg-white rounded-xl p-6 shadow-lg max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">
           Schedule {defenseStage}
         </h2>
 
         <div className="mb-4">
           <Label htmlFor="date">Date</Label>
           <Input
-            type="date"
             id="date"
+            type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1"
+            className="mt-1 w-full"
           />
         </div>
 
         <div className="mb-4">
           <Label htmlFor="time">Time</Label>
           <Input
-            type="time"
             id="time"
+            type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="mt-1"
+            className="mt-1 w-full"
           />
         </div>
 
         <div className="mb-4">
           <Label>Panel Members</Label>
-          <div className="grid grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
             {lecturers.map((lec) => (
-              <label key={lec} className="flex items-center gap-2">
+              <label
+                key={lec}
+                className="flex items-center gap-2 text-sm text-gray-700"
+              >
                 <Checkbox
                   checked={panel.includes(lec)}
                   onCheckedChange={(checked) => {
-                    if (checked) setPanel((p) => [...p, lec]);
-                    else setPanel((p) => p.filter((x) => x !== lec));
+                    if (checked) {
+                      setPanel((p) => [...p, lec]);
+                    } else {
+                      setPanel((p) => p.filter((x) => x !== lec));
+                    }
                   }}
                 />
                 <span>{lec}</span>
@@ -80,7 +86,12 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={saving}
+            className="min-w-[90px]"
+          >
             Cancel
           </Button>
           <Button
@@ -90,8 +101,8 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
               setSaving(false);
               onClose();
             }}
-            className="bg-amber-700 hover:bg-amber-800 text-white"
             disabled={!date || !time || panel.length === 0 || saving}
+            className="bg-amber-700 hover:bg-amber-800 text-white min-w-[90px]"
           >
             {saving ? "Saving..." : "Save"}
           </Button>

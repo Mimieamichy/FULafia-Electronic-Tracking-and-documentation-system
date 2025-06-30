@@ -1,4 +1,3 @@
-// src/student/StudentDashboardShell.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { Menu, Bell, Lock, Power } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -53,55 +52,46 @@ const StudentDashboardShell = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm p-4 flex justify-between items-center relative">
+      <header className="bg-white shadow-sm px-4 py-3 flex flex-wrap justify-between items-center gap-4 sm:gap-6 relative">
         <div className="flex items-center gap-4">
           <Menu
             className="w-6 h-6 text-gray-600 cursor-pointer"
             onClick={() => setIsMenuOpen((prev) => !prev)}
           />
+          <span className="text-gray-700 text-sm sm:text-base">
+            Welcome, {userName}
+          </span>
         </div>
 
         {/* Side menu */}
         {isMenuOpen && (
           <div
             ref={menuRef}
-            className="absolute top-16 left-4 bg-white shadow-lg rounded-lg p-4 w-56 z-20"
+            className="absolute top-16 left-4 bg-white shadow-lg rounded-lg p-4 w-5/6 max-w-xs z-30"
           >
-            <ul className="space-y-2 text-gray-700">
-              <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("dashboard");
-                  setIsMenuOpen(false);
-                }}
-              >
-                Dashboard
-              </li>
-              <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("uploadWork");
-                  setIsMenuOpen(false);
-                }}
-              >
-                Upload Work
-              </li>
-              <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("notifications");
-                  setIsMenuOpen(false);
-                }}
-              >
-                Notifications
-              </li>
+            <ul className="space-y-3 text-gray-700 text-sm">
+              {[
+                { label: "Dashboard", key: "dashboard" },
+                { label: "Upload Work", key: "uploadWork" },
+                { label: "Notifications", key: "notifications" },
+              ].map((item) => (
+                <li
+                  key={item.key}
+                  className="cursor-pointer hover:text-amber-700"
+                  onClick={() => {
+                    setCurrentView(item.key as StudentView);
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  {item.label}
+                </li>
+              ))}
             </ul>
           </div>
         )}
 
-        {/* Right side icons */}
+        {/* Right-side icons */}
         <div className="flex items-center gap-4">
-          <span className="text-gray-600">Welcome, {userName}</span>
           <Bell
             className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
             onClick={() => setCurrentView("notifications")}
@@ -129,7 +119,7 @@ const StudentDashboardShell = () => {
           <p className="text-sm text-gray-600 mb-4">
             A reset link will be sent to your email.
           </p>
-          <DialogFooter className="flex justify-end gap-2">
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2">
             <Button variant="outline" onClick={() => setResetModalOpen(false)}>
               Cancel
             </Button>
@@ -145,19 +135,30 @@ const StudentDashboardShell = () => {
 
       {/* Logout Confirmation Modal */}
       <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-full mx-0 sm:mx-auto sm:rounded-lg">
           <DialogHeader>
-            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Confirm Logout
+            </DialogTitle>
           </DialogHeader>
+
           <p className="text-sm text-gray-600 mb-4">
             Are you sure you want to logout?
           </p>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setLogoutModalOpen(false)}>
+
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setLogoutModalOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Link to="/">
-              <Button className="bg-red-600 text-white">Logout</Button>
+
+            <Link to="/" className="w-full sm:w-auto">
+              <Button className="bg-red-600 text-white w-full sm:w-auto">
+                Logout
+              </Button>
             </Link>
           </DialogFooter>
         </DialogContent>
