@@ -27,6 +27,27 @@ export default function NotificationsTab() {
     },
   ];
 
+  const provostNotifications = [
+    {
+      id: 1,
+      title: "New External Examiner Added",
+      message: "Dr. Jane Smith has been added as an external examiner.",
+      date: "June 24, 2025",
+      unread: true,
+      role: "PROVOST",
+      icon: <Users size={20} className="text-blue-600" />,
+    },
+    {
+      id: 2,
+      title: "Final Defense Scheduled",
+      message: "Final defense for PhD candidates scheduled for July 5.",
+      date: "June 29, 2025",
+      unread: false,
+      role: "PROVOST",
+      icon: <CalendarCheck size={20} className="text-green-600" />,
+    },
+  ];
+
   const pgcNotifications = [
     {
       id: 3,
@@ -49,7 +70,7 @@ export default function NotificationsTab() {
   ];
 
   const notifications =
-    role === "HOD" ? hodNotifications : role === "PG_COORD" ? pgcNotifications : [];
+    role === "HOD" ? hodNotifications : role === "PG_COORD" ? pgcNotifications : provostNotifications;
 
   return <NotificationCenter notifications={notifications} />;
 }

@@ -1,7 +1,7 @@
 // src/AuthProvider.tsx
 import { createContext, useState, ReactNode, useContext } from 'react';
 
-export type Role = 'HOD' | 'PG_COORD' | 'SUPERVISOR' | 'STUDENT';
+export type Role = 'HOD' | 'PG_COORD' | 'PROVOST' | 'SUPERVISOR' | 'STUDENT';
 
 interface AuthContextProps {
   role: Role;

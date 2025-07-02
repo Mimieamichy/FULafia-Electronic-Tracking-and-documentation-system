@@ -21,6 +21,7 @@ type Student = {
     external: number | null;
   };
   fileUrl: string;
+  supervisorFileUrl?: string;
   comments: { by: string; text: string }[];
 };
 
@@ -33,6 +34,7 @@ const mockMyStudents: Student[] = [
     stage: "Second Seminar",
     scores: { proposal: 90, internal: 85, external: null },
     fileUrl: "https://example.com/alice.pdf",
+    supervisorFileUrl: "", // 🔁 Initially empty
     comments: [{ by: "Dr. Moses", text: "Well structured draft." }],
   },
   {
@@ -43,6 +45,7 @@ const mockMyStudents: Student[] = [
     stage: "First Seminar",
     scores: { proposal: 75, internal: null, external: null },
     fileUrl: "https://example.com/bob.pdf",
+    supervisorFileUrl: "", // 🔁 Initially empty
     comments: [],
   },
 ];
@@ -98,9 +101,15 @@ export default function MyStudentsPage() {
                 <td className="p-3 border text-sm">{stu.matNo}</td>
                 <td className="p-3 border text-sm">{stu.topic}</td>
                 <td className="p-3 border text-sm">{stu.stage}</td>
-                <td className="p-3 border text-sm">{stu.scores.proposal ?? "—"}</td>
-                <td className="p-3 border text-sm">{stu.scores.internal ?? "—"}</td>
-                <td className="p-3 border text-sm">{stu.scores.external ?? "—"}</td>
+                <td className="p-3 border text-sm">
+                  {stu.scores.proposal ?? "—"}
+                </td>
+                <td className="p-3 border text-sm">
+                  {stu.scores.internal ?? "—"}
+                </td>
+                <td className="p-3 border text-sm">
+                  {stu.scores.external ?? "—"}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -108,19 +117,22 @@ export default function MyStudentsPage() {
       </div>
 
       {/* Modal */}
-      <Dialog open={selected !== null} onOpenChange={() => setSelectedIdx(null)}>
+      <Dialog
+        open={selected !== null}
+        onOpenChange={() => setSelectedIdx(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {selected?.name}'s Submission
-            </DialogTitle>
+            <DialogTitle>{selected?.name}'s Submission</DialogTitle>
           </DialogHeader>
 
           {selected && (
             <div className="space-y-6">
               {/* PDF Link */}
               <div className="p-4 border rounded bg-gray-50">
-                <p className="text-sm text-gray-600 mb-2">Download Submitted Work:</p>
+                <p className="text-sm text-gray-600 mb-2">
+                  Download Submitted Work:
+                </p>
                 <a
                   href={selected.fileUrl}
                   target="_blank"
@@ -132,11 +144,47 @@ export default function MyStudentsPage() {
                 </a>
               </div>
 
+              {/* Supervisor Upload & Link */}
+              <div className="p-4 border rounded bg-gray-50 space-y-2">
+                <p className="text-sm text-gray-600 mb-1">
+                  Upload a file for this student:
+                </p>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    // For mock, simulate URL
+                    const fakeUrl = URL.createObjectURL(file);
+                    const copy = [...students];
+                    copy[selectedIdx].supervisorFileUrl = fakeUrl;
+                    setStudents(copy);
+                  }}
+                />
+                {selected.supervisorFileUrl && (
+                  <div className="text-sm mt-2">
+                    <span className="text-gray-600">Uploaded File: </span>
+                    <a
+                      href={selected.supervisorFileUrl}
+                      download
+                      className="text-amber-700 underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Supervisor Upload.pdf
+                    </a>
+                  </div>
+                )}
+              </div>
+
               {/* Existing Comments */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Comments:</p>
                 {selected.comments.length === 0 ? (
-                  <p className="text-gray-500 italic text-sm">No comments yet.</p>
+                  <p className="text-gray-500 italic text-sm">
+                    No comments yet.
+                  </p>
                 ) : (
                   <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
                     {selected.comments.map((c, i) => (

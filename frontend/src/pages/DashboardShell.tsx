@@ -12,23 +12,27 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-import HodDashboardOverview from "./hod&pgc/HodDashboardOverview";
-import PgLecturerManagement from "./hod&pgc/PgLecturerManagement";
-import StudentSessionManagement from "./hod&pgc/StudentSessionManagement";
-import NotificationsTab from "./hod&pgc/NotificationsTab";
-import MyStudentListPage from "./hod&pgc/MyStudentListPage";
-import CreateSession from "./hod&pgc/CreateSession";
+import HodDashboardOverview from "./provost&co/HodDashboardOverview";
+import PgLecturerManagement from "./provost&co/PgLecturerManagement";
+import StudentSessionManagement from "./provost&co/StudentSessionManagement";
+import NotificationsTab from "./provost&co/NotificationsTab";
+import MyStudentsPage from "./supervisor/MyStudentsPage";
+import CreateSession from "./provost&co/CreateSession";
+import ProvostDashboardOverview from "./provost&co/ProvostDashboard";
+import ProvostActivityLog from "./provost&co/ProvostActivityLog";
 
 export type DashboardView =
   | "overview"
   | "pgLecturer"
   | "studentSession"
   | "notifications"
+  | "activityLog"
   | "myStudents";
 
 const DashboardShell = () => {
   const { role } = useAuth();
   const isHod = role === "HOD";
+  const isProvost = role === "PROVOST";
 
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
@@ -68,17 +72,19 @@ const DashboardShell = () => {
   const renderView = () => {
     switch (currentView) {
       case "overview":
-        return (
-          <HodDashboardOverview
+        return isProvost
+        ? <ProvostDashboardOverview />
+        : <HodDashboardOverview
             onCreateSessionClick={() => setSessionModalOpen(true)}
-          />
-        );
+          />;
       case "pgLecturer":
         return <PgLecturerManagement />;
       case "studentSession":
         return <StudentSessionManagement />;
       case "myStudents":
-        return <MyStudentListPage />;
+        return <MyStudentsPage />;
+      case "activityLog":
+        return isProvost ? <ProvostActivityLog /> : null;
       case "notifications":
         return <NotificationsTab />;
 
@@ -123,6 +129,8 @@ const DashboardShell = () => {
               >
                 {isHod
                   ? "PG Coordinator & Lecturers"
+                  : isProvost
+                  ? "External Examiners & Lecturers"
                   : "Student & Lecturer Management"}
               </li>
               <li
@@ -143,6 +151,17 @@ const DashboardShell = () => {
               >
                 My Students
               </li>
+              {isProvost && (
+                <li
+                  className="hover:text-amber-700 cursor-pointer"
+                  onClick={() => {
+                    setCurrentView("activityLog");
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  Activity Log
+                </li>
+              )}
               <li
                 className="hover:text-amber-700 cursor-pointer"
                 onClick={() => {

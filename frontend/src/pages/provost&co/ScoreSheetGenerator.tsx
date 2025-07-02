@@ -8,29 +8,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "../AuthProvider"; // 🔁 adjust this path to your actual AuthProvider location
 
 interface Criterion {
   title: string;
   percentage: number;
-}
-
-interface PanelMember {
-  id: string;
-  name: string;
-}
-
-async function fetchPanelMembers(): Promise<PanelMember[]> {
-  return [
-    { id: "p1", name: "Dr. Alice" },
-    { id: "p2", name: "Prof. Bob" },
-    { id: "p3", name: "Dr. Carol" },
-  ];
 }
 
 async function fetchStudentsByStage(stage: string): Promise<string[]> {
@@ -44,29 +26,29 @@ async function fetchStudentsByStage(stage: string): Promise<string[]> {
 }
 
 export default function ScoreSheetGenerator() {
-  const stages = [
+  const { role } = useAuth(); // 🔁 make sure your useAuth provides role
+  const isProvost = role === "PROVOST";
+
+  const allStages = [
     "First Seminar",
     "Second Seminar",
     "Third Seminar",
     "External Defense",
   ];
 
-  const [stage, setStage] = useState(stages[0]);
+  const allowedStages = isProvost
+    ? ["External Defense"]
+    : allStages.slice(0, 3); // All except External Defense
+
+ const [stage, setStage] = useState<string>(isProvost ? "External Defense" : "First Seminar");
+;
   const [criteria, setCriteria] = useState<Criterion[]>([
     { title: "Clarity", percentage: 30 },
     { title: "Originality", percentage: 70 },
   ]);
   const [newCriterion, setNewCriterion] = useState("");
   const [newPercentage, setNewPercentage] = useState("");
-
-  const [panelMembers, setPanelMembers] = useState<PanelMember[]>([]);
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-
   const [students, setStudents] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetchPanelMembers().then(setPanelMembers);
-  }, []);
 
   useEffect(() => {
     fetchStudentsByStage(stage).then(setStudents);
@@ -96,26 +78,17 @@ export default function ScoreSheetGenerator() {
     setCriteria((c) => c.filter((_, i) => i !== idx));
 
   const handlePublish = async () => {
-    if (
-      !isTotalValid ||
-      criteria.length === 0 ||
-      students.length === 0 ||
-      selectedMembers.length === 0
-    )
-      return;
+    if (!isTotalValid || criteria.length === 0 || students.length === 0) return;
 
     const payload = {
       stage,
       criteria,
-      panelMemberIds: selectedMembers,
       students,
     };
 
     console.log("Publishing rubric:", payload);
     await new Promise((res) => setTimeout(res, 500));
-    alert(
-      `Rubric for ${stage} sent to ${selectedMembers.length} panel member(s).`
-    );
+    alert(`Rubric for ${stage} published successfully.`);
   };
 
   return (
@@ -135,50 +108,13 @@ export default function ScoreSheetGenerator() {
             <SelectValue placeholder="Select stage" />
           </SelectTrigger>
           <SelectContent>
-            {stages.map((s) => (
+            {allowedStages.map((s) => (
               <SelectItem key={s} value={s}>
                 {s}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Panel Member Multi‑Select */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-0 sm:w-40">
-          Select Panel Members
-        </label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto text-left min-w-[180px]">
-              {selectedMembers.length > 0
-                ? `${selectedMembers.length} selected`
-                : "Choose panel members"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 max-w-full">
-            <div className="flex flex-col space-y-2 max-h-60 overflow-y-auto">
-              {panelMembers.map((p) => (
-                <label key={p.id} className="flex items-center cursor-pointer select-none">
-                  <Checkbox
-                    checked={selectedMembers.includes(p.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedMembers([...selectedMembers, p.id]);
-                      } else {
-                        setSelectedMembers(
-                          selectedMembers.filter((id) => id !== p.id)
-                        );
-                      }
-                    }}
-                  />
-                  <span className="ml-2">{p.name}</span>
-                </label>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
 
       {/* Criteria Editor */}
@@ -244,11 +180,16 @@ export default function ScoreSheetGenerator() {
 
       {/* Generated Score‑Sheet Table */}
       <div>
-        <label className="block text-sm font-medium mb-1">Preview Score Sheet</label>
+        <label className="block text-sm font-medium mb-1">
+          Preview Score Sheet for <strong>{stage}</strong>
+        </label>
         <div className="overflow-x-auto border rounded">
+          <h1 className="text-lg font-semibold text-center">{stage} Score Sheet</h1>
           <table className="min-w-full border-collapse border text-center text-sm sm:text-base">
+           
             <thead>
               <tr>
+                
                 <th className="border px-2 py-1 whitespace-nowrap">Student Name</th>
                 {criteria.map((c) => (
                   <th
@@ -267,7 +208,7 @@ export default function ScoreSheetGenerator() {
                     <td className="border px-2 py-1 text-left">{stud}</td>
                     {criteria.map((_, j) => (
                       <td key={j} className="border px-2 py-1">
-                        {/* Score entry cells */}
+                        {/* Empty score cells */}
                       </td>
                     ))}
                   </tr>
@@ -293,10 +234,7 @@ export default function ScoreSheetGenerator() {
           onClick={handlePublish}
           className="bg-amber-700 hover:bg-amber-800 text-white whitespace-nowrap"
           disabled={
-            !isTotalValid ||
-            criteria.length === 0 ||
-            students.length === 0 ||
-            selectedMembers.length === 0
+            !isTotalValid || criteria.length === 0 || students.length === 0
           }
         >
           Publish Rubric

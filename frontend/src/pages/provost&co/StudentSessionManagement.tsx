@@ -26,6 +26,8 @@ interface StudentStage {
   externalDefenseDate: number | null;
   supervisor1: string;
   supervisor2: string;
+  department: string; // new
+  faculty: string;
 }
 
 interface Session {
@@ -53,15 +55,15 @@ const sessionNames = ["2023/2024", "2024/2025", "2025/2026"];
 const StudentSessionManagement = () => {
   const { role } = useAuth(); // 'HOD' or 'PGC'
   const isHod = role === "HOD";
+  const isProvost = role === "PROVOST";
 
   // Modal & selection state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
-  const [defenseStage, setDefenseStage] = useState<string>(defenseOptions[3]);
-
-  // Session dropdown state
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [defenseStage, setDefenseStage] = useState<string>(
+    isProvost ? defenseOptions[3] : defenseOptions[0]
+  );
 
   const [selectedSession, setSelectedSession] = useState<string>(
     sessionNames[0]
@@ -99,6 +101,8 @@ const StudentSessionManagement = () => {
       externalDefenseDate: 0,
       supervisor1: "Not Assigned",
       supervisor2: "Not Assigned",
+      department: "Computer Science", // new
+      faculty: "Faculty of Engineering",
     },
     {
       id: "2",
@@ -111,6 +115,50 @@ const StudentSessionManagement = () => {
       externalDefenseDate: null,
       supervisor1: "Not Assigned",
       supervisor2: "Not Assigned",
+      department: "Med Lab Science", // new
+      faculty: "Faculty of Medicine",
+    },
+    {
+      id: "3",
+      matNo: "220976768",
+      fullName: "Sarah Johnson",
+      topic: "AI-Powered Chatbot",
+      firstSem: 85,
+      secondSem: 90,
+      thirdSem: null,
+      externalDefenseDate: null,
+      supervisor1: "Not Assigned",
+      supervisor2: "Not Assigned",
+      department: "Mathematics", // new
+      faculty: "Faculty of Sciences",
+    },
+    {
+      id: "4",
+      matNo: "220976769",
+      fullName: "Michael Smith",
+      topic: "Blockchain-Based Voting System",
+      firstSem: 95,
+      secondSem: 100,
+      thirdSem: 100,
+      externalDefenseDate: null,
+      supervisor1: "Not Assigned",
+      supervisor2: "Not Assigned",
+      department: "Political Science", // new
+      faculty: "Faculty of Social Sciences",
+    },
+    {
+      id: "4",
+      matNo: "220976769",
+      fullName: "Michael Smith",
+      topic: "Blockchain-Based Voting System",
+      firstSem: 95,
+      secondSem: 100,
+      thirdSem: 100,
+      externalDefenseDate: null,
+      supervisor1: "Not Assigned",
+      supervisor2: "Not Assigned",
+      department: "Computer Science", // new
+      faculty: "Faculty of Engineering",
     },
     // …more rows
   ]);
@@ -121,7 +169,7 @@ const StudentSessionManagement = () => {
 
   // Selected defense stage
   const [selectedDefense, setSelectedDefense] = useState<string>(
-    defenseOptions[3]
+    isProvost ? defenseOptions[3] : defenseOptions[0]
   );
 
   // Assign supervisor handler
@@ -157,13 +205,23 @@ const StudentSessionManagement = () => {
   // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return students.filter(
-      (s) =>
+    return students.filter((s) => {
+      const base =
         s.matNo.includes(term) ||
         s.fullName.toLowerCase().includes(term) ||
-        s.topic.toLowerCase().includes(term)
-    );
-  }, [students, search]);
+        s.topic.toLowerCase().includes(term);
+
+      if (isProvost) {
+        // Provost can also search by dept/faculty
+        return (
+          base ||
+          s.department.toLowerCase().includes(term) ||
+          s.faculty.toLowerCase().includes(term)
+        );
+      }
+      return base;
+    });
+  }, [students, search, isProvost]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice(
@@ -201,7 +259,6 @@ const StudentSessionManagement = () => {
         <h2 className="text-lg font-semibold text-gray-800">
           {degreeTab} Ready for {selectedDefense}
         </h2>
-
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center w-full sm:w-auto">
           {/* Defense Stage */}
           <div className="flex items-center gap-2">
@@ -217,11 +274,13 @@ const StudentSessionManagement = () => {
                 <SelectValue placeholder={selectedDefense} />
               </SelectTrigger>
               <SelectContent>
-                {defenseOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
+                {(isProvost ? ["External Defense"] : defenseOptions).map(
+                  (opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -259,53 +318,99 @@ const StudentSessionManagement = () => {
         </div>
 
         {/* Schedule Defense Button */}
-        <div className="mt-2 sm:mt-0">
-          <Button
-            className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
-            onClick={() => {
-              setDefenseStage(selectedDefense);
-              setDefenseModalOpen(true);
-            }}
-          >
-            Schedule {selectedDefense}
-          </Button>
-        </div>
+
+        {/* Non‑Provost: schedule all stages except External Defense */}
+        {!isProvost && selectedDefense !== "External Defense" && (
+          <div className="mt-2 sm:mt-0">
+            <Button
+              className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
+              onClick={() => {
+                setDefenseStage(selectedDefense);
+                setDefenseModalOpen(true);
+              }}
+            >
+              Schedule {selectedDefense}
+            </Button>
+          </div>
+        )}
+
+        {isProvost && defenseStage === "External Defense" && (
+          <div className="mt-4">
+            <Button
+              className="bg-amber-700 text-white w-full sm:w-auto"
+              onClick={() => setDefenseModalOpen(true)}
+            >
+              Schedule {selectedDefense}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Students Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto w-full">
-        <table className="min-w-[1000px] w-full text-left border-collapse">
+        <table className="min-w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="p-3 border">MAT NO.</th>
-              <th className="p-3 border">Full Name</th>
-              <th className="p-3 border">Topic</th>
-              <th className="p-3 border">First Seminar</th>
-              <th className="p-3 border">Second Seminar</th>
-              <th className="p-3 border">Third Seminar</th>
-              <th className="p-3 border">External Defense</th>
-              <th className="p-3 border">1st Supervisor</th>
-              <th className="p-3 border">2nd Supervisor</th>
-              {isHod && <th className="p-3 border">Advance</th>}
-              <th className="p-3 border">Status</th>
+            <tr className="bg-gray-50 text-sm">
+              {isProvost ? (
+                <>
+                  <th className="p-3 border">Matric No</th>
+                  <th className="p-3 border">Full Name</th>
+                  <th className="p-3 border">Project Topic</th>
+                  <th className="p-3 border">Current Stage</th>
+                  <th className="p-3 border">Department</th>
+                  <th className="p-3 border">Faculty</th>
+                </>
+              ) : (
+                <>
+                  <th className="p-3 border">MAT NO.</th>
+                  <th className="p-3 border">Full Name</th>
+                  <th className="p-3 border">Topic</th>
+                  <th className="p-3 border">First Seminar</th>
+                  <th className="p-3 border">Second Seminar</th>
+                  <th className="p-3 border">Third Seminar</th>
+                  <th className="p-3 border">External Defense</th>
+                  <th className="p-3 border">1st Supervisor</th>
+                  <th className="p-3 border">2nd Supervisor</th>
+                  {isHod && <th className="p-3 border">Advance</th>}
+                  <th className="p-3 border">Assign</th>
+                </>
+              )}
             </tr>
           </thead>
+
           <tbody>
             {paginated.map((s, idx) => {
-              const done =
-                (selectedDefense === "First Seminar" && s.firstSem === 100) ||
-                (selectedDefense === "Second Seminar" && s.secondSem === 100) ||
-                (selectedDefense === "Third Seminar" && s.thirdSem === 100) ||
-                (selectedDefense === "External Defense" &&
-                  s.externalDefenseDate != null);
+              if (isProvost) {
+                // For Provost we show just one row format:
+                const currentStage = defenseStage;
+                return (
+                  <tr
+                    key={s.id}
+                    className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
+                  >
+                    <td className="p-3 border">{s.matNo}</td>
+                    <td className="p-3 border">{s.fullName}</td>
+                    <td className="p-3 border">{s.topic}</td>
+                    <td className="p-3 border">{currentStage}</td>
+                    <td className="p-3 border">{s.department}</td>
+                    <td className="p-3 border">{s.faculty}</td>
+                  </tr>
+                );
+              }
 
-              const stageIndex = stageFlow.indexOf(selectedDefense as any);
-              const notFinal = stageIndex < stageFlow.length - 1;
+              // HOD/PGC row:
+              const done =
+                (defenseStage === "First Seminar" && s.firstSem === 100) ||
+                (defenseStage === "Second Seminar" && s.secondSem === 100) ||
+                (defenseStage === "Third Seminar" && s.thirdSem === 100);
+
+              const notFinal =
+                stageFlow.indexOf(defenseStage as any) < stageFlow.length - 1;
 
               return (
                 <tr
                   key={s.id}
-                  className={idx % 2 === 0 ? "bg-amber-50" : "bg-white"}
+                  className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                 >
                   <td className="p-3 border">{s.matNo}</td>
                   <td className="p-3 border">{s.fullName}</td>
@@ -316,7 +421,6 @@ const StudentSessionManagement = () => {
                   <td className="p-3 border">{s.externalDefenseDate ?? "—"}</td>
                   <td className="p-3 border">{s.supervisor1}</td>
                   <td className="p-3 border">{s.supervisor2}</td>
-
                   {isHod && (
                     <td className="p-3 border">
                       {done && notFinal ? (
@@ -332,7 +436,6 @@ const StudentSessionManagement = () => {
                       )}
                     </td>
                   )}
-
                   <td className="p-3 border">
                     <Button
                       size="sm"
@@ -352,7 +455,7 @@ const StudentSessionManagement = () => {
             {paginated.length === 0 && (
               <tr>
                 <td
-                  colSpan={colCount}
+                  colSpan={isProvost ? 6 : isHod ? 11 : 10}
                   className="text-center p-4 text-gray-500"
                 >
                   No students found.

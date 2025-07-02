@@ -38,6 +38,7 @@ const SignIn = () => {
     switch (formData.role) {
       case "HOD":
       case "PG_COORD":
+      case "PROVOST":
         navigate("/dashboard");
         break;
       case "SUPERVISOR":
@@ -115,7 +116,7 @@ const SignIn = () => {
                 Select Role:
               </label>
               <div className="grid grid-cols-2 gap-4">
-                {(["HOD", "PG_COORD", "SUPERVISOR", "STUDENT"] as Role[]).map(
+                {(["HOD", "PG_COORD", "PROVOST", "SUPERVISOR", "STUDENT"] as Role[]).map(
                   (r) => (
                     <label
                       key={r}
