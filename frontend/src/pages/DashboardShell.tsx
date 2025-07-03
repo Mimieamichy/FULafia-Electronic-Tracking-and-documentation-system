@@ -20,6 +20,7 @@ import MyStudentsPage from "./supervisor/MyStudentsPage";
 import CreateSession from "./provost&co/CreateSession";
 import ProvostDashboardOverview from "./provost&co/ProvostDashboard";
 import ProvostActivityLog from "./provost&co/ProvostActivityLog";
+import DefenseDayPage from "./DefenseDayPage";
 
 export type DashboardView =
   | "overview"
@@ -27,6 +28,7 @@ export type DashboardView =
   | "studentSession"
   | "notifications"
   | "activityLog"
+  | "defenseDay"
   | "myStudents";
 
 const DashboardShell = () => {
@@ -85,6 +87,8 @@ const DashboardShell = () => {
         return <MyStudentsPage />;
       case "activityLog":
         return isProvost ? <ProvostActivityLog /> : null;
+      case "defenseDay":
+        return <DefenseDayPage />;
       case "notifications":
         return <NotificationsTab />;
 
@@ -162,6 +166,15 @@ const DashboardShell = () => {
                   Activity Log
                 </li>
               )}
+              <li
+                className="hover:text-amber-700 cursor-pointer"
+                onClick={() => {
+                  setCurrentView("defenseDay");
+                  setIsMenuOpen(false);
+                }}
+              >
+                Defense Day
+              </li>
               <li
                 className="hover:text-amber-700 cursor-pointer"
                 onClick={() => {

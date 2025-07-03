@@ -41,6 +41,9 @@ const SignIn = () => {
       case "PROVOST":
         navigate("/dashboard");
         break;
+      case "DEAN":
+        navigate("/dean");
+        break;
       case "SUPERVISOR":
         navigate("/supervisor");
         break;
@@ -116,28 +119,35 @@ const SignIn = () => {
                 Select Role:
               </label>
               <div className="grid grid-cols-2 gap-4">
-                {(["HOD", "PG_COORD", "PROVOST", "SUPERVISOR", "STUDENT"] as Role[]).map(
-                  (r) => (
-                    <label
-                      key={r}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="role"
-                        value={r}
-                        checked={formData.role === r}
-                        onChange={(e) =>
-                          handleInputChange("role", e.target.value)
-                        }
-                      />
-                      {r === "PG_COORD"
-                        ? "PG Coordinator"
-                        : r.charAt(0) +
-                          r.slice(1).toLowerCase().replace("_", " ")}
-                    </label>
-                  )
-                )}
+                {(
+                  [
+                    "HOD",
+                    "PG_COORD",
+                    "PROVOST",
+                    "DEAN",
+                    "SUPERVISOR",
+                    "STUDENT",
+                  ] as Role[]
+                ).map((r) => (
+                  <label
+                    key={r}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value={r}
+                      checked={formData.role === r}
+                      onChange={(e) =>
+                        handleInputChange("role", e.target.value)
+                      }
+                    />
+                    {r === "PG_COORD"
+                      ? "PG Coordinator"
+                      : r.charAt(0) +
+                        r.slice(1).toLowerCase().replace("_", " ")}
+                  </label>
+                ))}
               </div>
             </div>
 

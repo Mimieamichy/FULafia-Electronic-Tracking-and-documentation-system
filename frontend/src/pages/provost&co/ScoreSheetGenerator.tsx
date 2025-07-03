@@ -1,3 +1,4 @@
+// src/pgc/ScoreSheetGenerator.tsx
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,25 +9,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "../AuthProvider"; // 🔁 adjust this path to your actual AuthProvider location
+import { useAuth } from "../AuthProvider"; // adjust path as needed
 
 interface Criterion {
   title: string;
   percentage: number;
 }
 
-async function fetchStudentsByStage(stage: string): Promise<string[]> {
-  const dummy = {
-    "First Seminar": ["John Doe", "Jane Smith"],
-    "Second Seminar": ["Jim Bean", "Jenny Lane"],
-    "Third Seminar": ["Paul Allen"],
-    "External Defense": ["Lisa Ray", "Mark Twain"],
+interface Student {
+  matNo: string;
+  name: string;
+  topic: string;
+}
+
+// Mock fetch
+async function fetchStudentsByStage(stage: string): Promise<Student[]> {
+  const dummy: Record<string, Student[]> = {
+    "First Seminar": [
+      { matNo: "220976780", name: "John Doe", topic: "Quantum Computing" },
+      { matNo: "220976781", name: "Jane Smith", topic: "Renewable Energy" },
+    ],
+    "Second Seminar": [
+      { matNo: "220976782", name: "Jim Bean", topic: "Cybersecurity" },
+      { matNo: "220976783", name: "Jenny Lane", topic: "Data Mining" },
+    ],
+    "Third Seminar": [{ matNo: "220976784", name: "Paul Allen", topic: "AI Ethics" }],
+    "External Defense": [
+      { matNo: "220976785", name: "Lisa Ray", topic: "Blockchain Voting" },
+      { matNo: "220976786", name: "Mark Twain", topic: "Nanotechnology" },
+    ],
   };
   return dummy[stage] || [];
 }
 
 export default function ScoreSheetGenerator() {
-  const { role } = useAuth(); // 🔁 make sure your useAuth provides role
+  const { role } = useAuth();
   const isProvost = role === "PROVOST";
 
   const allStages = [
@@ -35,20 +52,20 @@ export default function ScoreSheetGenerator() {
     "Third Seminar",
     "External Defense",
   ];
-
   const allowedStages = isProvost
     ? ["External Defense"]
-    : allStages.slice(0, 3); // All except External Defense
+    : allStages.slice(0, 3);
 
- const [stage, setStage] = useState<string>(isProvost ? "External Defense" : "First Seminar");
-;
+  const [stage, setStage] = useState<string>(
+    isProvost ? "External Defense" : "First Seminar"
+  );
   const [criteria, setCriteria] = useState<Criterion[]>([
     { title: "Clarity", percentage: 30 },
     { title: "Originality", percentage: 70 },
   ]);
   const [newCriterion, setNewCriterion] = useState("");
   const [newPercentage, setNewPercentage] = useState("");
-  const [students, setStudents] = useState<string[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
 
   useEffect(() => {
     fetchStudentsByStage(stage).then(setStudents);
@@ -68,7 +85,6 @@ export default function ScoreSheetGenerator() {
       criteria.some((c) => c.title.toLowerCase() === title.toLowerCase())
     )
       return;
-
     setCriteria([...criteria, { title, percentage }]);
     setNewCriterion("");
     setNewPercentage("");
@@ -79,13 +95,7 @@ export default function ScoreSheetGenerator() {
 
   const handlePublish = async () => {
     if (!isTotalValid || criteria.length === 0 || students.length === 0) return;
-
-    const payload = {
-      stage,
-      criteria,
-      students,
-    };
-
+    const payload = { stage, criteria, students };
     console.log("Publishing rubric:", payload);
     await new Promise((res) => setTimeout(res, 500));
     alert(`Rubric for ${stage} published successfully.`);
@@ -103,7 +113,7 @@ export default function ScoreSheetGenerator() {
         >
           Defense Stage
         </label>
-        <Select value={stage} onValueChange={(v) => setStage(v)}>
+        <Select value={stage} onValueChange={setStage}>
           <SelectTrigger id="stage-select" className="w-full sm:w-auto min-w-[180px]">
             <SelectValue placeholder="Select stage" />
           </SelectTrigger>
@@ -134,7 +144,6 @@ export default function ScoreSheetGenerator() {
               <button
                 onClick={() => handleRemoveCriterion(idx)}
                 className="text-red-600 hover:text-red-800"
-                aria-label={`Remove criterion ${c.title}`}
               >
                 Remove
               </button>
@@ -161,41 +170,31 @@ export default function ScoreSheetGenerator() {
             min={1}
             max={100}
           />
-          <Button
-            onClick={handleAddCriterion}
-            className="bg-amber-700 text-white whitespace-nowrap"
-          >
+          <Button onClick={handleAddCriterion} className="bg-amber-700 text-white">
             Add
           </Button>
         </div>
 
-        <div
-          className={`text-sm mt-2 ${
-            isTotalValid ? "text-green-600" : "text-red-600"
-          }`}
-        >
+        <div className={`text-sm mt-2 ${isTotalValid ? "text-green-600" : "text-red-600"}`}>
           Total: {totalPercentage}% {isTotalValid ? "(Valid)" : "(Must equal 100%)"}
         </div>
       </div>
 
-      {/* Generated Score‑Sheet Table */}
+      {/* Preview Table */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Preview Score Sheet for <strong>{stage}</strong>
         </label>
         <div className="overflow-x-auto border rounded">
-          <h1 className="text-lg font-semibold text-center">{stage} Score Sheet</h1>
+          <h3 className="text-lg font-semibold text-center my-2">{stage} Score Sheet</h3>
           <table className="min-w-full border-collapse border text-center text-sm sm:text-base">
-           
             <thead>
               <tr>
-                
-                <th className="border px-2 py-1 whitespace-nowrap">Student Name</th>
+                <th className="border px-2 py-1">Matric No</th>
+                <th className="border px-2 py-1">Student Name</th>
+                <th className="border px-2 py-1">Project Topic</th>
                 {criteria.map((c) => (
-                  <th
-                    key={c.title}
-                    className="border px-2 py-1 whitespace-nowrap"
-                  >
+                  <th key={c.title} className="border px-2 py-1 whitespace-nowrap">
                     {c.title} ({c.percentage}%)
                   </th>
                 ))}
@@ -205,20 +204,19 @@ export default function ScoreSheetGenerator() {
               {students.length > 0 ? (
                 students.map((stud, i) => (
                   <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-amber-50"}>
-                    <td className="border px-2 py-1 text-left">{stud}</td>
+                    <td className="border px-2 py-1">{stud.matNo}</td>
+                    <td className="border px-2 py-1 text-left">{stud.name}</td>
+                    <td className="border px-2 py-1 text-left">{stud.topic}</td>
                     {criteria.map((_, j) => (
                       <td key={j} className="border px-2 py-1">
-                        {/* Empty score cells */}
+                        {/* Empty score cell */}
                       </td>
                     ))}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td
-                    colSpan={criteria.length + 1}
-                    className="border px-2 py-2 text-gray-500"
-                  >
+                  <td colSpan={criteria.length + 3} className="border px-2 py-2 text-gray-500">
                     No students ready for this stage.
                   </td>
                 </tr>
@@ -233,9 +231,7 @@ export default function ScoreSheetGenerator() {
         <Button
           onClick={handlePublish}
           className="bg-amber-700 hover:bg-amber-800 text-white whitespace-nowrap"
-          disabled={
-            !isTotalValid || criteria.length === 0 || students.length === 0
-          }
+          disabled={!isTotalValid || criteria.length === 0 || students.length === 0}
         >
           Publish Rubric
         </Button>

@@ -47,6 +47,8 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
             <SelectContent>
               <SelectItem value="supervisor1">1st Supervisor</SelectItem>
               <SelectItem value="supervisor2">2nd Supervisor</SelectItem>
+              <SelectItem value="internalExaminer">Internal Examiner</SelectItem>
+              {/* You can add more types if needed */}
             </SelectContent>
           </Select>
         </div>
@@ -61,6 +63,8 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
             <SelectContent>
               <SelectItem value="Dr. Florence Okeke">Dr. Florence Okeke</SelectItem>
               <SelectItem value="Prof. Musa Ibrahim">Prof. Musa Ibrahim</SelectItem>
+              <SelectItem value="Dr. John Doe">Dr. John Doe</SelectItem>
+              <SelectItem value="Dr. Jane Smith">Dr. Jane Smith</SelectItem>
               {/* You can map lecturer list dynamically here */}
             </SelectContent>
           </Select>

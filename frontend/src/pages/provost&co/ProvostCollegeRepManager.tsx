@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/provost/ProvostCollegeRepManager.tsx
+import React, { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,15 +15,16 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
 
 // Mock data
 const departments = [
-    "Computer Science",
-    "Electrical Engineering",
-    "Statistics",
-    "Mathematics",
-    "Physics",
+  "Computer Science",
+  "Electrical Engineering",
+  "Statistics",
+  "Mathematics",
+  "Physics",
 ];
 
 const lecturers = [
@@ -46,14 +48,24 @@ export default function ProvostCollegeRepManager() {
 
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [selectedLecturerId, setSelectedLecturerId] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filtered list based on searchTerm
+  const filteredReps = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return reps.filter(
+      (r) =>
+        r.faculty.toLowerCase().includes(term) ||
+        r.lecturerName.toLowerCase().includes(term)
+    );
+  }, [reps, searchTerm]);
 
   const handleAssign = () => {
-    const existing = reps.find((r) => r.faculty === selectedFaculty);
-    if (existing) {
+    // prevent duplicate per faculty
+    if (reps.some((r) => r.faculty === selectedFaculty)) {
       alert("This faculty already has a college rep assigned.");
       return;
     }
-
     const lecturer = lecturers.find((l) => l.id === selectedLecturerId);
     if (!lecturer || !selectedFaculty) return;
 
@@ -78,7 +90,7 @@ export default function ProvostCollegeRepManager() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-semibold text-gray-800">
           Appointed College Representatives
         </h2>
@@ -88,6 +100,16 @@ export default function ProvostCollegeRepManager() {
         >
           Assign New Rep
         </Button>
+      </div>
+
+      {/* Search Box */}
+      <div className="mb-4">
+        <Input
+          placeholder="Search by department or lecturer"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-md"
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
@@ -100,7 +122,7 @@ export default function ProvostCollegeRepManager() {
             </tr>
           </thead>
           <tbody>
-            {reps.map((rep, idx) => (
+            {filteredReps.map((rep, idx) => (
               <tr
                 key={rep.id}
                 className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
@@ -117,10 +139,10 @@ export default function ProvostCollegeRepManager() {
                 </td>
               </tr>
             ))}
-            {reps.length === 0 && (
+            {filteredReps.length === 0 && (
               <tr>
                 <td colSpan={3} className="text-center p-4 text-gray-500">
-                  No college representatives appointed.
+                  No college representatives found.
                 </td>
               </tr>
             )}
@@ -176,7 +198,7 @@ export default function ProvostCollegeRepManager() {
               </Select>
             </div>
           </div>
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-6 flex justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => setModalOpen(false)}

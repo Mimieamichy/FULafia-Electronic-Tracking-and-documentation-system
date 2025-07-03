@@ -9,11 +9,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pen  } from "lucide-react";
 import AssignSupervisorModal from "./AssignSupervisorModal";
 import SetDefenseModal from "./SetDefenseModal";
 import { mockSaveDefense } from "@/lib/mockDefenseService";
 import { useAuth } from "../AuthProvider";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface StudentStage {
   id: string;
@@ -28,11 +35,6 @@ interface StudentStage {
   supervisor2: string;
   department: string; // new
   faculty: string;
-}
-
-interface Session {
-  id: string;
-  name: string;
 }
 
 const defenseOptions = [
@@ -64,10 +66,28 @@ const StudentSessionManagement = () => {
   const [defenseStage, setDefenseStage] = useState<string>(
     isProvost ? defenseOptions[3] : defenseOptions[0]
   );
+  // 👇 new state
+  const [selectedDepartmentForDefense, setSelectedDepartmentForDefense] =
+    useState<string>("");
 
   const [selectedSession, setSelectedSession] = useState<string>(
     sessionNames[0]
   );
+  // track which student we’re acting on
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+
+  // open the modal for a given student
+  const openActionModal = (studentId: string) => {
+    setActionStudentId(studentId);
+    setActionModalOpen(true);
+  };
+
+  // close and clear selection
+  const closeActionModal = () => {
+    setActionModalOpen(false);
+    setActionStudentId(null);
+  };
 
   // Panel candidates (stub)
   const panelCandidates = [
@@ -80,7 +100,9 @@ const StudentSessionManagement = () => {
     date: string;
     time: string;
     panel: string[];
+    department?: string; // 👈 department is optional
   }) => {
+    console.log("Scheduling for department:", data.department);
     await mockSaveDefense(data);
   };
 
@@ -175,7 +197,7 @@ const StudentSessionManagement = () => {
   // Assign supervisor handler
   const handleAssign = (
     studentId: string,
-    supType: "supervisor1" | "supervisor2",
+    supType: "supervisor1" | "supervisor2" | "internalExaminer",
     lecturerName: string
   ) => {
     setStudents((prev) =>
@@ -200,7 +222,13 @@ const StudentSessionManagement = () => {
     );
   };
 
-  // Load mock sessions once
+  // when HOD clicks “Approve”
+  const handleApprove = () => {
+    if (actionStudentId) {
+      advanceStudentStage(actionStudentId);
+    }
+    closeActionModal();
+  };
 
   // Filter + paginate
   const filtered = useMemo(() => {
@@ -229,8 +257,10 @@ const StudentSessionManagement = () => {
     page * itemsPerPage
   );
 
-  // Number of columns (10 base + advance if HOD + 1 status)
-  const colCount = 10 + (isHod ? 1 : 0) + 1;
+  const closeDefenseModal = () => {
+    setDefenseModalOpen(false);
+    setSelectedDepartmentForDefense("");
+  };
 
   return (
     <div className="space-y-6">
@@ -273,6 +303,7 @@ const StudentSessionManagement = () => {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder={selectedDefense} />
               </SelectTrigger>
+
               <SelectContent>
                 {(isProvost ? ["External Defense"] : defenseOptions).map(
                   (opt) => (
@@ -317,8 +348,6 @@ const StudentSessionManagement = () => {
           </div>
         </div>
 
-        {/* Schedule Defense Button */}
-
         {/* Non‑Provost: schedule all stages except External Defense */}
         {!isProvost && selectedDefense !== "External Defense" && (
           <div className="mt-2 sm:mt-0">
@@ -334,11 +363,38 @@ const StudentSessionManagement = () => {
           </div>
         )}
 
-        {isProvost && defenseStage === "External Defense" && (
-          <div className="mt-4">
+        {isProvost && selectedDefense === "External Defense" && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
+            {/* Department Selector */}
+            <Select
+              value={selectedDepartmentForDefense}
+              onValueChange={setSelectedDepartmentForDefense}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select Department" />
+              </SelectTrigger>
+              <SelectContent>
+                {/* replace with your real departments */}
+                {[
+                  "Computer Science",
+                  "Electrical Engineering",
+                  "Statistics" /*…*/,
+                ].map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Now that a department is chosen, enable schedule button */}
             <Button
               className="bg-amber-700 text-white w-full sm:w-auto"
-              onClick={() => setDefenseModalOpen(true)}
+              onClick={() => {
+                setDefenseStage(selectedDefense);
+                setDefenseModalOpen(true);
+              }}
+              disabled={!selectedDepartmentForDefense}
             >
               Schedule {selectedDefense}
             </Button>
@@ -371,7 +427,7 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">External Defense</th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
-                  {isHod && <th className="p-3 border">Advance</th>}
+                  {isHod && <th className="p-3 border">Action</th>}
                   <th className="p-3 border">Assign</th>
                 </>
               )}
@@ -426,10 +482,11 @@ const StudentSessionManagement = () => {
                       {done && notFinal ? (
                         <Button
                           size="sm"
-                          className="bg-green-600 text-white"
-                          onClick={() => advanceStudentStage(s.id)}
+                          variant="outline"
+                          onClick={() => openActionModal(s.id)}
+                          aria-label="Open action menu"
                         >
-                          Approve Next
+                          <Pen className="w-4 h-4" />
                         </Button>
                       ) : (
                         <span className="text-gray-400">—</span>
@@ -497,11 +554,35 @@ const StudentSessionManagement = () => {
 
       <SetDefenseModal
         isOpen={defenseModalOpen}
-        onClose={() => setDefenseModalOpen(false)}
+        onClose={closeDefenseModal}
         defenseStage={defenseStage}
         lecturers={panelCandidates}
-        onSubmit={handleDefenseSubmit}
+        onSubmit={(data) =>
+          handleDefenseSubmit({
+            ...data,
+            department: isProvost ? selectedDepartmentForDefense : undefined,
+          })
+        }
       />
+
+      <Dialog open={actionModalOpen} onOpenChange={closeActionModal}>
+        <DialogContent className="max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle>Approve Next Stage?</DialogTitle>
+          </DialogHeader>
+          <p className="px-6 text-gray-700">
+            Do you want to approve this student for the next stage or decline?
+          </p>
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={closeActionModal}>
+              Decline
+            </Button>
+            <Button className="bg-amber-700 text-white" onClick={handleApprove}>
+              Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

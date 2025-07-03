@@ -11,19 +11,25 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import SupervisorDashboard from "./SupervisorDashboard";
-import MyStudentsPage from "./MyStudentsPage";
-import SupervisorNotifications from "./SupervisorNotifications";
+import DeanDashboard from "./DeanDashboard";
+import MyStudentsPage from "../supervisor/MyStudentsPage";
+import DeanNotifications from "./Notification";
+import DeanActivityLog from "./DeanActivityLog";
 import DefenseDayPage from "../DefenseDayPage";
 
-export type SupervisorView = "dashboard" | "myStudents" | "defenseDay" | "notifications";
+export type DeanView =
+  | "dashboard"
+  | "myStudents"
+  | "activityLog"
+  | "defenseDay"
+  | "notifications";
 
-export default function SupervisorDashboardShell() {
+export default function DeanDashboardShell() {
   const { role } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const [currentView, setCurrentView] = useState<SupervisorView>("dashboard");
+  const [currentView, setCurrentView] = useState<DeanView>("dashboard");
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
@@ -40,13 +46,15 @@ export default function SupervisorDashboardShell() {
   const renderView = () => {
     switch (currentView) {
       case "dashboard":
-        return <SupervisorDashboard />;
+        return <DeanDashboard />;
       case "myStudents":
         return <MyStudentsPage />;
+      case "activityLog":
+        return <DeanActivityLog />;
       case "defenseDay":
         return <DefenseDayPage />;
       case "notifications":
-        return <SupervisorNotifications />;
+        return <DeanNotifications />;
       default:
         return null;
     }
@@ -88,6 +96,15 @@ export default function SupervisorDashboardShell() {
                 }}
               >
                 My Students
+              </li>
+              <li
+                className="cursor-pointer hover:text-amber-700"
+                onClick={() => {
+                  setCurrentView("activityLog");
+                  setIsMenuOpen(false);
+                }}
+              >
+                Activity Log
               </li>
               <li
                 className="cursor-pointer hover:text-amber-700"

@@ -1,7 +1,7 @@
 // src/AuthProvider.tsx
 import { createContext, useState, ReactNode, useContext } from 'react';
 
-export type Role = 'HOD' | 'PG_COORD' | 'PROVOST' | 'SUPERVISOR' | 'STUDENT';
+export type Role = 'HOD' | 'PG_COORD' | 'PROVOST' | 'DEAN' | 'SUPERVISOR' | 'STUDENT';
 
 interface AuthContextProps {
   role: Role;
@@ -13,8 +13,8 @@ interface AuthContextProps {
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [role, setRole] = useState<Role>('PG_COORD');    // default can be adjusted
-  const [userName, setUserName] = useState<string>('John Doe');
+  const [role, setRole] = useState<Role>('HOD');    // default can be adjusted
+  const [userName, setUserName] = useState<string>('');
 
   return (
     <AuthContext.Provider value={{ role, userName, setRole, setUserName }}>

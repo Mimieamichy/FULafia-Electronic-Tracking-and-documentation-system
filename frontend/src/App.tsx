@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import StudentDashboardShell from "./pages/student/StudentDashboardShell";
 import DashboardShell from "./pages/DashboardShell";
+import DeanDashboardShell from "./pages/dean/DeanDashboardShell";
 
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardShell />} />
           <Route path="/supervisor" element={<SupervisorDashboardShell />} />
           <Route path="/student" element={<StudentDashboardShell />} />
+          <Route path="/dean" element={<DeanDashboardShell />} />
 
           
           {/* Catch-all route for 404 Not Found */}

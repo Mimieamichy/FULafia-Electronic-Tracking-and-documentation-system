@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+// src/provost/ProvostActivityLog.tsx
+import React, { useEffect, useState } from "react";
+import { Clock, UserCheck, Calendar, FileText, MessageSquareText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-// Sample activity types
 type ActivityType =
   | "STAGE_APPROVAL"
   | "DEFENSE_SCHEDULED"
@@ -23,7 +20,7 @@ type ActivityLog = {
   timestamp: string; // ISO
 };
 
-// Dummy mock logs — replace with API in production
+// 🧪 Mock data (to be replaced with actual API fetch)
 const mockLogs: ActivityLog[] = [
   {
     id: "1",
@@ -32,7 +29,7 @@ const mockLogs: ActivityLog[] = [
     role: "HOD",
     target: "Alice Johnson",
     description: "Approved for Second Seminar",
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1hr ago
+    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
   },
   {
     id: "2",
@@ -41,7 +38,7 @@ const mockLogs: ActivityLog[] = [
     role: "PG Coordinator",
     target: "Bob Smith",
     description: "Assigned Dr. Henry as Supervisor 1",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2hrs ago
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: "3",
@@ -72,44 +69,57 @@ const mockLogs: ActivityLog[] = [
   },
 ];
 
-const activityTypeLabel = {
-  STAGE_APPROVAL: "Stage Approval",
-  DEFENSE_SCHEDULED: "Defense Scheduled",
-  SUPERVISOR_ASSIGNED: "Supervisor Assignment",
-  FILE_UPLOADED: "File Uploaded",
-  COMMENT_ADDED: "Comment Added",
+// 👁 Icon mapping
+const typeIcons: Record<ActivityType, JSX.Element> = {
+  STAGE_APPROVAL: <UserCheck className="w-5 h-5 text-amber-700" />,
+  DEFENSE_SCHEDULED: <Calendar className="w-5 h-5 text-blue-600" />,
+  SUPERVISOR_ASSIGNED: <UserCheck className="w-5 h-5 text-green-600" />,
+  FILE_UPLOADED: <FileText className="w-5 h-5 text-purple-600" />,
+  COMMENT_ADDED: <MessageSquareText className="w-5 h-5 text-gray-600" />,
 };
 
 const ProvostActivityLog = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
 
   useEffect(() => {
-    // In real app, replace this with an API call
-    setLogs(mockLogs);
+    setLogs(mockLogs); // Replace with actual fetch later
   }, []);
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold text-gray-800">School Activity Log</h2>
+    <div className="px-4 sm:px-6 lg:px-8 space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800">School-wide Activity Log</h2>
+        <p className="text-gray-600 text-sm mt-1">
+          Real-time overview of academic and administrative activity across all faculties.
+        </p>
+      </div>
 
-      <ScrollArea className="h-[70vh] pr-4">
-        <div className="space-y-4">
+      {logs.length === 0 ? (
+        <p className="text-center text-gray-400 py-10 italic">No activity logged yet.</p>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden divide-y divide-gray-100">
           {logs.map((log) => (
-            <Card key={log.id} className="p-4 border border-gray-200 shadow-sm">
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-sm font-medium text-gray-900">
-                  {log.actor} <span className="text-gray-500 text-xs">({log.role})</span>
+            <div key={log.id} className="flex items-start gap-4 p-4 hover:bg-amber-50 transition">
+              <div className="mt-1">{typeIcons[log.type]}</div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-800">
+                  <span className="font-medium text-amber-800">{log.actor}</span>{" "}
+                  <span className="text-xs text-gray-500">({log.role})</span> performed{" "}
+                  <span className="font-medium lowercase">
+                    {log.type.replace(/_/g, " ")}
+                  </span>{" "}
+                  on <span className="font-medium">{log.target}</span>
+                </p>
+                <p className="text-sm text-gray-600 mt-1">{log.description}</p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                  <Clock className="w-4 h-4" />
+                  {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
                 </div>
-                <Badge variant="outline">{activityTypeLabel[log.type]}</Badge>
               </div>
-              <p className="text-sm text-gray-700">{log.description}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
-              </p>
-            </Card>
+            </div>
           ))}
         </div>
-      </ScrollArea>
+      )}
     </div>
   );
 };
