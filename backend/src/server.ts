@@ -1,24 +1,21 @@
 // src/server.ts
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import app from './app';
-
 dotenv.config();
 
+import app from './app';
+import { connectDB } from './config/database';
+
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/etds';
 
 async function startServer() {
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log('MongoDB connected');
+    await connectDB();
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   } catch (err) {
-    console.error('DB connection error:', err);
-    process.exit(1); // Optional: exit the process if DB fails
+    process.exit(1);
   }
 }
 
