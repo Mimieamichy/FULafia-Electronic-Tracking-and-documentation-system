@@ -1,6 +1,7 @@
 // src/controllers/base/AuthController.ts
 import { Request, Response } from 'express';
 import AuthService from '../../services/auth';
+import UserService from '../../services/user';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -47,7 +48,30 @@ export default class GeneralController {
   }
 
   static async viewNotifications(req: AuthenticatedRequest, res: Response) {
-    const notes = await AuthService.getNotifications(req.user?._id);
-    res.json({ success: true, data: notes });
+    try {
+      const notes = await AuthService.getNotifications(req.user?._id);
+      res.json({ success: true, data: notes });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: 'Failed to get notification text', message: err.message });
+    }
+  }
+
+   static async getUserProfile(req: AuthenticatedRequest, res: Response) {
+    try {
+      const user = await UserService.getUserProfile(req.user?._id);
+      res.json({ success: true, data: user });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: 'Failed to get User profile', message: err.message });
+    }
+  }
+
+   static async updatePassword(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {oldPassword, newPassword} = req.body;
+      await UserService.updatePassword(req.user?._id, oldPassword, newPassword);
+      res.json({ success: true, data: newPassword });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: 'Failed to get update password', message: err.message });
+    }
   }
 }

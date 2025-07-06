@@ -4,21 +4,26 @@ import bcrypt from 'bcryptjs';
 export interface IUser extends Document {
   email: string;
   password: string;
-  role: string;
+  role: string[];
   firstName: string;
   lastName: string;
   permissions?: string[];
+  isPanelMember: Boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-const userSchema = new Schema<IUser>({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, required: true }, // admin, hod, student, etc.
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  permissions: [String],
-}, { timestamps: true });
+const userSchema = new Schema<IUser>(
+  {
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: {type: [String], required: true, default: ['GENERAL']}, // Default role is 'GENERAL'
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    isPanelMember: { type: Boolean, default: false },
+    permissions: [String],
+  },
+  { timestamps: true }
+);
 
 
 

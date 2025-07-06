@@ -13,7 +13,7 @@ const lecturerSchema = new Schema<ILecturer>({
   staffId: { type: String, required: true},
   title: { type: String, required: false },
   department: { type: String, required: false },
-  faculty: { type: String, required: false }
+  faculty: { type: String, required: false },
 }, { timestamps: true });
 
 export default mongoose.model<ILecturer>('Lecturer', lecturerSchema);

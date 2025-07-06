@@ -9,6 +9,7 @@ export interface IComment {
 export interface IVersion {
   versionNumber: number;
   fileUrl: string;
+  topic: string;
   uploadedBy: mongoose.Types.ObjectId;
   uploadedAt: Date;
   comments: IComment[];
@@ -29,6 +30,7 @@ const commentSchema = new Schema<IComment>({
 const versionSchema = new Schema<IVersion>({
   versionNumber: { type: Number, required: true },
   fileUrl:       { type: String, required: true },
+  topic:         { type: String, required: true },
   uploadedBy:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
   uploadedAt:    { type: Date, default: Date.now },
   comments:      { type: [commentSchema], default: [] },
@@ -36,13 +38,14 @@ const versionSchema = new Schema<IVersion>({
 
 const projectSchema = new Schema<IProject>({
   student:  { type: Schema.Types.ObjectId, ref: 'Student', required: true },
-  stage:    { type: String, required: true },
+  stage:    { type: String, required: true }, // e.g., 'proposal', 'defense', 'final submission'
   versions: { type: [versionSchema], default: [] },
 }, { timestamps: true });
 
 // Optional helper: auto-increment versionNumber on push
 projectSchema.methods.addVersion = async function(
   fileUrl: string,
+  topic: string,
   uploadedBy: mongoose.Types.ObjectId
 ) {
   const nextVersion = (this.versions.length > 0)
@@ -52,6 +55,7 @@ projectSchema.methods.addVersion = async function(
   this.versions.push({
     versionNumber: nextVersion,
     fileUrl,
+    topic,
     uploadedBy,
     uploadedAt: new Date(),
     comments: []

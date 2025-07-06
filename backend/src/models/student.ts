@@ -21,6 +21,8 @@ export interface IStudent extends Document {
   projectTopic?: string;
   stageScores: IStageScores;
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const stageScoresSchema = new Schema<IStageScores>(

@@ -1,24 +1,29 @@
 import { Student, IStudent } from "../models/index";
 
-
 export default class StudentService {
-    /**
-     * Fetches all students from the database.
-     * 
-     * @returns {Promise<Student[]>} - A promise that resolves to an array of students.
-     */
+    static async addStudent(studentData: IStudent) {
+        const student = new Student(studentData);
+        return await student.save();
+    }
+
     static async getAllStudents() {
-        return Student.find().populate('user').lean();
+        return await Student.find().populate('user').lean();
     }
 
-
-    /**
-     * Deletes a student by their ID.
-     * 
-     * @param {string} studentId - The ID of the student to delete.
-     * @returns {Promise<Student | null>} - A promise that resolves to the deleted student or null if not found.
-     */
-    static async deleteStudent(studentId: string){
-        return Student.findByIdAndDelete(studentId).lean();
+    static async deleteStudent(studentId: string) {
+        return await Student.findByIdAndDelete(studentId); // no .lean() needed here
     }
+
+    static async getAllStudentsInFaculty(faculty: string) {
+        return await Student.find({ faculty })
+            .populate('user')
+            .lean();
+    }
+
+    static async getAllStudentsInDepartment(department: string) {
+        return await Student.find({ department })
+            .populate('user')
+            .lean();
+    }
+
 }

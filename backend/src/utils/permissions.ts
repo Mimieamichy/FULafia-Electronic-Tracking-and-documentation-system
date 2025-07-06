@@ -16,7 +16,7 @@ export enum Role {
 }
 
 export enum Permission {
-  VIEW_PROJECT = 'view_project',
+  DOWNLOAD_PROJECT = 'download_project',
   UPLOAD_PROJECT = 'upload_project',
   VIEW_COMMENTS = 'view_comments',
   COMMENT = 'comment',
@@ -35,16 +35,18 @@ export enum Permission {
   VIEW_DEPT_STUDENTS = 'view_dept_students',
   ADD_PANEL_MEMBERS = 'add_panel_members',
   ASSIGN_SUPERVISORS = 'assign_supervisors',
+  VIEW_PROJECT_BY_DEPARTMENT = 'view_project_by_department',
 
   // PG Coord
   GENERATE_DEPT_SCORE_SHEET = 'generate_dept_score_sheet',
 
   // Dean
   VIEW_FACULTY_LECTURERS = 'view_faculty_lecturers',
+  VIEW_PROJECT_BY_FACULTY = 'view_project_by_faculty',
 
   // Supervisor
-  VIEW_STUDENTS = 'view_students',
-  VIEW_DEFENSES = 'view_defenses',
+  VIEW_PROJECT_BY_STUDENT = 'view_project_by_student',
+  VIEW_DEFENSE = 'view_defence',
   // major supervisor
   APPROVE_STUDENT_PROJECT = 'approve_student_project',
 
@@ -63,7 +65,7 @@ export enum Permission {
   ADD_EXTERNAL_EXAMINER = 'add_external_examiner',
 
   // External Examiner
-  APPROVE_DEFENCE = 'approve_defence',
+  APPROVE_LAST_DEFENSE = 'approve_last_defense',
 
   // Admin
   VIEW_ALL_LECTURERS = 'view_all_lecturers',
@@ -74,6 +76,7 @@ export enum Permission {
   VIEW_ALL_DEFENSES = 'view_all_defenses',
   VIEW_ACTIVITY_LOGS = 'view_activity_logs',
   VIEW_ALL_SESSIONS = 'view_all_sessions',
+  
   
 
   // General
@@ -86,7 +89,7 @@ export enum Permission {
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [Role.STUDENT]: [
-    Permission.VIEW_PROJECT,
+    Permission.DOWNLOAD_PROJECT,
     Permission.UPLOAD_PROJECT,
     Permission.VIEW_COMMENTS,
     Permission.COMMENT,
@@ -98,7 +101,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
     Permission.CREATE_SESSION,
     Permission.VIEW_SESSIONS,
-    Permission.VIEW_PROJECT,
+    Permission.VIEW_PROJECT_BY_DEPARTMENT,
     Permission.VIEW_DEPT_LECTURERS,
     Permission.SCHEDULE_DEFENSE,
     Permission.END_DEFENSE,
@@ -107,6 +110,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_DEPT_STUDENTS,
     Permission.ADD_PANEL_MEMBERS,
     Permission.ASSIGN_SUPERVISORS,
+    Permission.DOWNLOAD_PROJECT,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_DEPT_LECTURERS,
@@ -114,55 +118,55 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DELETE_LECTURER,
     Permission.GENERATE_DEPT_SCORE_SHEET,
   ],
-  [Role.DEAN]: [Permission.VIEW_FACULTY_LECTURERS, Permission.VIEW_SESSIONS],
+  [Role.DEAN]: [
+    Permission.VIEW_FACULTY_LECTURERS, 
+    Permission.VIEW_SESSIONS,
+    Permission.VIEW_PROJECT_BY_FACULTY
+  ],
   [Role.SUPERVISOR]: [
-    Permission.VIEW_STUDENTS,
-    Permission.VIEW_PROJECT,
-    Permission.VIEW_DEFENSES,
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
     Permission.UPLOAD_PROJECT,
     Permission.VIEW_COMMENTS,
     Permission.COMMENT,
   ],
-  [Role.MAJOR_SUPERVISOR]: [Permission.APPROVE_STUDENT_PROJECT],
+  [Role.MAJOR_SUPERVISOR]: [
+    Permission.APPROVE_STUDENT_PROJECT
+  ],
   [Role.PANEL_MEMBER]: [
-    Permission.VIEW_STUDENTS_PANEL,
-    Permission.VIEW_PROJECT,
-    Permission.VIEW_DEFENSES,
+    Permission.COMMENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
     Permission.SCORE_STUDENT,
   ],
   [Role.FACULTY_PG_REP]: [
-    Permission.VIEW_PROJECT,
     Permission.SCORE_STUDENT_GENERAL,
   ],
   [Role.INTERNAL_EXAMINER]: [
-    Permission.VIEW_PROJECT,
-    Permission.VIEW_STUDENTS,
-    Permission.VIEW_PROJECT,
-    Permission.VIEW_DEFENSES,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.VIEW_DEFENSE,
     Permission.UPLOAD_PROJECT,
     Permission.VIEW_COMMENTS,
     Permission.COMMENT,
   ],
   [Role.PROVOST]: [
-    Permission.VIEW_LECTURERS,
-    Permission.VIEW_PROJECT,
+    Permission.VIEW_ALL_LECTURERS,
     Permission.VIEW_SESSIONS,
     Permission.SCHEDULE_DEFENSE,
     Permission.GENERATE_GENERAL_SCORE_SHEET,
     Permission.ADD_EXTERNAL_EXAMINER,
   ],
   [Role.EXTERNAL_EXAMINER]: [
-    Permission.VIEW_PROJECT,
-    Permission.APPROVE_DEFENCE,
+    Permission.APPROVE_LAST_DEFENSE,
   ],
   [Role.ADMIN]: [
     Permission.VIEW_ALL_LECTURERS,
     Permission.DELETE_LECTURER,
     Permission.ADD_HOD,
     Permission.VIEW_ALL_SESSIONS,
-    Permission.VIEW_PROJECT,
     Permission.VIEW_ALL_STUDENTS,
-    Permission.VIEW_ALL_LECTURERS,
     Permission.VIEW_ALL_PROJECTS,
     Permission.VIEW_ALL_DEFENSES,
     Permission.VIEW_ACTIVITY_LOGS,

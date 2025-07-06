@@ -1,5 +1,5 @@
 // src/services/AuthService.ts
-import { User, Notification } from '../models/index';
+import { User, Notification, Lecturer, Student } from '../models/index';
 import jwt from 'jsonwebtoken';
 import EmailService from '../utils/helpers';
 
@@ -59,6 +59,8 @@ export default class AuthService {
     throw new Error(`Failed to fetch notifications: ${(error as Error).message}`);
   }
 }
+
+
 }
 
 
