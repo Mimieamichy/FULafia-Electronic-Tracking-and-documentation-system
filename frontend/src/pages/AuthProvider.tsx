@@ -33,6 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("token");
+
+     console.log("🧾 Retrieved token from localStorage:", storedToken);
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setToken(storedToken);
@@ -45,6 +47,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { user, token: authToken } = res.data.data;
     console.log("Login response:", res.data);
+    
+
 
     const userProfile: UserProfile = {
       userName: `${user.firstName} ${user.lastName}`,
@@ -59,6 +63,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("user", JSON.stringify(userProfile));
     localStorage.setItem("token", authToken);
     axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
+    
+    console.log("🔐 Token stored:", authToken);
   };
 
   const logout = () => {

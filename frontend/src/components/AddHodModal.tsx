@@ -60,6 +60,7 @@ export default function AddHodModal({
     setLoading(true);
     try {
       await onSubmit(formData);
+      
       // reset
       setFormData({
         title: "",
