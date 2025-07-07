@@ -1,10 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { Role } from '../utils/permissions';
 
 export interface IUser extends Document {
   email: string;
   password: string;
-  role: string[];
+  roles: string[];
   firstName: string;
   lastName: string;
   permissions?: string[];
@@ -16,11 +17,10 @@ const userSchema = new Schema<IUser>(
   {
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: {type: [String], required: true, default: ['GENERAL']}, // Default role is 'GENERAL'
+    roles: { type: [String], required: true, default: [Role.GENERAL] }, // Default role is 'GENERAL'
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     isPanelMember: { type: Boolean, default: false },
-    permissions: [String],
   },
   { timestamps: true }
 );

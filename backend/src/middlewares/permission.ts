@@ -17,20 +17,22 @@ export interface AuthenticatedRequest extends Request {
  * @param {Permission} requiredPermission - The permission to check for.
  * @returns {RequestHandler} Express middleware.
  */
-export function checkPermission(
-  requiredPermission: Permission
-): RequestHandler {
-   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export function checkPermission(requiredPermission: Permission): RequestHandler {
+  console.log('Checking permission:', requiredPermission);
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userPermissions = req.user?.permissions || [];
 
+      console.log('Checking User permission:', userPermissions);
     if (!userPermissions.includes(requiredPermission)) {
-    res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'forbidden',
         message: 'Missing required permission',
       });
+      return;
     }
 
     next();
   };
 }
+

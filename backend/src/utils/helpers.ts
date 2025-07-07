@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { ROLE_PERMISSIONS, Role, Permission } from '../utils/permissions';
 
 export default class EmailService {
   private static transporter = nodemailer.createTransport({
@@ -43,6 +44,11 @@ export default class EmailService {
     await this.sendMail(to, 'Password Reset Request', html);
   }
 
-  
 
+}
+
+
+export function getPermissionsFromRoles(roles: Role[]): Permission[] {
+  const all = roles.flatMap(role => ROLE_PERMISSIONS[role] || []);
+  return Array.from(new Set(all)); // Remove duplicates
 }

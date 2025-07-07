@@ -1,10 +1,12 @@
 // src/services/AuthService.ts
-import { User, Notification, Lecturer, Student } from '../models/index';
+import { User, Notification } from '../models/index';
 import jwt from 'jsonwebtoken';
 import EmailService from '../utils/helpers';
-
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 const RESET_TOKEN_EXPIRY = '1h';
+import { getPermissionsFromRoles } from '../utils/helpers';
+import { Role } from '../utils/permissions';
+
 
 export default class AuthService {
   static async login(email: string, password: string) {
@@ -13,11 +15,33 @@ export default class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const roles = user.roles as Role[];
+    const permissions = getPermissionsFromRoles(roles);
 
-    return { user, token };
+    
+
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        roles,
+        permissions,
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return {
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles,
+        isPanelMember: user.isPanelMember,
+      },
+      token,
+    };
   }
 
   static async logout(_userId: string) {

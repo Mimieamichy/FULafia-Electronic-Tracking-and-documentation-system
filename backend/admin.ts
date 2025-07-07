@@ -1,8 +1,8 @@
 import readline from 'readline';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { User } from './src/models/index'
+import { Role } from './src/utils/permissions';
 
 dotenv.config();
 
@@ -38,7 +38,7 @@ async function createAdmin() {
     const admin = await User.create({
       email,
       password: password,
-      role: 'admin',
+      roles: [Role.ADMIN, Role.GENERAL],
       firstName: 'System',
       lastName: 'Admin',
       isPanelMember: false,
