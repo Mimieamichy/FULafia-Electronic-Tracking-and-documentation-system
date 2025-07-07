@@ -18,8 +18,6 @@ export default class AuthService {
     const roles = user.roles as Role[];
     const permissions = getPermissionsFromRoles(roles);
 
-    
-
 
     const token = jwt.sign(
       {

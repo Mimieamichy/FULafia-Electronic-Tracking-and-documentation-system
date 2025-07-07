@@ -29,12 +29,21 @@ export default class AdminController {
 
   static async addHOD(req: Request, res: Response) {
     try {
-      console.log('Adding HOD with data:', req.body);
       const { email, title, firstName, lastName, department, faculty, staffId } = req.body;
       const hod = await LecturerService.addHOD({ email, title, firstName, lastName, department, faculty, staffId });
       res.json({ success: true, data: hod });
     } catch (err: any) {
-      console.log(err)
+      console.log('Error adding HOD:', err);
+      res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
+    }
+  }
+
+  static async getHODs(req: Request, res: Response) {
+    try {
+      const hods = await LecturerService.getHODs();
+      res.json({ success: true, data: hods });
+    } catch (err: any) {
+      console.log(err);
       res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
     }
   }

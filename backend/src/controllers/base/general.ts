@@ -19,6 +19,7 @@ export default class GeneralController {
       const { user, token } = await AuthService.login(email, password);
       res.json({ success: true, data: { user, token } });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'invalid_credentials', message: err.message });
     }
   }

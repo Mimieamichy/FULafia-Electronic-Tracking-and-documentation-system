@@ -5,7 +5,7 @@ import { Permission } from '../utils/permissions';
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    roles: string[];
     permissions: string[];
     [key: string]: any;
   };
@@ -18,11 +18,10 @@ export interface AuthenticatedRequest extends Request {
  * @returns {RequestHandler} Express middleware.
  */
 export function checkPermission(requiredPermission: Permission): RequestHandler {
-  console.log('Checking permission:', requiredPermission);
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userPermissions = req.user?.permissions || [];
 
-      console.log('Checking User permission:', userPermissions);
+      // console.log('Checking User permission:', userPermissions);
     if (!userPermissions.includes(requiredPermission)) {
       res.status(403).json({
         success: false,

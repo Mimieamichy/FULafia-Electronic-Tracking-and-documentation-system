@@ -1,5 +1,5 @@
 import { Lecturer, User } from '../models/index';
-import bcrypt from 'bcryptjs';
+import { Role } from '../utils/permissions';
 
 
 export default class LecturerService {
@@ -15,21 +15,13 @@ export default class LecturerService {
         return lecturer
     }
 
-    static async addHOD(data: {
-        email: string;
-        title: string;
-        firstName: string;
-        lastName: string;
-        department: string;
-        faculty: string;
-        staffId: string;
-    }) {
-        
+    static async addHOD(data: {email: string; title: string; firstName: string; lastName: string; department: string; faculty: string; staffId: string;}) {
+
         // create a User with role HOD, then Lecturer record
         const user = await User.create({
             email: data.email,
             password: data.email, // Use email as password for simplicity
-            role: 'hod',
+            roles: [Role.HOD, Role.GENERAL],
             firstName: data.firstName,
             lastName: data.lastName,
         });
@@ -40,6 +32,18 @@ export default class LecturerService {
             faculty: data.faculty,
             staffId: data.staffId,
         });
+    }
+
+    static async getLecturerById(lecturerId: string) {
+        const lecturer = await Lecturer.findById(lecturerId).populate('user');
+        if (!lecturer) {
+            throw new Error('Lecturer not found');
+        }
+        return lecturer;
+    }
+
+    static async getHODs() {
+        return Lecturer.find({ roles: Role.HOD }).populate('user');
     }
 
 

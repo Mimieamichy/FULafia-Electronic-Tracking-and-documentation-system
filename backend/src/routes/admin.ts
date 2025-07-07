@@ -12,7 +12,6 @@ const router = Router();
 const addHodSchema = Joi.object({
   email: Joi.string().email().required(),
   title: Joi.string().required(),
-  password: Joi.string().min(6).required(),
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
   department: Joi.string().required(),
@@ -24,6 +23,7 @@ const addHodSchema = Joi.object({
 router.get('/lecturers', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), AdminController.getAllLecturers);
 router.delete('/lecturers/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), AdminController.deleteLecturer);
 router.post('/lecturers/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), AdminController.addHOD);
+router.get('/lecturers/get-hods', authenticate, checkPermission(Permission.GET_HODS), AdminController.getHODs);
 
 router.get('/sessions', authenticate, checkPermission(Permission.VIEW_ALL_SESSIONS), AdminController.getAllSessions);
 router.get('/projects', authenticate, checkPermission(Permission.VIEW_ALL_PROJECTS), AdminController.getAllProjects);

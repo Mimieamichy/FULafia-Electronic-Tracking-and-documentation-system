@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    roles: string[];
     permissions: string[];
     [key: string]: any;
   };
@@ -22,8 +22,9 @@ export interface AuthenticatedRequest extends Request {
  */
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization as string | '';
 
+  console.log('Auth-Header', authHeader)
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ success: false, message: 'No token provided' });
     return;
@@ -34,25 +35,25 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
-      role: string;
+      roles: string[]; 
       permissions?: string[];
       [key: string]: any;
     };
 
-    // Ensure permissions is always present as an array
     const user = {
-      ...decoded,
+      id: decoded.id,
+      roles: decoded.roles,
       permissions: Array.isArray(decoded.permissions) ? decoded.permissions : [],
     };
 
-    // Type assertion to add user property
     (req as AuthenticatedRequest).user = user;
+
     next();
   } catch (err) {
     console.log('Token verification error:', err);
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
-    return;
   }
+
 }
 
 
