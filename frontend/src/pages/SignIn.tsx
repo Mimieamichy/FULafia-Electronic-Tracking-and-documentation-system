@@ -4,57 +4,67 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth, Role } from "./AuthProvider";
+import { useAuth } from "./AuthProvider";
 
 const SignIn = () => {
-  const [formData, setFormData] = useState<{
-    email: string;
-    password: string;
-    role: Role;
-  }>({
+  const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "HOD", // default
   });
-
   const [showPassword, setShowPassword] = useState(false);
-  const navigate = useNavigate();
-  const { setRole } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleInputChange = (field: "email" | "password", value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    try {
+      await login(formData.email, formData.password);
 
-    // Persist role in context
-    setRole(formData.role);
-
-    // Navigate based on role
-    switch (formData.role) {
-      case "HOD":
-      case "PG_COORD":
-      case "PROVOST":
-        navigate("/dashboard");
-        break;
-      case "DEAN":
-        navigate("/dean");
-        break;
-      case "SUPERVISOR":
-        navigate("/supervisor");
-        break;
-      case "STUDENT":
-        navigate("/student");
-        break;
+      // Wait a bit to ensure `user` is populated
+      setTimeout(() => {
+        switch (user?.role) {
+          case "HOD":
+          case "PG_COORD":
+          case "PROVOST":
+            navigate("/dashboard");
+            break;
+          case "DEAN":
+            navigate("/dean");
+            break;
+          case "admin":
+            navigate("/admin");
+            break;
+          case "SUPERVISOR":
+            navigate("/supervisor");
+            break;
+          case "STUDENT":
+            navigate("/student");
+            break;
+          default:
+            alert("Unknown role. Cannot redirect.");
+        }
+      }, 300);
+    } catch (err) {
+      console.error(err);
+      alert("Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex">
+      {/* Left side with background image */}
       <div
         className="hidden lg:flex lg:w-1/2"
         style={{
@@ -64,6 +74,7 @@ const SignIn = () => {
         }}
       ></div>
 
+      {/* Right side with form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="max-w-md w-full">
           <div className="mb-8">
@@ -113,50 +124,13 @@ const SignIn = () => {
               </div>
             </div>
 
-            {/* Select Role */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-3">
-                Select Role:
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                {(
-                  [
-                    "HOD",
-                    "PG_COORD",
-                    "PROVOST",
-                    "DEAN",
-                    "SUPERVISOR",
-                    "STUDENT",
-                  ] as Role[]
-                ).map((r) => (
-                  <label
-                    key={r}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value={r}
-                      checked={formData.role === r}
-                      onChange={(e) =>
-                        handleInputChange("role", e.target.value)
-                      }
-                    />
-                    {r === "PG_COORD"
-                      ? "PG Coordinator"
-                      : r.charAt(0) +
-                        r.slice(1).toLowerCase().replace("_", " ")}
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Submit */}
             <Button
               type="submit"
               className="w-full bg-amber-700 hover:bg-amber-800 text-white py-4 rounded-full text-xl font-medium flex items-center justify-center gap-3 mt-8"
+              disabled={loading}
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
               <ArrowRight size={24} />
             </Button>
           </form>

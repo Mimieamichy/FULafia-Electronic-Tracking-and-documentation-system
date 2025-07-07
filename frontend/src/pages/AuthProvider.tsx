@@ -1,23 +1,75 @@
 // src/AuthProvider.tsx
-import { createContext, useState, ReactNode, useContext } from 'react';
+import {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useEffect,
+} from "react";
+import axios from "axios";
 
-export type Role = 'HOD' | 'PG_COORD' | 'PROVOST' | 'DEAN' | 'SUPERVISOR' | 'STUDENT';
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-interface AuthContextProps {
-  role: Role;
+interface UserProfile {
   userName: string;
-  setRole: (r: Role) => void;
-  setUserName: (n: string) => void;
+  role: string;
+  email: string;
+  id: string;
 }
 
-export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+interface AuthContextProps {
+  user: UserProfile | null;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [role, setRole] = useState<Role>('HOD');    // default can be adjusted
-  const [userName, setUserName] = useState<string>('');
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+      setToken(storedToken);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+    }
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const res = await axios.post(`${baseUrl}/auth/login`, { email, password });
+
+    const { user, token: authToken } = res.data.data;
+
+    const userProfile: UserProfile = {
+      userName: `${user.firstName} ${user.lastName}`,
+      role: user.role[0], // assuming only one role
+      email: user.email,
+      id: user._id,
+    };
+
+    setUser(userProfile);
+    setToken(authToken);
+
+    localStorage.setItem("user", JSON.stringify(userProfile));
+    localStorage.setItem("token", authToken);
+    axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    delete axios.defaults.headers.common["Authorization"];
+  };
 
   return (
-    <AuthContext.Provider value={{ role, userName, setRole, setUserName }}>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -25,6 +77,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
 };

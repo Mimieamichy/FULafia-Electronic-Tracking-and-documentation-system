@@ -1,19 +1,44 @@
-
-import { useState } from "react";
-
+// src/components/AddHodModal.tsx
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+
+export interface NewHodData {
+  title: string;
+  firstName: string;
+  lastName: string;
+  staffId: string;
+  email: string;
+  faculty: string;
+  department: string;
+}
 
 interface AddHodModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (hodData: any) => void;
+  onSubmit: (data: NewHodData) => Promise<void>;
 }
 
-const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
-  const [formData, setFormData] = useState({
+export default function AddHodModal({
+  isOpen,
+  onClose,
+  onSubmit,
+}: AddHodModalProps) {
+  const [formData, setFormData] = useState<NewHodData>({
     title: "",
     firstName: "",
     lastName: "",
@@ -21,164 +46,192 @@ const AddHodModal = ({ isOpen, onClose, onSubmit }: AddHodModalProps) => {
     email: "",
     faculty: "",
     department: "",
-    
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof NewHodData, value: string) => {
+    setFormData((f) => ({ ...f, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    
-    const hodData = {
-      ...formData,
-      role: "hod", // Fixed role as HOD
-      type: "staff" // Fixed type as staff
-    };
-    
-    onSubmit(hodData);
-    setFormData({
-      title: "",
-      firstName: "",
-      lastName: "",
-      staffId: "",
-      email: "",
-      faculty: "",
-      department: "",
-      
-    });
-    onClose();
+    setError(null);
+    setLoading(true);
+    try {
+      await onSubmit(formData);
+      // reset
+      setFormData({
+        title: "",
+        firstName: "",
+        lastName: "",
+        staffId: "",
+        email: "",
+        faculty: "",
+        department: "",
+      });
+      onClose();
+    } catch (err: any) {
+      console.error("Add HOD failed", err);
+      setError(err.message || "Failed to add HOD");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl bg-white max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-2xl font-semibold text-gray-800">
-              Add New HOD
-            </DialogTitle>
-            
-          </div>
+          <DialogTitle className="text-2xl font-semibold text-gray-800">
+            Add New HOD
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {error && (
+            <p className="text-red-500 text-sm px-2" role="alert">
+              {error}
+            </p>
+          )}
+
+          {/* Row 1: Title / First / Last */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Title:</label>
-              <Select onValueChange={(value) => handleInputChange("title", value)} required>
-                <SelectTrigger className="w-full border-gray-300 rounded-full px-4 py-3">
+              <label className="block text-gray-700 mb-1">Title</label>
+              <Select
+                value={formData.title}
+                onValueChange={(val) => handleChange("title", val)}
+                required
+              >
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Title" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MR.">MR.</SelectItem>
-                  <SelectItem value="MRS.">MRS.</SelectItem>
-                  <SelectItem value="MISS.">MISS.</SelectItem>
-                  <SelectItem value="DR.">DR.</SelectItem>
-                  <SelectItem value="PROF.">PROF.</SelectItem>
-                  <SelectItem value="ENGR.">ENGR.</SelectItem>
+                  {["MR.", "MRS.", "MISS.", "DR.", "PROF.", "ENGR."].map(
+                    (t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    )
+                  )}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-2">First Name:</label>
+              <label className="block text-gray-700 mb-1">First Name</label>
               <Input
-                type="text"
                 value={formData.firstName}
-                onChange={(e) => handleInputChange("firstName", e.target.value)}
-                className="w-full border-gray-300 rounded-full px-4 py-3"
+                onChange={(e) => handleChange("firstName", e.target.value)}
                 required
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Last Name:</label>
+              <label className="block text-gray-700 mb-1">Last Name</label>
               <Input
-                type="text"
                 value={formData.lastName}
-                onChange={(e) => handleInputChange("lastName", e.target.value)}
-                className="w-full border-gray-300 rounded-full px-4 py-3"
+                onChange={(e) => handleChange("lastName", e.target.value)}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Row 2: Staff ID / Email */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Staff ID:</label>
+              <label className="block text-gray-700 mb-1">Staff ID</label>
               <Input
-                type="text"
                 value={formData.staffId}
-                onChange={(e) => handleInputChange("staffId", e.target.value)}
-                className="w-full border-gray-300 rounded-full px-4 py-3"
+                onChange={(e) => handleChange("staffId", e.target.value)}
                 required
               />
             </div>
-            
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Email:</label>
+              <label className="block text-gray-700 mb-1">Email</label>
               <Input
                 type="email"
                 value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                className="w-full border-gray-300 rounded-full px-4 py-3"
+                onChange={(e) => handleChange("email", e.target.value)}
                 required
               />
             </div>
+          </div>
+
+          {/* Row 3: Faculty / Department */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Faculty:</label>
-              <Select onValueChange={(value) => handleInputChange("faculty", value)} required>
-                <SelectTrigger className="w-full border-gray-300 rounded-full px-4 py-3">
+              <label className="block text-gray-700 mb-1">Faculty</label>
+              <Select
+                value={formData.faculty}
+                onValueChange={(val) => handleChange("faculty", val)}
+                required
+              >
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Faculty" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="engineering">Engineering</SelectItem>
-                  <SelectItem value="science">Science</SelectItem>
-                  <SelectItem value="arts">Arts</SelectItem>
-                  <SelectItem value="business">Business</SelectItem>
+                  {[
+                    "Engineering",
+                    "Science",
+                    "Arts",
+                    "Business",
+                    "Education",
+                    "Law",
+                    "Computing",
+                  ].map((fac) => (
+                    <SelectItem key={fac} value={fac}>
+                      {fac}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Department:</label>
-              <Select onValueChange={(value) => handleInputChange("department", value)} required>
-                <SelectTrigger className="w-full border-gray-300 rounded-full px-4 py-3">
+              <label className="block text-gray-700 mb-1">Department</label>
+              <Select
+                value={formData.department}
+                onValueChange={(val) => handleChange("department", val)}
+                required
+              >
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="computer-science">Computer Science</SelectItem>
-                  <SelectItem value="electrical">Electrical Engineering</SelectItem>
-                  <SelectItem value="mechanical">Mechanical Engineering</SelectItem>
-                  <SelectItem value="civil">Civil Engineering</SelectItem>
+                  {[
+                    "Computer Science",
+                    "Electrical",
+                    "Mechanical",
+                    "Civil",
+                    "Statistics",
+                  ].map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-           
-          
           </div>
 
-          <div className="flex justify-end pt-4">
+          <DialogFooter className="flex justify-end gap-4 pt-4">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+              className="min-w-[100px]"
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
-              className="bg-amber-700 hover:bg-amber-800 text-white px-12 py-3 text-lg font-medium"
+              className="bg-amber-700 text-white min-w-[100px]"
+              disabled={loading}
             >
-              ADD HOD
+              {loading ? "Adding..." : "Add HOD"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default AddHodModal;
+}
