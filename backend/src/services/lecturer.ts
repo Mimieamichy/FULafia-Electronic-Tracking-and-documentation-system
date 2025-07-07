@@ -24,13 +24,11 @@ export default class LecturerService {
         faculty: string;
         staffId: string;
     }) {
-        // Hash the password (defaulting to email as initial password)
-        const hashedPassword = await bcrypt.hash(data.email, 10); // saltRounds = 10
-
+        
         // create a User with role HOD, then Lecturer record
         const user = await User.create({
             email: data.email,
-            password: hashedPassword,
+            password: data.email, // Use email as password for simplicity
             role: 'hod',
             firstName: data.firstName,
             lastName: data.lastName,
