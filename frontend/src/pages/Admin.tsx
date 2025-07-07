@@ -10,8 +10,8 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogFooter,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 
@@ -32,37 +32,41 @@ const Admin = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Set axios default Authorization header
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common["Authorization"];
-    }
-  }, [token]);
-
   // Fetch HODs
   useEffect(() => {
-    async function loadHods() {
+    const loadHods = async () => {
+      if (!token) return;
       try {
+        console.log("🔧 [Admin] fetching HODs with token:", token);
         const res = await axios.get<{ data: HOD[] }>(
-          `${baseUrl}/admin/lecturers/get-hods`
+          `${baseUrl}/admin/lecturers/get-hods`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
         setHods(res.data.data);
+        console.log("📋 HODs loaded:", res.data.data);
       } catch (err) {
         console.error("Failed to load HODs", err);
+        toast({
+          title: "Error",
+          description: "Could not load HOD list.",
+          variant: "destructive",
+        });
       }
-    }
+    };
     loadHods();
-  }, []);
+  }, [token, toast]);
 
   const handleAddHod = (newHod: HOD) => {
     setHods((prev) => [...prev, newHod]);
   };
 
   const handleLogout = () => {
-    logout(); // Clears token, user
-    navigate("/"); // Optional: redirect after logout
+    logout();
+    navigate("/");
   };
 
   return (
@@ -84,7 +88,7 @@ const Admin = () => {
             title="Sign out"
             className="cursor-pointer"
           >
-            <Power className="w-6 h-6 text-red-500 hover:text-red-600 transition-colors" />
+            <Power className="w-6 h-6 text-red-500 hover:text-red-600" />
           </button>
         </div>
       </header>
@@ -109,13 +113,7 @@ const Admin = () => {
                   {hod.title} {hod.name}
                 </div>
                 <div className="text-right">
-                  <Button
-                    variant="outline"
-                    className="border-amber-700 text-amber-700 hover:bg-amber-100"
-                    onClick={() => {
-                      // Future: implement edit
-                    }}
-                  >
+                  <Button variant="outline" className="border-amber-700 text-amber-700">
                     Edit
                   </Button>
                 </div>
@@ -129,7 +127,7 @@ const Admin = () => {
         <div className="flex justify-end">
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-amber-700 hover:bg-amber-800 text-white"
+            className="bg-amber-700 text-white"
           >
             Add HOD
           </Button>
@@ -141,11 +139,22 @@ const Admin = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={async (hodData) => {
+          if (!token) {
+            toast({ title: "Not authorized", variant: "destructive" });
+            return;
+          }
           try {
+            console.log("Sending HOD Data:", hodData, "token:", token);
             const res = await axios.post<{ data: HOD }>(
               `${baseUrl}/admin/lecturers/add-hod`,
-              hodData
+              hodData,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
             );
+            console.log("Add HOD response:", res.data);
             handleAddHod(res.data.data);
             setIsAddModalOpen(false);
           } catch (err) {
@@ -159,7 +168,7 @@ const Admin = () => {
         }}
       />
 
-      {/* Logout Modal */}
+      {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
         <DialogContent className="max-w-md bg-white rounded-lg">
           <DialogHeader>
@@ -167,17 +176,15 @@ const Admin = () => {
               Confirm Logout
             </DialogTitle>
           </DialogHeader>
-          <p className="text-gray-600 mt-2">Are you sure you want to log out?</p>
+          <p className="text-gray-600 mt-2">
+            Are you sure you want to log out?
+          </p>
           <DialogFooter className="mt-6 flex justify-end gap-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowLogoutModal(false)}
-              className="px-6"
-            >
+            <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
               Cancel
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white px-6"
+              className="bg-red-600 text-white"
               onClick={handleLogout}
             >
               Log Out
