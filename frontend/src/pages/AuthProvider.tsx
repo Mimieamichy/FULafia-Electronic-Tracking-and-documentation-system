@@ -44,10 +44,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const res = await axios.post(`${baseUrl}/auth/login`, { email, password });
 
     const { user, token: authToken } = res.data.data;
+    console.log("Login response:", res.data);
 
     const userProfile: UserProfile = {
       userName: `${user.firstName} ${user.lastName}`,
-      role: user.role[0], // assuming only one role
+      role: user.roles[0], // assuming only one role
       email: user.email,
       id: user._id,
     };
