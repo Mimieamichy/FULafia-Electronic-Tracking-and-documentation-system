@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import AddHodModal from "@/components/AddHodModal";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { useAuth } from "./AuthProvider";   // adjust path as needed
+import { useAuth } from "./AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 export interface HOD {
   id: string;
@@ -16,6 +17,7 @@ export interface HOD {
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const Admin = () => {
+  const { toast } = useToast();
   const { user, token } = useAuth();
   const [hods, setHods] = useState<HOD[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -100,9 +102,7 @@ const Admin = () => {
               </div>
             ))
           ) : (
-            <div className="p-4 text-center text-gray-500">
-              No HODs found.
-            </div>
+            <div className="p-4 text-center text-gray-500">No HODs found.</div>
           )}
         </div>
 
@@ -130,7 +130,13 @@ const Admin = () => {
             setIsAddModalOpen(false);
           } catch (err) {
             console.error("Add HOD failed", err);
-            alert("Failed to add HOD. Check console for details.");
+            
+           
+            toast({
+              title: "Error",
+              description: "Failed to add HOD. Check console for details.",
+              variant: "destructive",
+            });
           }
         }}
       />

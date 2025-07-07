@@ -85,6 +85,7 @@ export default function AddHodModal({
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold text-gray-800">
             Add New HOD
+           
           </DialogTitle>
         </DialogHeader>
 
