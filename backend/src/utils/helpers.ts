@@ -43,4 +43,6 @@ export default class EmailService {
     await this.sendMail(to, 'Password Reset Request', html);
   }
 
+  
+
 }
