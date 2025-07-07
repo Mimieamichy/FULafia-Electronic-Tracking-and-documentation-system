@@ -16,6 +16,7 @@ export enum Role {
 }
 
 export enum Permission {
+  // Student
   DOWNLOAD_PROJECT = 'download_project',
   UPLOAD_PROJECT = 'upload_project',
   VIEW_COMMENTS = 'view_comments',

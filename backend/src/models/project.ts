@@ -17,7 +17,6 @@ export interface IVersion {
 
 export interface IProject extends Document {
   student: mongoose.Types.ObjectId;
-  stage: string; // e.g., 'proposal', 'defense', 'final submission'
   versions: IVersion[];
 }
 
@@ -38,12 +37,11 @@ const versionSchema = new Schema<IVersion>({
 
 const projectSchema = new Schema<IProject>({
   student:  { type: Schema.Types.ObjectId, ref: 'Student', required: true },
-  stage:    { type: String, required: true }, // e.g., 'proposal', 'defense', 'final submission'
   versions: { type: [versionSchema], default: [] },
 }, { timestamps: true });
 
 // Optional helper: auto-increment versionNumber on push
-projectSchema.methods.addVersion = async function(
+projectSchema.methods.addVersion = function(
   fileUrl: string,
   topic: string,
   uploadedBy: mongoose.Types.ObjectId
@@ -64,6 +62,6 @@ projectSchema.methods.addVersion = async function(
   return this.save();
 };
 
+
+
 export default mongoose.model<IProject>('Project', projectSchema);
-// This model allows you to track multiple versions of a student's project,
-// including who uploaded each version, when it was uploaded, and any comments made about it.

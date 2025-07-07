@@ -24,7 +24,6 @@ export interface AuthenticatedRequest extends Request {
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization as string | '';
 
-  console.log('Auth-Header', authHeader)
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ success: false, message: 'No token provided' });
     return;

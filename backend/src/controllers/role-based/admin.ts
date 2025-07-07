@@ -41,6 +41,7 @@ export default class AdminController {
   static async getHODs(req: Request, res: Response) {
     try {
       const hods = await LecturerService.getHODs();
+      console.log('HODs:', hods);
       res.json({ success: true, data: hods });
     } catch (err: any) {
       console.log(err);

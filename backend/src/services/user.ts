@@ -8,10 +8,10 @@ export default class UserService {
 
         const profile: any = { user };
 
-        if ((user.role).includes('lecturer')) {
+        if ((user.roles).includes('lecturer')) {
             const lecturer = await Lecturer.findOne({ user: user._id }).lean();
             if (lecturer) profile.lecturer = lecturer;
-        } else if ((user.role).includes('student')) {
+        } else if ((user.roles).includes('student')) {
             const student = await Student.findOne({ user: user._id }).lean();
             if (student) profile.student = student;
         }

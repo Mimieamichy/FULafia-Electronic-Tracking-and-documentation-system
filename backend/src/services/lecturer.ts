@@ -43,7 +43,7 @@ export default class LecturerService {
     }
 
     static async getHODs() {
-        return Lecturer.find({ roles: Role.HOD }).populate('user');
+        return Lecturer.find().populate('user');
     }
 
 
