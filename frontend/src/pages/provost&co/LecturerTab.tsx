@@ -56,6 +56,7 @@ export default function LecturerTab() {
   const { token, user } = useAuth();
   const isHod = user?.role?.toUpperCase() === "HOD";
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
+// console.log("token:", token);
 
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -82,18 +83,24 @@ export default function LecturerTab() {
   ];
 
   // Set axios header and fetch on mount
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      loadLecturers();
-    }
-  }, [token]);
+  // useEffect(() => {
+  //   if (token) {
+  //     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  //     loadLecturers();
+  //   }
+  // }, [token,]);
 
   async function loadLecturers() {
     try {
       const res = await axios.get<{ data: any[] }>(
-        `${baseUrl}/admin/lecturers`,
+        `${baseUrl}/lecturer/lecturers`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+        
+
       );
+      console.log("Lecturers loaded:", res.data.data);
       setLecturers(
         res.data.data.map((r) => ({
           id: r._id,
@@ -162,9 +169,14 @@ export default function LecturerTab() {
         // not in spec: skipping update endpoint
       } else {
         const res = await axios.post<{ data: any }>(
-          `${baseUrl}/admin/lecturers/add-lecturer`,
-          form
+          `${baseUrl}/lecturer/add-lecturer`,
+
+          form,
+        {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
+        console.log("Lecturer added:", res.data.data);
         const raw = res.data.data;
         setLecturers((prev) => [
           ...prev,
@@ -199,7 +211,9 @@ export default function LecturerTab() {
     if (!confirm("Delete this lecturer?")) return;
     setDeletingId(id);
     try {
-      await axios.delete(`${baseUrl}/admin/lecturers/lecturers/${id}`);
+      await axios.delete(`${baseUrl}/lecturer/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setLecturers((prev) => prev.filter((l) => l.id !== id));
     } catch (err) {
       console.error("Delete failed", err);

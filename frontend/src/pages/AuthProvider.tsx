@@ -8,6 +8,7 @@ import {
 } from "react";
 import axios from "axios";
 
+
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 interface UserProfile {
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -73,6 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     delete axios.defaults.headers.common["Authorization"];
+    
   };
 
   return (

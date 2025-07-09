@@ -50,10 +50,10 @@ export default function AdminStaffManagement() {
     const load = async () => {
       try {
         const [hodRes, provRes] = await Promise.all([
-          axios.get<{ data: any[] }>(`${baseUrl}/admin/lecturers/get-hods`, {
+          axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get<{ data: any[] }>(`${baseUrl}/admin/lecturers/get-hods`, {
+          axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
