@@ -9,3 +9,7 @@ const router = Router();
 
 
 router.get('/notifications', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS), NotificationController.viewNotifications);
+
+
+
+export default router;

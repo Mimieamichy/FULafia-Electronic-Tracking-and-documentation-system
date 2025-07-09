@@ -1,5 +1,5 @@
  import { Request, Response } from 'express';
- import StudentService from "../../services/students";
+ import StudentService from "../services/students";
  
  
  export default class StudentController {

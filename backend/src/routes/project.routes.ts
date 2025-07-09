@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth';
 import { checkPermission } from '../middlewares/permission';
-import { upload } from '../middlewares/upload';
+import upload  from '../middlewares/upload';
 import ProjectController from '../controllers/project';
 import { Permission } from '../utils/permissions';
 

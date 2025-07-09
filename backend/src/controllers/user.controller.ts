@@ -1,4 +1,5 @@
 import UserService from '../../src/services/user';
+import ActivityLogService from '../../src/services/activity_log'
 import { Request, Response } from 'express';
 
 export interface AuthenticatedRequest extends Request {
@@ -28,6 +29,15 @@ export default class UserController {
       res.json({ success: true, data: newPassword });
     } catch (err: any) {
       res.status(400).json({ success: false, error: 'Failed to get update password', message: err.message });
+    }
+  }
+
+  static async getActivityLogs(req: Request, res: Response) {
+    try {
+      const logs = await ActivityLogService.getHistory(100);
+      res.json({ success: true, data: logs });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: 'Failed to get all activities', message: err.message });
     }
   }
 }

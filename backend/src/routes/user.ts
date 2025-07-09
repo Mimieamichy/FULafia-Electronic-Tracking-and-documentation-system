@@ -1,14 +1,17 @@
-import e, { Router } from 'express';
-import AuthController from '../controllers/base/auth';
+import { Router } from 'express';
+import UserController from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth';
+import { checkPermission } from '../middlewares/permission';
+import { Permission } from '../utils/permissions';
 
 
 const router = Router();
 
 
 
-router.get('/profile', authenticate, AuthController.getUserProfile);
-router.put('/updatePassword', authenticate, AuthController.updatePassword);
+router.get('/profile', authenticate, UserController.getUserProfile);
+router.put('/updatePassword', authenticate, UserController.updatePassword);
+router.get('/activity-logs', authenticate, checkPermission(Permission.VIEW_ACTIVITY_LOGS), UserController.getActivityLogs);
 
 
 export default router;

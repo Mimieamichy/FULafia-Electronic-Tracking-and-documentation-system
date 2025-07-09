@@ -5,10 +5,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRoutes from './routes/auth';
-import adminRoutes from './routes/admin';
 import userRoutes from './routes/user';
-
-
+import lecturerRoutes from './routes/lecturer.routes';
+import notificationRoutes from './routes/notification';
+import sessionRoutes from './routes/session'
+import projectRoutes from './routes/project.routes'
 
 
 const app = express();
@@ -18,8 +19,11 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes)
+app.use('/api/lecturer', lecturerRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api', notificationRoutes)
+app.use('/api/session', sessionRoutes)
+app.use('/api/project', projectRoutes)
 
 
 export default app;

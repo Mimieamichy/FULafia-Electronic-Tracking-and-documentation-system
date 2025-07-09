@@ -73,12 +73,5 @@ static async getSessionByFaculty(req: AuthenticatedRequest, res: Response){
 
 }
 
-  static async getActivityLogs(req: Request, res: Response) {
-    try {
-      const logs = await ActivityLogService.getHistory(100);
-      res.json({ success: true, data: logs });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: 'Failed to get all activities', message: err.message });
-    }
-  }
+  
 }
