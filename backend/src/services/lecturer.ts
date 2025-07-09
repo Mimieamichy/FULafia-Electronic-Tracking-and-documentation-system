@@ -20,10 +20,9 @@ export default class LecturerService {
         title: string;
         firstName: string;
         lastName: string;
-        department: string;
-        faculty: string;
+        userId: string;
         staffId: string;
-        role: string; // e.g. 'hod', 'lecturer', 'supervisor'
+        role: string; 
     }) {
         const normalizedRole = data.role.toLowerCase();
 
@@ -49,6 +48,10 @@ export default class LecturerService {
         }
 
         const roles: Role[] = [resolvedRole, Role.GENERAL];
+        const lecturer =  await this.getLecturerById(data.userId)
+        const faculty = lecturer.faculty
+        const department = lecturer.department
+
 
         // Create User with dynamic roles
         const user = await User.create({
@@ -62,8 +65,8 @@ export default class LecturerService {
         return Lecturer.create({
             user: user._id,
             title: data.title,
-            department: data.department,
-            faculty: data.faculty,
+            department,
+            faculty,
             staffId: data.staffId,
         });
     }
