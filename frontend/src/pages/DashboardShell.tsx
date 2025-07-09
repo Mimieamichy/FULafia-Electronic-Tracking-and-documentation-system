@@ -20,78 +20,59 @@ import MyStudentsPage from "./supervisor/MyStudentsPage";
 import CreateSession from "./provost&co/CreateSession";
 import ProvostDashboardOverview from "./provost&co/ProvostDashboard";
 import ProvostActivityLog from "./provost&co/ProvostActivityLog";
-import DefenseDayPage from "./DefenseDayPage";
-
+import DefenseDayPage from "./DefenseDayPage"
 export type DashboardView =
   | "overview"
   | "pgLecturer"
   | "studentSession"
+  | "myStudents"
   | "notifications"
   | "activityLog"
-  | "defenseDay"
-  | "myStudents";
+  | "defenseDay";
 
-const DashboardShell = () => {
-  const { role } = useAuth();
+export default function DashboardShell() {
+  const { user, logout } = useAuth();
+  const role = user?.role?.toUpperCase() || "";
   const isHod = role === "HOD";
   const isProvost = role === "PROVOST";
+  const userName = user?.userName || "User";
 
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
-
-  // side‑menu state
+  const [currentView, setCurrentView] = useState<DashboardView>("overview");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // which tab/view are we on?
-  const [currentView, setCurrentView] = useState<DashboardView>("overview");
-
-  // Create Session modal state
-  const [sessionModalOpen, setSessionModalOpen] = useState(false);
-
-  // Close menu on outside click
+  // close menu on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsMenuOpen(false);
       }
     };
-    if (isMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    if (isMenuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [isMenuOpen]);
 
-  // Called when a new session is successfully created
-  const handleSessionCreated = (newSession: any) => {
-    console.log("New session created:", newSession);
-    // TODO: hook into your session context or refresh list
-  };
-
-  // Render the correct view, injecting the session‑button callback into the overview
   const renderView = () => {
     switch (currentView) {
       case "overview":
         return isProvost
-        ? <ProvostDashboardOverview />
-        : <HodDashboardOverview
-            onCreateSessionClick={() => setSessionModalOpen(true)}
-          />;
+          ? <ProvostDashboardOverview />
+          : <HodDashboardOverview onCreateSessionClick={() => setSessionModalOpen(true)} />;
       case "pgLecturer":
         return <PgLecturerManagement />;
       case "studentSession":
         return <StudentSessionManagement />;
       case "myStudents":
         return <MyStudentsPage />;
+      case "notifications":
+        return <NotificationsTab />;
       case "activityLog":
         return isProvost ? <ProvostActivityLog /> : null;
       case "defenseDay":
         return <DefenseDayPage />;
-      case "notifications":
-        return <NotificationsTab />;
-
       default:
         return null;
     }
@@ -99,13 +80,16 @@ const DashboardShell = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Header */}
       <header className="bg-white shadow-sm p-4 flex justify-between items-center relative">
         <div className="flex items-center gap-4">
-          {/* Hamburger */}
           <Menu
             className="w-6 h-6 text-gray-600 cursor-pointer"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => setIsMenuOpen(o => !o)}
           />
+          <span className="text-gray-700">
+            Welcome, {userName} 
+          </span>
         </div>
 
         {/* Side‑menu */}
@@ -114,74 +98,28 @@ const DashboardShell = () => {
             ref={menuRef}
             className="absolute top-16 left-4 bg-white shadow-lg rounded-lg p-4 w-64 z-10"
           >
-            <ul className="space-y-3 text-gray-700">
-              <li
-                className="hover:text-amber-700 cursor-pointer"
-                onClick={() => {
-                  setCurrentView("overview");
-                  setIsMenuOpen(false);
-                }}
-              >
+            <ul className="space-y-2 text-gray-700">
+              <li onClick={() => { setCurrentView("overview"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
                 Dashboard
               </li>
-              <li
-                className="hover:text-amber-700 cursor-pointer"
-                onClick={() => {
-                  setCurrentView("pgLecturer");
-                  setIsMenuOpen(false);
-                }}
-              >
-                {isHod
-                  ? "PG Coordinator & Lecturers"
-                  : isProvost
-                  ? "External Examiners & Lecturers"
-                  : "Student & Lecturer Management"}
+              <li onClick={() => { setCurrentView("pgLecturer"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
+                {isProvost ? "External Examiners & Lecturers" : "PG Coordinator & Lecturers"}
               </li>
-              <li
-                className="hover:text-amber-700 cursor-pointer"
-                onClick={() => {
-                  setCurrentView("studentSession");
-                  setIsMenuOpen(false);
-                }}
-              >
+              <li onClick={() => { setCurrentView("studentSession"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
                 Seminar & Sessions
               </li>
-              <li
-                className="hover:text-amber-700 cursor-pointer"
-                onClick={() => {
-                  setCurrentView("myStudents");
-                  setIsMenuOpen(false);
-                }}
-              >
+              <li onClick={() => { setCurrentView("myStudents"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
                 My Students
               </li>
               {isProvost && (
-                <li
-                  className="hover:text-amber-700 cursor-pointer"
-                  onClick={() => {
-                    setCurrentView("activityLog");
-                    setIsMenuOpen(false);
-                  }}
-                >
+                <li onClick={() => { setCurrentView("activityLog"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
                   Activity Log
                 </li>
               )}
-              <li
-                className="hover:text-amber-700 cursor-pointer"
-                onClick={() => {
-                  setCurrentView("defenseDay");
-                  setIsMenuOpen(false);
-                }}
-              >
+              <li onClick={() => { setCurrentView("defenseDay"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
                 Defense Day
               </li>
-              <li
-                className="hover:text-amber-700 cursor-pointer"
-                onClick={() => {
-                  setCurrentView("notifications");
-                  setIsMenuOpen(false);
-                }}
-              >
+              <li onClick={() => { setCurrentView("notifications"); setIsMenuOpen(false) }} className="cursor-pointer hover:text-amber-700">
                 Notifications
               </li>
             </ul>
@@ -190,98 +128,60 @@ const DashboardShell = () => {
 
         {/* Right‑side icons */}
         <div className="flex items-center gap-4">
-          <span className="text-gray-600">Welcome, {role}</span>
           <Bell
+            className="w-6 h-6 text-gray-600 cursor-pointer"
             onClick={() => setCurrentView("notifications")}
-            className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800 transition-colors"
           />
-
-          {/* Reset Password Icon */}
           <Lock
-            onClick={() => setResetPasswordModalOpen(true)}
-            className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800 transition-colors"
+            className="w-6 h-6 text-gray-600 cursor-pointer"
+            onClick={() => setResetModalOpen(true)}
           />
-
-          {/* Logout Icon */}
           <Power
+            className="w-6 h-6 text-red-500 cursor-pointer"
             onClick={() => setLogoutModalOpen(true)}
-            className="w-6 h-6 text-red-500 cursor-pointer hover:text-red-600 transition-colors"
           />
         </div>
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-8">{renderView()}</main>
+      <main className="container mx-auto px-4 py-8">
+        {renderView()}
+      </main>
 
-      {/* Create Session Modal */}
+      {/* Create Session Modal (HOD only) */}
       {isHod && (
         <CreateSession
           isOpen={sessionModalOpen}
           onClose={() => setSessionModalOpen(false)}
-          onCreated={handleSessionCreated}
+          onCreated={() => {/* ... */}}
         />
       )}
+
       {/* Reset Password Modal */}
-      <Dialog
-        open={resetPasswordModalOpen}
-        onOpenChange={setResetPasswordModalOpen}
-      >
+      <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset Your Password</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-600">
-            This feature is currently mocked. You will receive an email with
-            reset instructions.
-          </p>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setResetPasswordModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-amber-700 text-white"
-              onClick={() => setResetPasswordModalOpen(false)}
-            >
-              Confirm
-            </Button>
+          <DialogHeader><DialogTitle>Reset Password</DialogTitle></DialogHeader>
+          <p className="p-4">A reset link will be emailed to you.</p>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setResetModalOpen(false)}>Cancel</Button>
+            <Button className="bg-amber-700 text-white" onClick={() => setResetModalOpen(false)}>Send</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Logout Confirmation Modal */}
       <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-        <DialogContent className="max-w-md w-full mx-0 sm:mx-auto  sm:rounded-lg">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">
-              Confirm Logout
-            </DialogTitle>
-          </DialogHeader>
-
-          <p className="text-sm text-gray-600 mt-2">
-            Are you sure you want to logout?
-          </p>
-
-          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setLogoutModalOpen(false)}
-              className="w-full sm:w-auto"
-            >
-              Cancel
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader><DialogTitle>Confirm Logout</DialogTitle></DialogHeader>
+          <p className="p-4">Are you sure you want to log out?</p>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setLogoutModalOpen(false)}>Cancel</Button>
+            <Button className="bg-red-600 text-white" onClick={() => { logout(); }}>
+              Logout
             </Button>
-            <Link to="/" className="w-full sm:w-auto">
-              <Button className="bg-red-600 text-white w-full sm:w-auto">
-                Logout
-              </Button>
-            </Link>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-};
-
-export default DashboardShell;
+}

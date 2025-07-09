@@ -1,5 +1,6 @@
 // src/hod&pgc/LecturerTab.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit2 } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "../AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 interface Lecturer {
   id: string;
@@ -23,22 +25,23 @@ interface Lecturer {
   faculty: string;
 }
 
-// Static options
-const titleOptions = ["Mr.", "Mrs.", "Miss.", "Dr.", "Engr."];
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
+// Static dropdown options
+const titleOptions = ["Mr.", "Mrs.", "Miss.", "Dr.", "Engr."];
 const facultyOptions = [
   "Faculty of Engineering",
   "Faculty of Science",
   "Faculty of Arts",
+  "Faculty of Social Sciences",
+  "Faculty of Education",
+  "Faculty of Computing"
 ];
-
 const departmentOptions = [
   "Computer Science",
   "Electrical Engineering",
   "Statistics",
 ];
-
-// Base roles (everybody)
 const baseRoleOptions = [
   "Lecturer I",
   "Lecturer II",
@@ -47,17 +50,16 @@ const baseRoleOptions = [
   "Visiting Lecturer",
   "Adjunct Lecturer",
   "Research Fellow",
-  
 ];
 
 export default function LecturerTab() {
-  const { role: userRole } = useAuth();
-  const isProvost = userRole === "PROVOST";
-  const isHod = userRole === "HOD";
+  const { token, user } = useAuth();
+  const isHod = user?.role?.toUpperCase() === "HOD";
+  const isProvost = user?.role?.toUpperCase() === "PROVOST";
 
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Lecturer | null>(null);
   const [form, setForm] = useState<Omit<Lecturer, "id">>({
     title: "",
     firstName: "",
@@ -68,17 +70,50 @@ export default function LecturerTab() {
     department: "",
     faculty: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Build the allowed role options dynamically
+  // Build role options
   const roleOptions = [
-  ...baseRoleOptions,
-  ...(isHod ? ["PG Coordinator"] : []),
-  ...(isProvost ? ["External Examiner"] : []),
-];
-   
+    ...baseRoleOptions,
+    ...(isHod ? ["PG Coordinator"] : []),
+    ...(isProvost ? ["External Examiner"] : []),
+  ];
 
-  const openAdd = () => {
-    setEditingId(null);
+  // Set axios header and fetch on mount
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      loadLecturers();
+    }
+  }, [token]);
+
+  async function loadLecturers() {
+    try {
+      const res = await axios.get<{ data: any[] }>(
+        `${baseUrl}/admin/lecturers`,
+      );
+      setLecturers(
+        res.data.data.map((r) => ({
+          id: r._id,
+          title: r.title,
+          firstName: r.user.firstName,
+          lastName: r.user.lastName,
+          staffId: r.staffId,
+          email: r.user.email,
+          role: r.role,
+          department: r.department,
+          faculty: r.faculty,
+        }))
+      );
+    } catch (err) {
+      console.error("Load lecturers failed", err);
+    }
+  }
+
+  function openAdd() {
+    setEditing(null);
     setForm({
       title: "",
       firstName: "",
@@ -90,119 +125,142 @@ export default function LecturerTab() {
       faculty: "",
     });
     setModalOpen(true);
-  };
+  }
 
-  const openEdit = (lec: Lecturer) => {
-    setEditingId(lec.id);
+  function openEdit(lec: Lecturer) {
+    setEditing(lec);
     setForm({ ...lec });
     setModalOpen(true);
-  };
+  }
 
-  const handleDelete = (id: string) =>
-    setLecturers((prev) => prev.filter((l) => l.id !== id));
+  async function handleSubmit() {
+    // basic validation
+    for (let key of [
+      "title",
+      "firstName",
+      "lastName",
+      "staffId",
+      "email",
+      "role",
+      "department",
+      "faculty",
+    ] as const) {
+      if (!form[key]) {
+        
+        toast({
+          title: "Validation Error",
+          description: `Please fill in the ${key} field.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
-  const handleSubmit = () => {
-    const {
-      title,
-      firstName,
-      lastName,
-      staffId,
-      email,
-      role,
-      department,
-      faculty,
-    } = form;
-    if (
-      !title ||
-      !firstName ||
-      !lastName ||
-      !staffId ||
-      !email ||
-      !role ||
-      !department ||
-      !faculty
-    ) {
-      alert(
-        "All fields are required (Title, First/Last Name, Staff ID, Email, Role, Department, Faculty)."
-      );
-      return;
+    setLoading(true);
+    try {
+      if (editing) {
+        // not in spec: skipping update endpoint
+      } else {
+        const res = await axios.post<{ data: any }>(
+          `${baseUrl}/admin/lecturers/add-lecturer`,
+          form
+        );
+        const raw = res.data.data;
+        setLecturers((prev) => [
+          ...prev,
+          {
+            id: raw._id,
+            title: raw.title,
+            firstName: raw.user.firstName,
+            lastName: raw.user.lastName,
+            staffId: raw.staffId,
+            email: raw.user.email,
+            role: raw.role,
+            department: raw.department,
+            faculty: raw.faculty,
+          },
+        ]);
+      }
+      setModalOpen(false);
+    } catch (err) {
+      console.error("Add lecturer failed", err);
+     
+      toast({
+        title: "Error",
+        description: "Failed to add staff. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    if (editingId) {
-      setLecturers((prev) =>
-        prev.map((l) =>
-          l.id === editingId ? { id: editingId, ...form } : l
-        )
-      );
-    } else {
-      setLecturers((prev) => [
-        ...prev,
-        { id: Date.now().toString(), ...form },
-      ]);
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this lecturer?")) return;
+    setDeletingId(id);
+    try {
+      await axios.delete(`${baseUrl}/admin/lecturers/lecturers/${id}`);
+      setLecturers((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      console.error("Delete failed", err);
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete lecturer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
     }
-    setModalOpen(false);
-  };
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-          Lecturers
-        </h2>
-        <Button
-          onClick={openAdd}
-          className="bg-amber-700 text-white hover:bg-amber-800 min-w-[140px]"
-        >
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Lecturers</h2>
+        <Button onClick={openAdd} className="bg-amber-700 text-white">
           Add Lecturer
         </Button>
       </div>
-
-      <div className="bg-white rounded-lg shadow-sm overflow-auto">
-        <table className="w-full min-w-[600px]">
-          <thead>
-            <tr className="bg-gray-100 text-left">
+      <div className="bg-white rounded shadow overflow-x-auto">
+        <table className="min-w-[800px] w-full text-left">
+          <thead className="bg-gray-100">
+            <tr>
               <th className="p-3">Name</th>
-              <th className="p-3">Lecturer ID</th>
+              <th className="p-3">Staff ID</th>
               <th className="p-3">Email</th>
               <th className="p-3">Department</th>
               <th className="p-3">Role</th>
-              <th className="p-3">Actions</th>
+              <th className="p-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {lecturers.map((lec, idx) => (
-              <tr
-                key={lec.id}
-                className={idx % 2 === 0 ? "bg-amber-50" : "bg-white"}
-              >
+            {lecturers.map((l, i) => (
+              <tr key={l.id} className={i % 2 ? "bg-white" : "bg-amber-50"}>
                 <td className="p-3">
-                  {lec.title} {lec.firstName} {lec.lastName}
+                  {l.title} {l.firstName} {l.lastName}
                 </td>
-                <td className="p-3">{lec.staffId}</td>
-                <td className="p-3">{lec.email}</td>
-                <td className="p-3">{lec.department}</td>
-                <td className="p-3">{lec.role}</td>
-                <td className="p-3 flex gap-2">
-                  <button
-                    onClick={() => openEdit(lec)}
-                    className="text-blue-600 hover:text-blue-800"
-                    aria-label={`Edit ${lec.firstName} ${lec.lastName}`}
-                  >
+                <td className="p-3">{l.staffId}</td>
+                <td className="p-3">{l.email}</td>
+                <td className="p-3">{l.department}</td>
+                <td className="p-3">{l.role}</td>
+                <td className="p-3 text-right space-x-2">
+                  <button onClick={() => openEdit(l)}>
                     <Edit2 size={18} />
                   </button>
                   <button
-                    onClick={() => handleDelete(lec.id)}
-                    className="text-red-600 hover:text-red-800"
-                    aria-label={`Delete ${lec.firstName} ${lec.lastName}`}
+                    onClick={() => handleDelete(l.id)}
+                    disabled={deletingId === l.id}
                   >
                     <Trash2 size={18} />
                   </button>
                 </td>
               </tr>
             ))}
-            {lecturers.length === 0 && (
+            {!lecturers.length && (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
-                  No lecturers added yet.
+                <td colSpan={6} className="p-4 text-center text-gray-500">
+                  No lecturers found.
                 </td>
               </tr>
             )}
@@ -212,161 +270,146 @@ export default function LecturerTab() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4">
-              {editingId ? "Edit Lecturer" : "Add Lecturer"}
-            </h2>
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <h3 className="text-lg font-medium mb-4">
+              {editing ? "Edit Lecturer" : "Add Lecturer"}
+            </h3>
 
-            {/* Form Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Title */}
+              {/** Title */}
               <div>
                 <label className="block text-gray-700 mb-1">Title</label>
                 <Select
                   value={form.title}
-                  onValueChange={(val) =>
-                    setForm((prev) => ({ ...prev, title: val }))
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, title: v }))
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select title" />
+                    <SelectValue placeholder="Select Title" />
                   </SelectTrigger>
                   <SelectContent>
-                    {titleOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
+                    {titleOptions.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* First Name */}
+              {/** First Name */}
               <div>
-                <label className="block text-gray-700 mb-1">First Name</label>
+                <label className="block text-gray-700 mb-1">
+                  First Name
+                </label>
                 <input
                   type="text"
+                  className="w-full border rounded px-2 py-1"
                   value={form.firstName}
                   onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      firstName: e.target.value,
-                    }))
+                    setForm((f) => ({ ...f, firstName: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  required
                 />
               </div>
-
-              {/* Last Name */}
+              {/** Last Name */}
               <div>
-                <label className="block text-gray-700 mb-1">Last Name</label>
+                <label className="block text-gray-700 mb-1">
+                  Last Name
+                </label>
                 <input
                   type="text"
+                  className="w-full border rounded px-2 py-1"
                   value={form.lastName}
                   onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      lastName: e.target.value,
-                    }))
+                    setForm((f) => ({ ...f, lastName: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  required
                 />
               </div>
-
-              {/* Staff ID */}
+              {/** Staff ID */}
               <div>
                 <label className="block text-gray-700 mb-1">Staff ID</label>
                 <input
                   type="text"
+                  className="w-full border rounded px-2 py-1"
                   value={form.staffId}
                   onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      staffId: e.target.value,
-                    }))
+                    setForm((f) => ({ ...f, staffId: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  required
                 />
               </div>
-
-              {/* Email */}
+              {/** Email */}
               <div>
                 <label className="block text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
+                  className="w-full border rounded px-2 py-1"
                   value={form.email}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, email: e.target.value }))
+                    setForm((f) => ({ ...f, email: e.target.value }))
                   }
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  required
                 />
               </div>
-
-              {/* Role */}
+              {/** Role */}
               <div>
                 <label className="block text-gray-700 mb-1">Role</label>
                 <Select
                   value={form.role}
-                  onValueChange={(val) =>
-                    setForm((prev) => ({ ...prev, role: val }))
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, role: v }))
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-40 overflow-y-auto">
-                    {roleOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
+                  <SelectContent>
+                    {roleOptions.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Faculty */}
+              {/** Faculty */}
               <div>
                 <label className="block text-gray-700 mb-1">Faculty</label>
                 <Select
                   value={form.faculty}
-                  onValueChange={(val) =>
-                    setForm((prev) => ({ ...prev, faculty: val }))
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, faculty: v }))
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select faculty" />
+                    <SelectValue placeholder="Select Faculty" />
                   </SelectTrigger>
                   <SelectContent>
-                    {facultyOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
+                    {facultyOptions.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {f}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Department */}
+              {/** Department */}
               <div>
-                <label className="block text-gray-700 mb-1">Department</label>
+                <label className="block text-gray-700 mb-1">
+                  Department
+                </label>
                 <Select
                   value={form.department}
-                  onValueChange={(val) =>
-                    setForm((prev) => ({ ...prev, department: val }))
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, department: v }))
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select department" />
+                    <SelectValue placeholder="Select Department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departmentOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
+                    {departmentOptions.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -374,23 +417,21 @@ export default function LecturerTab() {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="mt-6 text-sm text-gray-600">
-              By submitting, you agree to our Terms & Privacy Policy.
-            </div>
-            <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
-              <button
+            <div className="mt-6 flex justify-end space-x-3">
+              <Button
+                variant="outline"
                 onClick={() => setModalOpen(false)}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                disabled={loading}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSubmit}
-                className="w-full sm:w-auto px-6 py-2 bg-amber-700 text-white rounded hover:bg-amber-800"
+                className="bg-amber-700 text-white"
+                disabled={loading}
               >
-                Submit
-              </button>
+                {editing ? "Save" : "Add"}
+              </Button>
             </div>
           </div>
         </div>
