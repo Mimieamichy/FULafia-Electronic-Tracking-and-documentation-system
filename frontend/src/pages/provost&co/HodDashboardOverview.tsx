@@ -39,17 +39,20 @@ interface HodDashboardOverviewProps {
 export default function HodDashboardOverview({
   onCreateSessionClick,
 }: HodDashboardOverviewProps) {
-  const { role } = useAuth();
-  const isHod = role === "HOD";
+  const { user } = useAuth();
+  const isHod = user?.role?.toUpperCase() === "HOD";
+
+  // Fallback if name isn't available
+  const displayName = user?.userName  || "HOD";
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 max-w-screen-lg mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
-          Welcome, Dr. James Bagudu 👋
+          Welcome, {displayName} 👋
         </h1>
         <p className="text-gray-600 mt-1 text-sm sm:text-base">
-          Here’s an overview of your departmental activities
+          Here’s an overview of your {user?.role} activities
         </p>
       </div>
 
@@ -61,7 +64,6 @@ export default function HodDashboardOverview({
             className="
               bg-white rounded-xl shadow-md p-5 flex items-center gap-4 border border-gray-100
               hover:shadow-lg transition-shadow duration-300 ease-in-out
-              cursor-default
               min-w-0
             "
           >

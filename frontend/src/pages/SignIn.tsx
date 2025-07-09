@@ -40,16 +40,16 @@ const SignIn = () => {
           case "provost":
             navigate("/dashboard");
             break;
-          case "DEAN":
+          case "dean":
             navigate("/dean");
             break;
           case "admin":
             navigate("/admin");
             break;
-          case "SUPERVISOR":
+          case "supervisor":
             navigate("/supervisor");
             break;
-          case "STUDENT":
+          case "student":
             navigate("/student");
             break;
           

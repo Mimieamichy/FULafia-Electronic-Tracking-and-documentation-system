@@ -18,7 +18,7 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter = ({ notifications }: NotificationCenterProps) => {
-  const { role } = useAuth();
+  const { user } = useAuth();
   const [localNotes, setLocalNotes] = useState(notifications);
 
   const handleClick = (id: number) => {
@@ -29,11 +29,11 @@ const NotificationCenter = ({ notifications }: NotificationCenterProps) => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">{role} Notifications</h1>
+      <h1 className="text-2xl font-bold text-gray-800">{user?.role} Notifications</h1>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-4 max-w-2xl">
         {localNotes
-          .filter((n) => !n.role || n.role === role)
+          .filter((n) => !n.role || n.role === user?.role)
           .map((note) => (
             <div
               key={note.id}

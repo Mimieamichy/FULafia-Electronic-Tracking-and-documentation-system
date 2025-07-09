@@ -18,8 +18,8 @@ const allLecturers = [
 ];
 
 export default function PgCoordinatorTab() {
-  const { role } = useAuth();
-  const isHod = role === "HOD";
+  const { user } = useAuth();
+  const isHod = user?.role?.toUpperCase() === "HOD";
 
   // Only HODs can change the PG Coordinator
   const [currentCord, setCurrentCord] = useState<PGCoordinator>(allLecturers[0]);

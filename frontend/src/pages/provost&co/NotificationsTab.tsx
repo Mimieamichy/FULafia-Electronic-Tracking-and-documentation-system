@@ -4,7 +4,7 @@ import { Users, CalendarCheck, MessageSquare } from "lucide-react";
 import { useAuth } from "../AuthProvider";
 
 export default function NotificationsTab() {
-  const { role } = useAuth();
+  const { user } = useAuth();
 
   const hodNotifications = [
     {
@@ -70,7 +70,7 @@ export default function NotificationsTab() {
   ];
 
   const notifications =
-    role === "HOD" ? hodNotifications : role === "PG_COORD" ? pgcNotifications : provostNotifications;
+   user?.role?.toUpperCase() === "HOD" ? hodNotifications : user?.role?.toUpperCase() === "PG_COORD" ? pgcNotifications : provostNotifications;
 
   return <NotificationCenter notifications={notifications} />;
 }

@@ -9,9 +9,9 @@ import ProvostCollegeRepManager from "./ProvostCollegeRepManager";
 import { useAuth } from "../AuthProvider";
 
 const PgLecturerManagement = () => {
-  const { role } = useAuth(); // 'HOD', 'PGC', or 'PROVOST'
-  const isHod = role === "HOD";
-  const isProvost = role === "PROVOST";
+  const { user } = useAuth(); // 'HOD', 'PGC', or 'PROVOST'
+  const isHod = user?.role?.toUpperCase() === "HOD";
+  const isProvost = user?.role?.toUpperCase() === "PROVOST";
 
   // Default tab choice
   const defaultTab = isHod ? "pg" : isProvost ? "external" : "students";
