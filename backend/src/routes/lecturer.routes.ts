@@ -22,9 +22,9 @@ const addHodSchema = Joi.object({
 
 // ✅ Routes with authentication and permissions
 router.get('/lecturers', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), LecturerController.getAllLecturers);
-router.delete('/lecturers/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.deleteLecturer);
-router.post('/lecturers/add-lecturer', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addLecturer);
-router.get('/lecturers/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
+router.delete('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.deleteLecturer);
+router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addLecturer);
+router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
 
 
 
