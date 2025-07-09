@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import LecturerService from '../../services/lecturer'
+import LecturerService from '../services/lecturer'
 
 
 export default class LecturerController {
