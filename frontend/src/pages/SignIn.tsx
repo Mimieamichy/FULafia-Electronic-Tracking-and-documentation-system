@@ -5,6 +5,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "./AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ const SignIn = () => {
 
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleInputChange = (field: "email" | "password", value: string) => {
     setFormData((prev) => ({
@@ -33,9 +35,9 @@ const SignIn = () => {
       // Wait a bit to ensure `user` is populated
       setTimeout(() => {
         switch (user?.role) {
-          case "HOD":
-          case "PG_COORD":
-          case "PROVOST":
+          case "hod":
+          case "pg_coord":
+          case "provost":
             navigate("/dashboard");
             break;
           case "DEAN":
@@ -50,13 +52,18 @@ const SignIn = () => {
           case "STUDENT":
             navigate("/student");
             break;
-          default:
-            alert("Unknown role. Cannot redirect.");
+          
         }
       }, 300);
     } catch (err) {
       console.error(err);
-      alert("Login failed. Please check your credentials.");
+      
+      toast({
+        title: "Login Failed",
+        description: "Please check your email and password.",
+        variant: "destructive",
+      });
+
     } finally {
       setLoading(false);
     }

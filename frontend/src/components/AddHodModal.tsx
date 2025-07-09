@@ -25,6 +25,7 @@ export interface NewHodData {
   email: string;
   faculty: string;
   department: string;
+  role: "hod" | "provost"; // new field
 }
 
 interface AddHodModalProps {
@@ -46,6 +47,7 @@ export default function AddHodModal({
     email: "",
     faculty: "",
     department: "",
+    role: "hod", // new field
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export default function AddHodModal({
     setLoading(true);
     try {
       await onSubmit(formData);
-      
+
       // reset
       setFormData({
         title: "",
@@ -70,6 +72,7 @@ export default function AddHodModal({
         email: "",
         faculty: "",
         department: "",
+        role: "hod", // reset role
       });
       onClose();
     } catch (err: any) {
@@ -85,8 +88,7 @@ export default function AddHodModal({
       <DialogContent className="max-w-4xl bg-white max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold text-gray-800">
-            Add New HOD
-           
+            Add New HOD or Provost
           </DialogTitle>
         </DialogHeader>
 
@@ -159,62 +161,85 @@ export default function AddHodModal({
             </div>
           </div>
 
-          {/* Row 3: Faculty / Department */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700 mb-1">Faculty</label>
-              <Select
-                value={formData.faculty}
-                onValueChange={(val) => handleChange("faculty", val)}
-                required
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Faculty" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "Engineering",
-                    "Science",
-                    "Arts",
-                    "Business",
-                    "Education",
-                    "Law",
-                    "Computing",
-                  ].map((fac) => (
-                    <SelectItem key={fac} value={fac}>
-                      {fac}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-gray-700 mb-1">Department</label>
-              <Select
-                value={formData.department}
-                onValueChange={(val) => handleChange("department", val)}
-                required
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "Computer Science",
-                    "Electrical",
-                    "Mechanical",
-                    "Civil",
-                    "Statistics",
-                  ].map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <label className="block text-gray-700 mb-1">Role</label>
+            <Select
+              value={formData.role}
+              onValueChange={(val) =>
+                handleChange("role", val as "hod" | "provost")
+              }
+              required
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hod">HOD</SelectItem>
+                <SelectItem value="provost">Provost</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
+
+          {/* Row 3: Faculty / Department */}
+          {formData.role === "hod" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Faculty</label>
+                <Select
+                  value={formData.faculty}
+                  onValueChange={(val) => handleChange("faculty", val)}
+                  required={formData.role === "hod"}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Faculty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Engineering",
+                      "Science",
+                      "Arts",
+                      "Business",
+                      "Education",
+                      "Law",
+                      "Computing",
+                    ].map((fac) => (
+                      <SelectItem key={fac} value={fac}>
+                        {fac}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">Department</label>
+                <Select
+                  value={formData.department}
+                  onValueChange={(val) => handleChange("department", val)}
+                  required={formData.role === "hod"}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Computer Science",
+                      "Electrical",
+                      "Mechanical",
+                      "Civil",
+                      "Statistics",
+                    ].map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          
           <DialogFooter className="flex justify-end gap-4 pt-4">
             <Button
               variant="outline"
