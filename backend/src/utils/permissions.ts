@@ -78,6 +78,7 @@ export enum Permission {
   VIEW_ACTIVITY_LOGS = 'view_activity_logs',
   VIEW_ALL_SESSIONS = 'view_all_sessions',
   GET_HODS = 'get_hods',
+  GET_PROVOST = 'get_provost',
   
 
   // General
@@ -172,6 +173,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_ALL_DEFENSES,
     Permission.VIEW_ACTIVITY_LOGS,
     Permission.GET_HODS,
+    Permission.GET_PROVOST
   ],
   [Role.GENERAL]: [
     Permission.LOGIN,

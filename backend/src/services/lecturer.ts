@@ -22,7 +22,7 @@ export default class LecturerService {
         lastName: string;
         userId: string;
         staffId: string;
-        role: string; 
+        role: string;
     }) {
         const normalizedRole = data.role.toLowerCase();
 
@@ -48,7 +48,7 @@ export default class LecturerService {
         }
 
         const roles: Role[] = [resolvedRole, Role.GENERAL];
-        const lecturer =  await this.getLecturerById(data.userId)
+        const lecturer = await this.getLecturerById(data.userId)
         const faculty = lecturer.faculty
         const department = lecturer.department
 
@@ -80,8 +80,24 @@ export default class LecturerService {
     }
 
     static async getHODs() {
-        return Lecturer.find().populate("user");
+        return Lecturer.find()
+            .populate({
+                path: 'user',
+                match: { roles: 'hod' }, // filters users whose roles include 'hod'
+            })
+            .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
+
+
+    static async getProvost() {
+        return Lecturer.find()
+            .populate({
+                path: 'user',
+                match: { roles: 'provost' }, // filters users whose roles include 'provost'
+            })
+            .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
+    }
+
 }
 
 
