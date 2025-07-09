@@ -91,5 +91,20 @@ export default class ProjectService {
   }
 
 
+  static async getProjectById(projectId: string) {
+    return Project.findById(projectId)
+      .populate({ path: "student", populate: { path: "user" } })
+      .lean();
+  }
+
+
+  static async getProjectByStudentId(studentId: string) {
+    return Project.findOne({ student: studentId })
+      .populate({ path: "student", populate: { path: "user" } })
+      .lean();
+  }
+
 
 }
+// This service handles project-related operations such as adding, retrieving, deleting projects, and managing project versions.
+// It also includes methods for downloading project files and uploading new project versions.

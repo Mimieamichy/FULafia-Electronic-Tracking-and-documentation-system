@@ -1,5 +1,5 @@
 // src/services/AuthService.ts
-import { User, Notification } from '../models/index';
+import { User } from '../models/index';
 import jwt from 'jsonwebtoken';
 import EmailService from '../utils/helpers';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -70,17 +70,7 @@ export default class AuthService {
     return;
   }
 
-  static async getNotifications(userId: string) {
-  try {
-    const notifications = await Notification.find({ recipient: userId })
-      .sort({ createdAt: -1 })
-      .lean();
 
-    return notifications;
-  } catch (error) {
-    throw new Error(`Failed to fetch notifications: ${(error as Error).message}`);
-  }
-}
 
 
 }

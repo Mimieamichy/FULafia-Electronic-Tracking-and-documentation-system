@@ -9,6 +9,8 @@ export interface ISession extends Document {
   endDate: Date;
 }
 
+
+
 const sessionSchema = new Schema<ISession>({
   sessionName: { type: String, required: true },
   department: { type: String, required: true },

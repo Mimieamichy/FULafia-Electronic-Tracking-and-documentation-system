@@ -1,6 +1,6 @@
 // src/routes/auth.ts
 import { Router } from 'express';
-import AuthController from '../controllers/base/general';
+import AuthController from '../controllers/auth';
 import { validateBody } from '../middlewares/validations';
 import { authenticate } from '../middlewares/auth';
 import { checkPermission } from '../middlewares/permission';
@@ -22,7 +22,7 @@ router.post('/login', validateBody(loginSchema), AuthController.login);
 router.post('/logout', authenticate, checkPermission(Permission.LOGOUT), AuthController.logout);
 router.post('/forgot-password', validateBody(forgotSchema), AuthController.forgotPassword);
 router.post('/reset-password', validateBody(resetSchema), AuthController.resetPassword);
-router.get('/notifications', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS),AuthController.viewNotifications);
+
 
 
 export default router;
