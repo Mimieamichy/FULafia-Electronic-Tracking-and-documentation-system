@@ -1,6 +1,15 @@
 import { Request, Response } from 'express';
 import LecturerService from '../services/lecturer'
 
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    role: string;
+    permissions: string[];
+    [key: string]: any;
+  };
+}
+
 
 export default class LecturerController {
 static async getAllLecturers(req: Request, res: Response) {
@@ -22,10 +31,11 @@ static async getAllLecturers(req: Request, res: Response) {
     }
   }
 
-  static async addLecturer(req: Request, res: Response) {
+  static async addLecturer(req: AuthenticatedRequest, res: Response) {
     try {
-      const { email, title, firstName, lastName, department, faculty, staffId, role } = req.body;
-      const hod = await LecturerService.addLecturer({ email, title, firstName, lastName, department, faculty, staffId, role });
+      const { email, title, firstName, lastName, staffId, role } = req.body;
+      const userId = req.user?.id || ''
+      const hod = await LecturerService.addLecturer({ email, title, firstName, lastName, userId, staffId, role });
       res.json({ success: true, data: hod });
     } catch (err: any) {
       console.log('Error adding HOD:', err);
