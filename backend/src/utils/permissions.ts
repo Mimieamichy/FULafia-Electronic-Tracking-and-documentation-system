@@ -166,7 +166,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [Role.ADMIN]: [
     Permission.VIEW_ALL_LECTURERS,
     Permission.DELETE_LECTURER,
-    Permission.ADD_HOD,
+    Permission.ADD_LECTURER,
     Permission.VIEW_ALL_SESSIONS,
     Permission.VIEW_ALL_STUDENTS,
     Permission.VIEW_ALL_PROJECTS,
