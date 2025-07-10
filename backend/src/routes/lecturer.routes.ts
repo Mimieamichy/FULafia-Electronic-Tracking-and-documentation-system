@@ -16,14 +16,27 @@ const addHodSchema = Joi.object({
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
   role: Joi.string().required(),
-  staffId: Joi.string().required()
+  staffId: Joi.string().required(),
+  faculty: Joi.string().required(),
+  department: Joi.string().required(),
 }); 
+
+
+const addLectuerSchema = Joi.object({
+  email: Joi.string().email().required(),
+  title: Joi.string().required(),
+  firstName: Joi.string().required(),
+  lastName: Joi.string().required(),
+  role: Joi.string().required(),
+  staffId: Joi.string().required(),
+});
 
 // ✅ Routes with authentication and permissions
 router.get('/lecturers', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), LecturerController.getAllLecturers);
 router.delete('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.deleteLecturer);
-router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addHodSchema), LecturerController.addLecturer);
+router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addLectuerSchema), LecturerController.addLecturer);
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
+router.post('/add-hos', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addLecturer);
 
 export default router;

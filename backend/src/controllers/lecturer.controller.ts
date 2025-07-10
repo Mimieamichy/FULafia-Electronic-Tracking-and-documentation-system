@@ -17,6 +17,7 @@ static async getAllLecturers(req: Request, res: Response) {
       const lecturers = await LecturerService.getAllLecturers();
       res.json({ success: true, data: lecturers });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'invalid_credentials', message: err.message });
     }
   }
@@ -36,6 +37,19 @@ static async getAllLecturers(req: Request, res: Response) {
       const { email, title, firstName, lastName, staffId, role } = req.body;
       const userId = req.user?.id || ''
       const hod = await LecturerService.addLecturer({ email, title, firstName, lastName, userId, staffId, role });
+      res.json({ success: true, data: hod });
+    } catch (err: any) {
+      console.log('Error adding HOD:', err);
+      res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
+    }
+  }
+
+
+  static async addHOD(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { email, title, firstName, lastName, staffId, role, department, faculty } = req.body;
+      const userId = req.user?.id || ''
+      const hod = await LecturerService.addHOD({ email, title, firstName, lastName, userId, staffId, role, department, faculty });
       res.json({ success: true, data: hod });
     } catch (err: any) {
       console.log('Error adding HOD:', err);

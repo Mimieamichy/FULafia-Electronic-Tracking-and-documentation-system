@@ -173,6 +173,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_ALL_DEFENSES,
     Permission.VIEW_ACTIVITY_LOGS,
     Permission.GET_HODS,
+    Permission.ADD_HOD,
     Permission.GET_PROVOST
   ],
   [Role.GENERAL]: [
