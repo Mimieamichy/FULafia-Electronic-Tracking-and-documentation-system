@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import AddHodModal from "@/components/AddHodModal";
+import AddHodModal, { NewHodData } from "@/components/AddHodModal";
+import AdminStaffManagement from "./AdminStaffManagement";
 import axios from "axios";
 import { useAuth } from "./AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -14,28 +15,25 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
-import AdminStaffManagement from "./AdminStaffManagement";
 
-export interface HOD {
-  id: string;
-  title: string;
-  name: string;
-}
-
-const baseUrl = import.meta.env.VITE_BACKEND_URL;
-
-const Admin = () => {
-  const { toast } = useToast();
+export default function Admin() {
   const { user, token, logout } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [hods, setHods] = useState<HOD[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Fetch HODs
+  const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const handleAddHod = (newHod: HOD) => setHods((prev) => [...prev, newHod]);
+  // 1️⃣ Inject / remove axios Authorization header when token changes
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  }, [token]);
 
   const handleLogout = () => {
     logout();
@@ -62,9 +60,8 @@ const Admin = () => {
         </div>
       </header>
 
-      {/* Main */}
-
-      <main className="container mx-auto px-4 py-8">
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 space-y-8">
         <AdminStaffManagement />
 
         <div className="flex justify-end">
@@ -72,76 +69,58 @@ const Admin = () => {
             onClick={() => setIsAddModalOpen(true)}
             className="bg-amber-700 text-white"
           >
-            Add HOD
+            Add HOD / Provost
           </Button>
         </div>
       </main>
 
-      {/* Add HOD Modal */}
+      {/* Add HOD/Provost Modal */}
       <AddHodModal
-  isOpen={isAddModalOpen}
-  onClose={() => setIsAddModalOpen(false)}
-  onSubmit={async (payload) => {
-    if (!token) {
-      toast({ title: "Not authorized", variant: "destructive" });
-      return;
-    }
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={async (payload: NewHodData) => {
+          if (!token) {
+            toast({ title: "Not authorized", variant: "destructive" });
+            return;
+          }
 
-    // 1️⃣ Prepare the body: drop faculty/department for provost
-    const body: Partial<typeof payload> = { 
-      title:        payload.title,
-      firstName:    payload.firstName,
-      lastName:     payload.lastName,
-      staffId:      payload.staffId,
-      email:        payload.email,
-      role:         payload.role,
-      // only include these when role==='hod'
-      ...(payload.role === "hod" && {
-        faculty: payload.faculty,
-        department: payload.department,
-      }),
-    };
+          // Build payload: drop faculty/department if adding a provost
+          const body: Partial<NewHodData> = {
+            title: payload.title,
+            firstName: payload.firstName,
+            lastName: payload.lastName,
+            staffId: payload.staffId,
+            email: payload.email,
+            role: payload.role,
+            ...(payload.role === "hod" && {
+              faculty: payload.faculty,
+              department: payload.department,
+            }),
+          };
 
-    // 2️⃣ Pick the correct endpoint
-    const endpoint =
-      payload.role === "provost"
-        ? "/lecturer/add-lecturer"
-        : "/lecturer/add-hod";
-
-    try {
-      const res = await axios.post<{ data: any }>(
-        `${baseUrl}${endpoint}`,
-        body,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const raw = res.data.data;
-      // 3️⃣ Map the returned object into your UI model
-      const newRecord = {
-        id: raw._id,
-        title: raw.title,
-        name: `${raw.user.firstName} ${raw.user.lastName}`,
-        // email is already on raw.user.email
-        email: raw.user.email,
-        // if it's a HOD you might want to show faculty/department as well
-        ...(payload.role === "hod" && {
-          faculty: raw.faculty,
-          department: raw.department,
-        }),
-      };
-
-      handleAddHod(newRecord);
-      setIsAddModalOpen(false);
-    } catch (err) {
-      console.error("Add user failed", err);
-      toast({
-        title: "Error",
-        description: "Failed to add user. Check console for details.",
-        variant: "destructive",
-      });
-    }
-  }}
-/>
+          // Choose endpoint based on role
+          const endpoint =
+            payload.role === "provost"
+             ? "/lecturer/add-lecturer"
+              : "/lecturer/add-hod";
+          try {
+            const res = await axios.post<{ data: any }>(
+              `${baseUrl}${endpoint}`,
+              body
+            );
+            toast({ title: "Success", description: "User added." });
+            setIsAddModalOpen(false);
+            // Ideally trigger a reload in AdminStaffManagement via context or a callback
+          } catch (err) {
+            console.error("Add user failed", err);
+            toast({
+              title: "Error",
+              description: "Failed to add user. See console for details.",
+              variant: "destructive",
+            });
+          }
+        }}
+      />
 
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
@@ -153,10 +132,16 @@ const Admin = () => {
             Are you sure you want to log out?
           </p>
           <DialogFooter className="mt-6 flex justify-end gap-4">
-            <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowLogoutModal(false)}
+            >
               Cancel
             </Button>
-            <Button className="bg-red-600 text-white" onClick={handleLogout}>
+            <Button
+              className="bg-red-600 text-white"
+              onClick={handleLogout}
+            >
               Log Out
             </Button>
           </DialogFooter>
@@ -164,6 +149,4 @@ const Admin = () => {
       </Dialog>
     </div>
   );
-};
-
-export default Admin;
+}

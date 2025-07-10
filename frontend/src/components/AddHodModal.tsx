@@ -254,7 +254,9 @@ export default function AddHodModal({
               className="bg-amber-700 text-white min-w-[100px]"
               disabled={loading}
             >
-              {loading ? "Adding..." : "Add HOD"}
+
+
+              {loading ? "Adding..." : `Add ${formData.role === "hod" ? "HOD" : "Provost"}`}
             </Button>
           </DialogFooter>
         </form>
