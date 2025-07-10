@@ -18,6 +18,8 @@ interface LecturerRecord {
   title: string;
   name: string;
   email: string;
+  dept?: string; // Optional for HODs
+  faculty?: string; // Optional for HODs
 }
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
@@ -64,6 +66,8 @@ export default function AdminStaffManagement() {
             title: raw.title,
             name: `${raw.user.firstName} ${raw.user.lastName}`,
             email: raw.user.email,
+            dept: raw.department,
+            faculty: raw.faculty,
           }))
         );
 
@@ -73,6 +77,7 @@ export default function AdminStaffManagement() {
             title: raw.title,
             name: `${raw.user.firstName} ${raw.user.lastName}`,
             email: raw.user.email,
+            
           }))
         );
       } catch (err) {
@@ -99,7 +104,7 @@ export default function AdminStaffManagement() {
 
     setDeletingId(id);
     try {
-      await axios.delete(`${baseUrl}/admin/lecturers/${id}`, {
+      await axios.delete(`${baseUrl}/lecturer/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -131,6 +136,8 @@ export default function AdminStaffManagement() {
             <th className="p-3 border-b">Title</th>
             <th className="p-3 border-b">Name</th>
             <th className="p-3 border-b">Email</th>
+            <th className="p-3 border-b">Department</th>
+            <th className="p-3 border-b">Faculty</th> 
             <th className="p-3 border-b text-right">Action</th>
           </tr>
         </thead>
@@ -143,6 +150,8 @@ export default function AdminStaffManagement() {
               <td className="p-3 border-b">{row.title}</td>
               <td className="p-3 border-b capitalize">{row.name}</td>
               <td className="p-3 border-b">{row.email}</td>
+              <td className="p-3 border-b">{row.dept}</td>
+              <td className="p-3 border-b">{row.faculty}</td>
               <td className="p-3 border-b text-right">
                 <Button
                   size="sm"
