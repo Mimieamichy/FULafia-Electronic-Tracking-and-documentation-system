@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import LecturerController from '../controllers/lecturer';
+import LecturerController from '../controllers/lecturer.controller';
 import { authenticate } from '../middlewares/auth';
 import { checkPermission } from '../middlewares/permission';
 import { validateBody } from '../middlewares/validations';
@@ -15,17 +15,15 @@ const addHodSchema = Joi.object({
   title: Joi.string().required(),
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
-  department: Joi.string().required(),
-  faculty: Joi.string().required(),
+  role: Joi.string().required(),
   staffId: Joi.string().required()
-});
+}); 
 
 // ✅ Routes with authentication and permissions
 router.get('/lecturers', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), LecturerController.getAllLecturers);
 router.delete('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.deleteLecturer);
 router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addHodSchema), LecturerController.addLecturer);
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
-
-
+router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
 
 export default router;

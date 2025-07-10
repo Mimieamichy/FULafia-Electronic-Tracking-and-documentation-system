@@ -53,4 +53,14 @@ static async getAllLecturers(req: Request, res: Response) {
         res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
       }
     }
+
+      static async getProvost(req: Request, res: Response) {
+      try {
+        const provost = await LecturerService.getProvost();
+        res.json({ success: true, data: provost });
+      } catch (err: any) {
+        console.log(err);
+        res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
+      }
+    }
 }
