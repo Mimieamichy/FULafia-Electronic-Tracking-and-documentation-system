@@ -26,7 +26,7 @@ export default function AdminStaffManagement() {
   const { token } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"hod" | "provost">("hod");
-  //console.log("🔍 token in AdminStaffManagement =", token);
+//  console.log("🔍 token in AdminStaffManagement =", token);
 
   const [hods, setHods] = useState<LecturerRecord[]>([]);
   const [provosts, setProvosts] = useState<LecturerRecord[]>([]);
@@ -38,26 +38,26 @@ export default function AdminStaffManagement() {
 
   
 
-  // set axios auth header
-  useEffect(() => {
-    if (token)
+ useEffect(() => {
+    if (token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    else delete axios.defaults.headers.common["Authorization"];
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+    }
   }, [token]);
 
   // load lists
   useEffect(() => {
+    if (!token) return; 
     const load = async () => {
+      // console.log("About to fetch HODs with token:", token)
       try {
         const [hodRes, provRes] = await Promise.all([
-          axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+          axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, ),
+            axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`,),
+          ]);
 
+         console.log("HODs response:", hodRes.data);
         setHods(
           hodRes.data.data.map((raw) => ({
             id: raw._id,

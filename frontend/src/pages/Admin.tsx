@@ -79,46 +79,69 @@ const Admin = () => {
 
       {/* Add HOD Modal */}
       <AddHodModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={async (payload) => {
-          if (!token) {
-            toast({ title: "Not authorized", variant: "destructive" });
-            return;
-          }
+  isOpen={isAddModalOpen}
+  onClose={() => setIsAddModalOpen(false)}
+  onSubmit={async (payload) => {
+    if (!token) {
+      toast({ title: "Not authorized", variant: "destructive" });
+      return;
+    }
 
-          // 👇 Clean up faculty/department if role is provost
-          const payloadToSend = { ...payload };
-          if (payload.role === "provost") {
-            delete payloadToSend.faculty;
-            delete payloadToSend.department;
-          }
+    // 1️⃣ Prepare the body: drop faculty/department for provost
+    const body: Partial<typeof payload> = { 
+      title:        payload.title,
+      firstName:    payload.firstName,
+      lastName:     payload.lastName,
+      staffId:      payload.staffId,
+      email:        payload.email,
+      role:         payload.role,
+      // only include these when role==='hod'
+      ...(payload.role === "hod" && {
+        faculty: payload.faculty,
+        department: payload.department,
+      }),
+    };
 
-          try {
-            const url = `${baseUrl}/lecturer/add-lecturer`;
+    // 2️⃣ Pick the correct endpoint
+    const endpoint =
+      payload.role === "provost"
+        ? "/lecturer/add-lecturer"
+        : "/lecturer/add-hod";
 
-            const res = await axios.post<{ data: any }>(url, payloadToSend, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+    try {
+      const res = await axios.post<{ data: any }>(
+        `${baseUrl}${endpoint}`,
+        body,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-            const raw = res.data.data;
-            const newHod = {
-              id: raw._id,
-              title: raw.title,
-              name: `${raw.user.firstName} ${raw.user.lastName}`,
-            };
-            handleAddHod(newHod);
-            setIsAddModalOpen(false);
-          } catch (err) {
-            console.error("Add HOD/Provost failed", err);
-            toast({
-              title: "Error",
-              description: "Failed to add user. Check console for details.",
-              variant: "destructive",
-            });
-          }
-        }}
-      />
+      const raw = res.data.data;
+      // 3️⃣ Map the returned object into your UI model
+      const newRecord = {
+        id: raw._id,
+        title: raw.title,
+        name: `${raw.user.firstName} ${raw.user.lastName}`,
+        // email is already on raw.user.email
+        email: raw.user.email,
+        // if it's a HOD you might want to show faculty/department as well
+        ...(payload.role === "hod" && {
+          faculty: raw.faculty,
+          department: raw.department,
+        }),
+      };
+
+      handleAddHod(newRecord);
+      setIsAddModalOpen(false);
+    } catch (err) {
+      console.error("Add user failed", err);
+      toast({
+        title: "Error",
+        description: "Failed to add user. Check console for details.",
+        variant: "destructive",
+      });
+    }
+  }}
+/>
 
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
