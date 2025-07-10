@@ -79,6 +79,39 @@ export default class LecturerService {
         return lecturer;
     }
 
+     static async addHOD(data: {
+        email: string;
+        title: string;
+        firstName: string;
+        lastName: string;
+        userId: string;
+        staffId: string;
+        role: string;
+        department: string;
+        faculty: string;
+    }) {
+    
+
+        const roles = [Role.HOD, Role.GENERAL];
+       
+        // Create User with dynamic roles
+        const user = await User.create({
+            email: data.email,
+            password: data.email, // for development; hash in pre-save
+            roles,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        return Lecturer.create({
+            user: user._id,
+            title: data.title,
+            department: data.department,
+            faculty: data.faculty,
+            staffId: data.staffId,
+        });
+    }
+
     static async getHODs() {
         return Lecturer.find()
             .populate({
