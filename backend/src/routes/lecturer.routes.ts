@@ -37,6 +37,6 @@ router.delete('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER),
 router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addLectuerSchema), LecturerController.addLecturer);
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
-router.post('/add-hos', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addLecturer);
+router.post('/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addHOD);
 
 export default router;
