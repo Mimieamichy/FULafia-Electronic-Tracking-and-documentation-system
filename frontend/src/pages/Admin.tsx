@@ -95,7 +95,7 @@ const Admin = () => {
           }
 
           try {
-            const url = `${baseUrl}/admin/lecturers/add-lecturer`;
+            const url = `${baseUrl}/lecturer/add-lecturer`;
 
             const res = await axios.post<{ data: any }>(url, payloadToSend, {
               headers: { Authorization: `Bearer ${token}` },
