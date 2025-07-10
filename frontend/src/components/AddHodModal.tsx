@@ -25,7 +25,7 @@ export interface NewHodData {
   email: string;
   faculty: string;
   department: string;
-  role: "hod" | "provost"; // new field
+  role: string; // new field
 }
 
 interface AddHodModalProps {
@@ -47,7 +47,7 @@ export default function AddHodModal({
     email: "",
     faculty: "",
     department: "",
-    role: "hod", // new field
+    role: "", // new field
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,13 +173,12 @@ export default function AddHodModal({
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Role" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent>               
                 <SelectItem value="hod">HOD</SelectItem>
                 <SelectItem value="provost">Provost</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
 
           {/* Row 3: Faculty / Department */}
           {formData.role === "hod" && (
@@ -239,7 +238,6 @@ export default function AddHodModal({
             </div>
           )}
 
-          
           <DialogFooter className="flex justify-end gap-4 pt-4">
             <Button
               variant="outline"
@@ -254,9 +252,9 @@ export default function AddHodModal({
               className="bg-amber-700 text-white min-w-[100px]"
               disabled={loading}
             >
-
-
-              {loading ? "Adding..." : `Add ${formData.role === "hod" ? "HOD" : "Provost"}`}
+              {loading
+                ? "Adding..."
+                : `Add ${formData.role === "hod" ? "HOD" : "Provost"}`}
             </Button>
           </DialogFooter>
         </form>
