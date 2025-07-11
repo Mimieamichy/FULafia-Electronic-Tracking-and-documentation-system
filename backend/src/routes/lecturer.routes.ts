@@ -38,5 +38,6 @@ router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTUR
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
 router.post('/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addHOD);
+router.post('/add-provost', authenticate, checkPermission(Permission.ADD_PROVOST), validateBody(addLectuerSchema), LecturerController.addProvost);
 
 export default router;

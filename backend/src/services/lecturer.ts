@@ -24,51 +24,51 @@ export default class LecturerService {
         staffId: string;
         role: string;
     }) {
-        const normalizedRole = data.role.toLowerCase();
+    
+      const normalizedRole = data.role.toLowerCase();
 
-        // Validate and map string to enum
-        const roleMap: Record<string, Role> = {
-            hod: Role.HOD,
-            lecturer: Role.LECTURER,
-            supervisor: Role.SUPERVISOR,
-            major_supervisor: Role.MAJOR_SUPERVISOR,
-            panel_member: Role.PANEL_MEMBER,
-            pgcord: Role.PGCOORD,
-            dean: Role.DEAN,
-            faculty_pg_rep: Role.FACULTY_PG_REP,
-            internal_examiner: Role.INTERNAL_EXAMINER,
-            provost: Role.PROVOST,
-            external_examiner: Role.EXTERNAL_EXAMINER,
-            admin: Role.ADMIN,
-        };
+      // Validate and map string to enum
+      const roleMap: Record<string, Role> = {
+        lecturer: Role.LECTURER,
+        supervisor: Role.SUPERVISOR,
+        major_supervisor: Role.MAJOR_SUPERVISOR,
+        panel_member: Role.PANEL_MEMBER,
+        pgcord: Role.PGCOORD,
+        dean: Role.DEAN,
+        faculty_pg_rep: Role.FACULTY_PG_REP,
+        internal_examiner: Role.INTERNAL_EXAMINER,
+        external_examiner: Role.EXTERNAL_EXAMINER,
+      };
 
-        const resolvedRole = roleMap[normalizedRole];
-        if (!resolvedRole) {
-            throw new Error(`Invalid role: ${data.role}`);
-        }
+      const resolvedRole = roleMap[normalizedRole];
+      if (!resolvedRole) {
+        throw new Error(`Invalid role: ${data.role}`);
+      }
 
-        const roles: Role[] = [resolvedRole, Role.GENERAL];
-        const lecturer = await this.getLecturerById(data.userId)
-        const faculty = lecturer.faculty
-        const department = lecturer.department
+      const roles: Role[] = [resolvedRole, Role.GENERAL];
+      const lecturer = await this.getLecturerById(data.userId);
 
 
-        // Create User with dynamic roles
-        const user = await User.create({
-            email: data.email,
-            password: data.email, // for development; hash in pre-save
-            roles,
-            firstName: data.firstName,
-            lastName: data.lastName,
-        });
+      // Get lecturer's department and faculty if no lecturer exists return null
+      let faculty = lecturer?.faculty ?? "none";
+      let department = lecturer?.department ?? "none";
 
-        return Lecturer.create({
-            user: user._id,
-            title: data.title,
-            department,
-            faculty,
-            staffId: data.staffId,
-        });
+      // Create User with dynamic roles
+      const user = await User.create({
+        email: data.email,
+        password: data.email, 
+        roles,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+
+      return Lecturer.create({
+        user: user._id,
+        title: data.title,
+        department,
+        faculty,
+        staffId: data.staffId,
+      });
     }
 
     static async getLecturerById(lecturerId: string) {
@@ -108,6 +108,38 @@ export default class LecturerService {
             title: data.title,
             department: data.department,
             faculty: data.faculty,
+            staffId: data.staffId,
+        });
+    }
+
+
+    static async addProvost(data: {
+        email: string;
+        title: string;
+        firstName: string;
+        lastName: string;
+        userId: string;
+        staffId: string;
+        role: string;
+    }) {
+    
+
+        const roles = [Role.HOD, Role.GENERAL];
+       
+        // Create User with dynamic roles
+        const user = await User.create({
+            email: data.email,
+            password: data.email, // for development; hash in pre-save
+            roles,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        return Lecturer.create({
+            user: user._id,
+            title: data.title,
+            department: 'none',
+            faculty: 'none',
             staffId: data.staffId,
         });
     }
