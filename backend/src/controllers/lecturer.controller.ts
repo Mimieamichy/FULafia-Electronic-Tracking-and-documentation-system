@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
 
 
 export default class LecturerController {
-static async getAllLecturers(req: Request, res: Response) {
+  static async getAllLecturers(req: Request, res: Response) {
     try {
       const lecturers = await LecturerService.getAllLecturers();
       res.json({ success: true, data: lecturers });
@@ -28,6 +28,7 @@ static async getAllLecturers(req: Request, res: Response) {
       await LecturerService.deleteLecturer(lecturerId);
       res.json({ success: true, message: 'Lecturer deleted successfully' })
     } catch (err: any) {
+      console.log("Error deleting lecturer:", err);
       res.status(400).json({ success: false, error: 'Failed to delete lecturer', message: err.message });
     }
   }
@@ -58,23 +59,22 @@ static async getAllLecturers(req: Request, res: Response) {
   }
 
   static async getHODs(req: Request, res: Response) {
-      try {
-        const hods = await LecturerService.getHODs();
-        console.log('HODs:', hods);
-        res.json({ success: true, data: hods });
-      } catch (err: any) {
-        console.log(err);
-        res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
-      }
+    try {
+      const hods = await LecturerService.getHODs();
+      res.json({ success: true, data: hods });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
     }
+  }
 
-      static async getProvost(req: Request, res: Response) {
-      try {
-        const provost = await LecturerService.getProvost();
-        res.json({ success: true, data: provost });
-      } catch (err: any) {
-        console.log(err);
-        res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
-      }
+  static async getProvost(req: Request, res: Response) {
+    try {
+      const provost = await LecturerService.getProvost();
+      res.json({ success: true, data: provost });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
     }
+  }
 }

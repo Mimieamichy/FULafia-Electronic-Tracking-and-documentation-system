@@ -1,5 +1,5 @@
 // src/pages/AdminStaffManagement.tsx
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -26,38 +26,62 @@ export default function AdminStaffManagement() {
   const { token } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"hod" | "provost">("hod");
-//  console.log("🔍 token in AdminStaffManagement =", token);
-
+  
   const [hods, setHods] = useState<LecturerRecord[]>([]);
   const [provosts, setProvosts] = useState<LecturerRecord[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(
-    null
-  );
+  const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  
+  // Create axios instance with interceptor - SINGLE SOURCE OF TRUTH
+  const apiClient = axios.create({
+    baseURL: baseUrl,
+  });
 
- useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common["Authorization"];
-    }
+  // Set up interceptor to handle token automatically
+  useEffect(() => {
+    const requestInterceptor = apiClient.interceptors.request.use(
+      (config) => {
+        // Only add token if it exists and is not 'null' string
+        if (token && token !== 'null' && token !== 'undefined') {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log('🔑 Adding token to request:', token.substring(0, 20) + '...');
+        } else {
+          console.log('❌ No valid token available');
+          delete config.headers.Authorization;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Cleanup interceptor on unmount
+    return () => {
+      apiClient.interceptors.request.eject(requestInterceptor);
+    };
   }, [token]);
 
-  // load lists
+  // Load data when token is available
   useEffect(() => {
-    if (!token) return; 
-    const load = async () => {
-      // console.log("About to fetch HODs with token:", token)
-      try {
-        const [hodRes, provRes] = await Promise.all([
-          axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, ),
-            axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`,),
-          ]);
+    if (!token || token === 'null' || token === 'undefined') {
+      console.log('❌ No valid token, skipping data load');
+      return;
+    }
 
-         console.log("HODs response:", hodRes.data);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        console.log('🔄 Loading HODs and Provosts...');
+        
+        const [hodRes, provRes] = await Promise.all([
+          apiClient.get<{ data: any[] }>('/lecturer/get-hods'),
+          apiClient.get<{ data: any[] }>('/lecturer/get-provost'), // Fixed: different endpoint
+        ]);
+
+        console.log('✅ HODs loaded:', hodRes.data.data.length);
+        console.log('✅ Provosts loaded:', provRes.data.data.length);
+
         setHods(
           hodRes.data.data.map((raw) => ({
             id: raw._id,
@@ -76,22 +100,25 @@ export default function AdminStaffManagement() {
           }))
         );
       } catch (err) {
-        console.error(err);
+        console.error('❌ Error loading data:', err);
         toast({
           title: "Error",
-          description: "Failed to load lists.",
+          description: "Failed to load staff lists.",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
-    load();
+
+    loadData();
   }, [token, toast]);
 
   const handleDelete = async (id: string) => {
-    if (!token) {
+    if (!token || token === 'null' || token === 'undefined') {
       toast({
         title: "Unauthorized",
-        description: "No token provided",
+        description: "No valid authentication token",
         variant: "destructive",
       });
       return;
@@ -99,27 +126,31 @@ export default function AdminStaffManagement() {
 
     setDeletingId(id);
     try {
-      await axios.delete(`${baseUrl}/admin/lecturers/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      console.log('🗑️ Deleting lecturer with ID:', id);
+      
+      await apiClient.delete(`/admin/lecturers/${id}`);
+
+      // Remove from both lists
+      setHods((prev) => prev.filter((x) => x.id !== id));
+      setProvosts((prev) => prev.filter((x) => x.id !== id));
+
+      toast({ 
+        title: "Success", 
+        description: "Staff member deleted successfully." 
       });
-
-      // Remove from both hod and provost
-      setHods((h) => h.filter((x) => x.id !== id));
-      setProvosts((p) => p.filter((x) => x.id !== id));
-
-      toast({ title: "Deleted", description: "Record removed." });
+      
+      console.log('✅ Lecturer deleted successfully');
     } catch (err) {
       console.error("❌ Delete error:", err);
       toast({
         title: "Error",
-        description: "Delete failed.",
+        description: "Failed to delete staff member.",
         variant: "destructive",
       });
     } finally {
       setDeletingId(null);
       setShowDeleteModal(false);
+      setSelectedIdToDelete(null);
     }
   };
 
@@ -151,6 +182,7 @@ export default function AdminStaffManagement() {
                     setSelectedIdToDelete(row.id);
                     setShowDeleteModal(true);
                   }}
+                  disabled={deletingId !== null}
                 >
                   Delete
                 </Button>
@@ -160,7 +192,7 @@ export default function AdminStaffManagement() {
           {data.length === 0 && (
             <tr>
               <td colSpan={4} className="p-4 text-center text-gray-500">
-                No records found.
+                {isLoading ? 'Loading...' : 'No records found.'}
               </td>
             </tr>
           )}
@@ -169,7 +201,16 @@ export default function AdminStaffManagement() {
     </div>
   );
 
-  
+  // Don't render if no token
+  if (!token || token === 'null' || token === 'undefined') {
+    return (
+      <div className="p-6">
+        <div className="text-center text-gray-500">
+          Please log in to access staff management.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -180,8 +221,8 @@ export default function AdminStaffManagement() {
         onValueChange={(val: string) => setActiveTab(val as typeof activeTab)}
       >
         <TabsList>
-          <TabsTrigger value="hod">HODs</TabsTrigger>
-          <TabsTrigger value="provost">Provost</TabsTrigger>
+          <TabsTrigger value="hod">HODs ({hods.length})</TabsTrigger>
+          <TabsTrigger value="provost">Provost ({provosts.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="hod" className="pt-4">
@@ -194,29 +235,36 @@ export default function AdminStaffManagement() {
       </Tabs>
 
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Confirm Delete</DialogTitle>
-      </DialogHeader>
-      <p className="text-gray-700">
-        Are you sure you want to delete this user?
-      </p>
-      <DialogFooter className="mt-6 flex justify-end gap-2">
-        <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
-          Cancel
-        </Button>
-        <Button
-          className="bg-red-600 text-white"
-          onClick={() => {
-            if (selectedIdToDelete) handleDelete(selectedIdToDelete);
-          }}
-          disabled={deletingId !== null}
-        >
-          {deletingId === selectedIdToDelete ? "Deleting…" : "Delete"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>;
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-700">
+            Are you sure you want to delete this staff member? This action cannot be undone.
+          </p>
+          <DialogFooter className="mt-6 flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteModal(false);
+                setSelectedIdToDelete(null);
+              }}
+              disabled={deletingId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={() => {
+                if (selectedIdToDelete) handleDelete(selectedIdToDelete);
+              }}
+              disabled={deletingId !== null}
+            >
+              {deletingId === selectedIdToDelete ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
