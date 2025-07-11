@@ -63,8 +63,7 @@ export default class LecturerController {
   static async addProvost(req: AuthenticatedRequest, res: Response) {
     try {
       const { email, title, firstName, lastName, staffId, role } = req.body;
-      const userId = req.user?.id || ''
-      const provost = await LecturerService.addProvost({ email, title, firstName, lastName, userId, staffId, role });
+      const provost = await LecturerService.addProvost({ email, title, firstName, lastName, staffId, role });
       res.json({ success: true, data: provost });
     } catch (err: any) {
       console.log('Error adding Provost:', err);
