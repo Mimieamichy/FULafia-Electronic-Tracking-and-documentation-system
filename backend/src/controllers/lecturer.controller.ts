@@ -90,4 +90,17 @@ export default class LecturerController {
       res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
     }
   }
+
+
+  static async getLecturerByDepartment(req: AuthenticatedRequest, res: Response){
+    try {
+      const userId = req.user?.id || '';
+      const provost = await LecturerService.getLecturerByDepartment(userId);
+      res.json({ success: true, data: provost });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
+    }
+  }
 }
+
