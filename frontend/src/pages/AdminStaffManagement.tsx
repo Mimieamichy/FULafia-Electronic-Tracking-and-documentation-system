@@ -225,7 +225,7 @@ export default function AdminStaffManagement() {
         </Button>
       </DialogFooter>
     </DialogContent>
-  </Dialog>;
+  </Dialog>
     </div>
   );
 }

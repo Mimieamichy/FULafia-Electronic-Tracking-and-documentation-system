@@ -101,7 +101,7 @@ export default function Admin() {
           // Choose endpoint based on role
           const endpoint =
             payload.role === "provost"
-             ? "/lecturer/add-lecturer"
+             ? "/lecturer/add-provost"
               : "/lecturer/add-hod";
           try {
             const res = await axios.post<{ data: any }>(
