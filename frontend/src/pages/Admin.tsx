@@ -108,14 +108,14 @@ export default function Admin() {
               `${baseUrl}${endpoint}`,
               body
             );
-            toast({ title: "Success", description: "User added." });
+            toast({ title: "Success", description: "Staff added." });
             setIsAddModalOpen(false);
             // Ideally trigger a reload in AdminStaffManagement via context or a callback
           } catch (err) {
-            console.error("Add user failed", err);
+            console.error("Add staff failed", err);
             toast({
               title: "Error",
-              description: "Failed to add user. See console for details.",
+              description: "Failed to add staff. See console for details.",
               variant: "destructive",
             });
           }

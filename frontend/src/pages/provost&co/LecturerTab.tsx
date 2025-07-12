@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -21,46 +21,29 @@ interface Lecturer {
   staffId: string;
   email: string;
   role: string;
-  department: string;
-  faculty: string;
+}
+
+interface Option {
+  label: string;
+  value: string;
 }
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-// Static dropdown options
-const titleOptions = ["Mr.", "Mrs.", "Miss.", "Dr.", "Engr."];
-const facultyOptions = [
-  "Faculty of Engineering",
-  "Faculty of Science",
-  "Faculty of Arts",
-  "Faculty of Social Sciences",
-  "Faculty of Education",
-  "Faculty of Computing"
-];
-const departmentOptions = [
-  "Computer Science",
-  "Electrical Engineering",
-  "Statistics",
-];
-const baseRoleOptions = [
-  "Lecturer I",
-  "Lecturer II",
-  "Assistant Lecturer",
-  "Senior Lecturer",
-  "Visiting Lecturer",
-  "Adjunct Lecturer",
-  "Research Fellow",
-];
+// Titles for dropdown
+const titleOptions = ["Mr.", "Mrs.", "Miss.", "Dr.", "Engr.", "Prof.", "Assoc. Prof."];
+
+// Roles for dropdown
+const baseRoleOptions: Option[] = [{ label: "Lecturer", value: "lecturer" }];
 
 export default function LecturerTab() {
   const { token, user } = useAuth();
   const isHod = user?.role?.toUpperCase() === "HOD";
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
-// console.log("token:", token);
+  const { toast } = useToast();
 
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Lecturer | null>(null);
   const [form, setForm] = useState<Omit<Lecturer, "id">>({
     title: "",
     firstName: "",
@@ -68,39 +51,40 @@ export default function LecturerTab() {
     staffId: "",
     email: "",
     role: "",
-    department: "",
-    faculty: "",
   });
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const { toast } = useToast();
 
-  // Build role options
-  const roleOptions = [
+  // Build role options based on HOD/Provost
+  const roleOptions: Option[] = [
     ...baseRoleOptions,
-    ...(isHod ? ["PG Coordinator"] : []),
-    ...(isProvost ? ["External Examiner"] : []),
+    ...(isHod
+      ? [
+          { label: "PG Coordinator", value: "pgcord" },
+          { label: "Dean", value: "dean" },
+        ]
+      : []),
+    ...(isProvost
+      ? [{ label: "External Examiner", value: "external_examiner" }]
+      : []),
   ];
 
-  // Set axios header and fetch on mount
-  // useEffect(() => {
-  //   if (token) {
-  //     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  //     loadLecturers();
-  //   }
-  // }, [token,]);
+  // Load lecturers list
+  useEffect(() => {
+    if (!token) {
+      toast({ title: "Not authorized", variant: "destructive" });
+      return;
+    }
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    loadLecturers();
+  }, [token]);
 
   async function loadLecturers() {
     try {
       const res = await axios.get<{ data: any[] }>(
         `${baseUrl}/lecturer/lecturers`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-        
-
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log("Lecturers loaded:", res.data.data);
       setLecturers(
         res.data.data.map((r) => ({
           id: r._id,
@@ -110,17 +94,19 @@ export default function LecturerTab() {
           staffId: r.staffId,
           email: r.user.email,
           role: r.role,
-          department: r.department,
-          faculty: r.faculty,
         }))
       );
     } catch (err) {
       console.error("Load lecturers failed", err);
+      toast({
+        title: "Error",
+        description: "Failed to load lecturers.",
+        variant: "destructive",
+      });
     }
   }
 
   function openAdd() {
-    setEditing(null);
     setForm({
       title: "",
       firstName: "",
@@ -128,32 +114,21 @@ export default function LecturerTab() {
       staffId: "",
       email: "",
       role: "",
-      department: "",
-      faculty: "",
     });
     setModalOpen(true);
   }
 
-  function openEdit(lec: Lecturer) {
-    setEditing(lec);
-    setForm({ ...lec });
-    setModalOpen(true);
-  }
-
   async function handleSubmit() {
-    // basic validation
-    for (let key of [
+    // Validate
+    for (const key of [
       "title",
       "firstName",
       "lastName",
       "staffId",
       "email",
       "role",
-      "department",
-      "faculty",
     ] as const) {
       if (!form[key]) {
-        
         toast({
           title: "Validation Error",
           description: `Please fill in the ${key} field.`,
@@ -165,41 +140,30 @@ export default function LecturerTab() {
 
     setLoading(true);
     try {
-      if (editing) {
-        // not in spec: skipping update endpoint
-      } else {
-        const res = await axios.post<{ data: any }>(
-          `${baseUrl}/lecturer/add-lecturer`,
-
-          form,
+      const res = await axios.post<{ data: any }>(
+        `${baseUrl}/lecturer/add-lecturer`,
+        form,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const raw = res.data.data;
+      setLecturers((prev) => [
+        ...prev,
         {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        console.log("Lecturer added:", res.data.data);
-        const raw = res.data.data;
-        setLecturers((prev) => [
-          ...prev,
-          {
-            id: raw._id,
-            title: raw.title,
-            firstName: raw.user.firstName,
-            lastName: raw.user.lastName,
-            staffId: raw.staffId,
-            email: raw.user.email,
-            role: raw.role,
-            department: raw.department,
-            faculty: raw.faculty,
-          },
-        ]);
-      }
+          id: raw._id,
+          title: raw.title,
+          firstName: raw.user.firstName,
+          lastName: raw.user.lastName,
+          staffId: raw.staffId,
+          email: raw.user.email,
+          role: raw.role,
+        },
+      ]);
       setModalOpen(false);
     } catch (err) {
       console.error("Add lecturer failed", err);
-     
       toast({
         title: "Error",
-        description: "Failed to add staff. Please try again.",
+        description: "Failed to add lecturer.",
         variant: "destructive",
       });
     } finally {
@@ -211,16 +175,15 @@ export default function LecturerTab() {
     if (!confirm("Delete this lecturer?")) return;
     setDeletingId(id);
     try {
-      await axios.delete(`${baseUrl}/lecturer/${id}`, {
+      await axios.delete(`${baseUrl}/lecturers/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLecturers((prev) => prev.filter((l) => l.id !== id));
     } catch (err) {
       console.error("Delete failed", err);
-      
       toast({
         title: "Error",
-        description: "Failed to delete lecturer. Please try again.",
+        description: "Failed to delete lecturer.",
         variant: "destructive",
       });
     } finally {
@@ -236,6 +199,7 @@ export default function LecturerTab() {
           Add Lecturer
         </Button>
       </div>
+
       <div className="bg-white rounded shadow overflow-x-auto">
         <table className="min-w-[800px] w-full text-left">
           <thead className="bg-gray-100">
@@ -243,7 +207,6 @@ export default function LecturerTab() {
               <th className="p-3">Name</th>
               <th className="p-3">Staff ID</th>
               <th className="p-3">Email</th>
-              <th className="p-3">Department</th>
               <th className="p-3">Role</th>
               <th className="p-3 text-right">Actions</th>
             </tr>
@@ -256,24 +219,22 @@ export default function LecturerTab() {
                 </td>
                 <td className="p-3">{l.staffId}</td>
                 <td className="p-3">{l.email}</td>
-                <td className="p-3">{l.department}</td>
                 <td className="p-3">{l.role}</td>
-                <td className="p-3 text-right space-x-2">
-                  <button onClick={() => openEdit(l)}>
-                    <Edit2 size={18} />
-                  </button>
-                  <button
+                <td className="p-3 text-right">
+                  <Button
+                    variant="destructive"
+                    size="icon"
                     onClick={() => handleDelete(l.id)}
                     disabled={deletingId === l.id}
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
             {!lecturers.length && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-gray-500">
+                <td colSpan={5} className="p-4 text-center text-gray-500">
                   No lecturers found.
                 </td>
               </tr>
@@ -282,23 +243,19 @@ export default function LecturerTab() {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Add Lecturer Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <h3 className="text-lg font-medium mb-4">
-              {editing ? "Edit Lecturer" : "Add Lecturer"}
-            </h3>
+            <h3 className="text-lg font-medium mb-4">Add Lecturer</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/** Title */}
+              {/* Title */}
               <div>
                 <label className="block text-gray-700 mb-1">Title</label>
                 <Select
                   value={form.title}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, title: v }))
-                  }
+                  onValueChange={(v) => setForm((f) => ({ ...f, title: v }))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Title" />
@@ -312,11 +269,10 @@ export default function LecturerTab() {
                   </SelectContent>
                 </Select>
               </div>
-              {/** First Name */}
+
+              {/* First Name */}
               <div>
-                <label className="block text-gray-700 mb-1">
-                  First Name
-                </label>
+                <label className="block text-gray-700 mb-1">First Name</label>
                 <input
                   type="text"
                   className="w-full border rounded px-2 py-1"
@@ -326,11 +282,10 @@ export default function LecturerTab() {
                   }
                 />
               </div>
-              {/** Last Name */}
+
+              {/* Last Name */}
               <div>
-                <label className="block text-gray-700 mb-1">
-                  Last Name
-                </label>
+                <label className="block text-gray-700 mb-1">Last Name</label>
                 <input
                   type="text"
                   className="w-full border rounded px-2 py-1"
@@ -340,7 +295,8 @@ export default function LecturerTab() {
                   }
                 />
               </div>
-              {/** Staff ID */}
+
+              {/* Staff ID */}
               <div>
                 <label className="block text-gray-700 mb-1">Staff ID</label>
                 <input
@@ -352,7 +308,8 @@ export default function LecturerTab() {
                   }
                 />
               </div>
-              {/** Email */}
+
+              {/* Email */}
               <div>
                 <label className="block text-gray-700 mb-1">Email</label>
                 <input
@@ -364,66 +321,21 @@ export default function LecturerTab() {
                   }
                 />
               </div>
-              {/** Role */}
+
+              {/* Role */}
               <div>
                 <label className="block text-gray-700 mb-1">Role</label>
                 <Select
                   value={form.role}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, role: v }))
-                  }
+                  onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roleOptions.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/** Faculty */}
-              <div>
-                <label className="block text-gray-700 mb-1">Faculty</label>
-                <Select
-                  value={form.faculty}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, faculty: v }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Faculty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {facultyOptions.map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {f}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/** Department */}
-              <div>
-                <label className="block text-gray-700 mb-1">
-                  Department
-                </label>
-                <Select
-                  value={form.department}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, department: v }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departmentOptions.map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {d}
+                    {roleOptions.map(({ label, value }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -444,7 +356,7 @@ export default function LecturerTab() {
                 className="bg-amber-700 text-white"
                 disabled={loading}
               >
-                {editing ? "Save" : "Add"}
+                Add
               </Button>
             </div>
           </div>

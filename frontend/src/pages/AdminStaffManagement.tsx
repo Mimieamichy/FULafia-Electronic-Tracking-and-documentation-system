@@ -56,10 +56,11 @@ export default function AdminStaffManagement() {
       try {
         const [hodRes, provRes] = await Promise.all([
           axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`, ),
-            axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-hods`,),
+            axios.get<{ data: any[] }>(`${baseUrl}/lecturer/get-provost`,),
           ]);
 
          console.log("HODs response:", hodRes.data);
+        console.log("Provosts response:", provRes.data);
         setHods(
           hodRes.data.data.map((raw) => ({
             id: raw._id,
@@ -136,8 +137,12 @@ export default function AdminStaffManagement() {
             <th className="p-3 border-b">Title</th>
             <th className="p-3 border-b">Name</th>
             <th className="p-3 border-b">Email</th>
-            <th className="p-3 border-b">Department</th>
-            <th className="p-3 border-b">Faculty</th> 
+            { activeTab === "hod" && (
+              <>
+                <th className="p-3 border-b">Department</th>
+                <th className="p-3 border-b">Faculty</th>
+              </>
+            )}
             <th className="p-3 border-b text-right">Action</th>
           </tr>
         </thead>
@@ -150,8 +155,12 @@ export default function AdminStaffManagement() {
               <td className="p-3 border-b">{row.title}</td>
               <td className="p-3 border-b capitalize">{row.name}</td>
               <td className="p-3 border-b">{row.email}</td>
-              <td className="p-3 border-b">{row.dept}</td>
-              <td className="p-3 border-b">{row.faculty}</td>
+              { activeTab === "hod" && (
+                <>
+                  <td className="p-3 border-b">{row.dept}</td>
+                  <td className="p-3 border-b">{row.faculty}</td>
+                </>
+              )}
               <td className="p-3 border-b text-right">
                 <Button
                   size="sm"
@@ -208,7 +217,7 @@ export default function AdminStaffManagement() {
         <DialogTitle>Confirm Delete</DialogTitle>
       </DialogHeader>
       <p className="text-gray-700">
-        Are you sure you want to delete this user?
+        Are you sure you want to delete this Staff?
       </p>
       <DialogFooter className="mt-6 flex justify-end gap-2">
         <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
