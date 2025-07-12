@@ -23,7 +23,7 @@ export interface AuthenticatedRequest extends Request {
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization as string | '';
-  console.log('AuthHeader: ', req.headers)
+  // console.log('AuthHeader: ', req.headers)
 
 
   if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader == null) {
@@ -32,7 +32,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   const token = authHeader.split(' ')[1];
-  console.log('Toekn:',token)
+  // console.log('Toekn:',token)
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {

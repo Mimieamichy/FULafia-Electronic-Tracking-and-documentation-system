@@ -8,12 +8,17 @@ export default class LecturerService {
     }
 
     static async deleteLecturer(lecturerId: string) {
-        const lecturer = Lecturer.findByIdAndDelete(lecturerId);
+        const lecturer = await Lecturer.findByIdAndDelete(lecturerId);
         if (!lecturer) {
             throw new Error("Lecturer not found");
         }
+
+        // Delete the associated user
+        await User.findByIdAndDelete(lecturer.user);
+
         return lecturer;
     }
+
 
     static async addLecturer(data: {
         email: string;
@@ -24,11 +29,11 @@ export default class LecturerService {
         staffId: string;
         role: string;
     }) {
+
         const normalizedRole = data.role.toLowerCase();
 
         // Validate and map string to enum
         const roleMap: Record<string, Role> = {
-            hod: Role.HOD,
             lecturer: Role.LECTURER,
             supervisor: Role.SUPERVISOR,
             major_supervisor: Role.MAJOR_SUPERVISOR,
@@ -37,9 +42,7 @@ export default class LecturerService {
             dean: Role.DEAN,
             faculty_pg_rep: Role.FACULTY_PG_REP,
             internal_examiner: Role.INTERNAL_EXAMINER,
-            provost: Role.PROVOST,
             external_examiner: Role.EXTERNAL_EXAMINER,
-            admin: Role.ADMIN,
         };
 
         const resolvedRole = roleMap[normalizedRole];
@@ -48,15 +51,17 @@ export default class LecturerService {
         }
 
         const roles: Role[] = [resolvedRole, Role.GENERAL];
-        const lecturer = await this.getLecturerById(data.userId)
-        const faculty = lecturer.faculty
-        const department = lecturer.department
+        const lecturer = await this.getLecturerById(data.userId);
 
+
+        // Get lecturer's department and faculty if no lecturer exists return null
+        let faculty = lecturer?.faculty ?? "none";
+        let department = lecturer?.department ?? "none";
 
         // Create User with dynamic roles
         const user = await User.create({
             email: data.email,
-            password: data.email, // for development; hash in pre-save
+            password: data.email,
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
@@ -79,7 +84,7 @@ export default class LecturerService {
         return lecturer;
     }
 
-     static async addHOD(data: {
+    static async addHOD(data: {
         email: string;
         title: string;
         firstName: string;
@@ -90,10 +95,10 @@ export default class LecturerService {
         department: string;
         faculty: string;
     }) {
-    
+
 
         const roles = [Role.HOD, Role.GENERAL];
-       
+
         // Create User with dynamic roles
         const user = await User.create({
             email: data.email,
@@ -103,11 +108,42 @@ export default class LecturerService {
             lastName: data.lastName,
         });
 
-        return Lecturer.create({
+        return await Lecturer.create({
             user: user._id,
             title: data.title,
             department: data.department,
             faculty: data.faculty,
+            staffId: data.staffId,
+        });
+    }
+
+
+    static async addProvost(data: {
+        email: string;
+        title: string;
+        firstName: string;
+        lastName: string;
+        staffId: string;
+        role: string;
+    }) {
+
+
+        const roles = [Role.PROVOST, Role.GENERAL];
+
+        // Create User with dynamic roles
+        const user = await User.create({
+            email: data.email,
+            password: data.email, // for development; hash in pre-save
+            roles,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        return await Lecturer.create({
+            user: user._id,
+            title: data.title,
+            department: 'none',
+            faculty: 'none',
             staffId: data.staffId,
         });
     }

@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
 
 
 export default class LecturerController {
-static async getAllLecturers(req: Request, res: Response) {
+  static async getAllLecturers(req: Request, res: Response) {
     try {
       const lecturers = await LecturerService.getAllLecturers();
       res.json({ success: true, data: lecturers });
@@ -28,6 +28,7 @@ static async getAllLecturers(req: Request, res: Response) {
       await LecturerService.deleteLecturer(lecturerId);
       res.json({ success: true, message: 'Lecturer deleted successfully' })
     } catch (err: any) {
+      console.log("Error deleting lecturer:", err);
       res.status(400).json({ success: false, error: 'Failed to delete lecturer', message: err.message });
     }
   }
@@ -36,11 +37,11 @@ static async getAllLecturers(req: Request, res: Response) {
     try {
       const { email, title, firstName, lastName, staffId, role } = req.body;
       const userId = req.user?.id || ''
-      const hod = await LecturerService.addLecturer({ email, title, firstName, lastName, userId, staffId, role });
-      res.json({ success: true, data: hod });
+      const lecturer = await LecturerService.addLecturer({ email, title, firstName, lastName, userId, staffId, role });
+      res.json({ success: true, data: lecturer });
     } catch (err: any) {
-      console.log('Error adding HOD:', err);
-      res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
+      console.log('Error adding Lecturer:', err);
+      res.status(400).json({ success: false, error: 'Failed to add Lecturer', message: err.message });
     }
   }
 
@@ -57,24 +58,36 @@ static async getAllLecturers(req: Request, res: Response) {
     }
   }
 
-  static async getHODs(req: Request, res: Response) {
-      try {
-        const hods = await LecturerService.getHODs();
-        console.log('HODs:', hods);
-        res.json({ success: true, data: hods });
-      } catch (err: any) {
-        console.log(err);
-        res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
-      }
-    }
 
-      static async getProvost(req: Request, res: Response) {
-      try {
-        const provost = await LecturerService.getProvost();
-        res.json({ success: true, data: provost });
-      } catch (err: any) {
-        console.log(err);
-        res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
-      }
+
+  static async addProvost(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { email, title, firstName, lastName, staffId, role } = req.body;
+      const provost = await LecturerService.addProvost({ email, title, firstName, lastName, staffId, role });
+      res.json({ success: true, data: provost });
+    } catch (err: any) {
+      console.log('Error adding Provost:', err);
+      res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
     }
+  }
+
+  static async getHODs(req: Request, res: Response) {
+    try {
+      const hods = await LecturerService.getHODs();
+      res.json({ success: true, data: hods });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
+    }
+  }
+
+  static async getProvost(req: Request, res: Response) {
+    try {
+      const provost = await LecturerService.getProvost();
+      res.json({ success: true, data: provost });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
+    }
+  }
 }
