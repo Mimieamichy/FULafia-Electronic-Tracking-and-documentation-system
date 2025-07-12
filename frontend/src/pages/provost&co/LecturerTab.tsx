@@ -31,7 +31,15 @@ interface Option {
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 // Titles for dropdown
-const titleOptions = ["Mr.", "Mrs.", "Miss.", "Dr.", "Engr.", "Prof.", "Assoc. Prof."];
+const titleOptions = [
+  "Mr.",
+  "Mrs.",
+  "Miss.",
+  "Dr.",
+  "Engr.",
+  "Prof.",
+  "Assoc. Prof.",
+];
 
 // Roles for dropdown
 const baseRoleOptions: Option[] = [{ label: "Lecturer", value: "lecturer" }];
@@ -54,6 +62,7 @@ export default function LecturerTab() {
   });
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
 
   // Build role options based on HOD/Provost
   const roleOptions: Option[] = [
@@ -82,9 +91,10 @@ export default function LecturerTab() {
   async function loadLecturers() {
     try {
       const res = await axios.get<{ data: any[] }>(
-        `${baseUrl}/lecturer/lecturers`,
+        `${baseUrl}/lecturer/department`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      console.log("Loaded lecturers:", res.data.data);
       setLecturers(
         res.data.data.map((r) => ({
           id: r._id,
@@ -93,7 +103,7 @@ export default function LecturerTab() {
           lastName: r.user.lastName,
           staffId: r.staffId,
           email: r.user.email,
-          role: r.role,
+          role: r.user.roles[0].toUpperCase(),
         }))
       );
     } catch (err) {
@@ -171,11 +181,10 @@ export default function LecturerTab() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this lecturer?")) return;
+  async function confirmDelete(id: string) {
     setDeletingId(id);
     try {
-      await axios.delete(`${baseUrl}/lecturers/${id}`, {
+      await axios.delete(`${baseUrl}/lecturer/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLecturers((prev) => prev.filter((l) => l.id !== id));
@@ -188,6 +197,7 @@ export default function LecturerTab() {
       });
     } finally {
       setDeletingId(null);
+      setDeleteModalId(null);
     }
   }
 
@@ -214,7 +224,7 @@ export default function LecturerTab() {
           <tbody>
             {lecturers.map((l, i) => (
               <tr key={l.id} className={i % 2 ? "bg-white" : "bg-amber-50"}>
-                <td className="p-3">
+                <td className="p-3 capitalize">
                   {l.title} {l.firstName} {l.lastName}
                 </td>
                 <td className="p-3">{l.staffId}</td>
@@ -224,7 +234,7 @@ export default function LecturerTab() {
                   <Button
                     variant="destructive"
                     size="icon"
-                    onClick={() => handleDelete(l.id)}
+                    onClick={() => setDeleteModalId(l.id)}
                     disabled={deletingId === l.id}
                   >
                     <Trash2 size={18} />
@@ -238,6 +248,31 @@ export default function LecturerTab() {
                   No lecturers found.
                 </td>
               </tr>
+            )}
+            {deleteModalId && (
+              <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                  <h4 className="text-lg font-medium mb-4">
+                    Are you sure you want to delete this lecturer?
+                  </h4>
+                  <div className="flex justify-end space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setDeleteModalId(null)}
+                      disabled={deletingId === deleteModalId}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-red-600 text-white"
+                      onClick={() => confirmDelete(deleteModalId)}
+                      disabled={deletingId === deleteModalId}
+                    >
+                      {deletingId === deleteModalId ? "Deleting…" : "Delete"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </tbody>
         </table>
