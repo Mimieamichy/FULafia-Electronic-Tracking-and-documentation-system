@@ -10,7 +10,7 @@ const router = Router();
 
 
 router.get('/profile', authenticate, UserController.getUserProfile);
-router.put('/updatePassword', authenticate, UserController.updatePassword);
+router.put('/update-password', authenticate, UserController.updatePassword);
 router.get('/activity-logs', authenticate, checkPermission(Permission.VIEW_ACTIVITY_LOGS), UserController.getActivityLogs);
 
 

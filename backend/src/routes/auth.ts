@@ -20,7 +20,7 @@ const resetSchema = Joi.object({ token: Joi.string().required(), newPassword: Jo
 // Routes
 router.post('/login', validateBody(loginSchema), AuthController.login);
 router.post('/logout', authenticate, checkPermission(Permission.LOGOUT), AuthController.logout);
-router.post('/forgot-password', validateBody(forgotSchema), AuthController.forgotPassword);
+router.post('/forget-password', validateBody(forgotSchema), AuthController.forgotPassword);
 router.post('/reset-password', validateBody(resetSchema), AuthController.resetPassword);
 
 

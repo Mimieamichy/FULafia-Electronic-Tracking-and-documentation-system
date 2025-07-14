@@ -112,9 +112,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.ADD_PANEL_MEMBERS,
     Permission.ASSIGN_SUPERVISORS,
     Permission.DOWNLOAD_PROJECT,
+    Permission.DELETE_LECTURER
   ],
   [Role.PGCOORD]: [
-    Permission.VIEW_DEPT_LECTURERS,
+    Permission.VIEW_LECTURERS_BY_DEPARTMENT,
     Permission.ADD_LECTURER,
     Permission.DELETE_LECTURER,
     Permission.GENERATE_DEPT_SCORE_SHEET,
