@@ -18,6 +18,7 @@ export default class UserController {
       const user = await UserService.getUserProfile(req.user?._id);
       res.json({ success: true, data: user });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'Failed to get User profile', message: err.message });
     }
   }
@@ -28,6 +29,7 @@ export default class UserController {
       await UserService.updatePassword(req.user?._id, oldPassword, newPassword);
       res.json({ success: true, data: newPassword });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'Failed to get update password', message: err.message });
     }
   }
@@ -37,6 +39,7 @@ export default class UserController {
       const logs = await ActivityLogService.getHistory(100);
       res.json({ success: true, data: logs });
     } catch (err: any) {
+      console.log(err)
       res.status(500).json({ success: false, error: 'Failed to get all activities', message: err.message });
     }
   }

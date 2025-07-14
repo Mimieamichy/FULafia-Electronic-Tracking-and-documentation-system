@@ -22,6 +22,7 @@ export default class SessionController {
       const sessions = await SessionService.getAllSessions();
       res.json({ success: true, data: sessions });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'Failed to get all sessions', message: err.message });
     }
   }
@@ -44,6 +45,7 @@ export default class SessionController {
 
     res.json({ success: true, data: session });
   } catch (err: any) {
+    console.log(err)
     res.status(400).json({success: false, error: "Failed to create session", message: err.message});
   }
 }
@@ -56,7 +58,8 @@ static async getSessionByDepartment(req: AuthenticatedRequest, res: Response){
       return res.status(404).json({ success: false, error: 'Department not found' });
     }
   } catch(err: any) {
-     res.status(400).json({success: false, error: "Failed to get department session", message: err.message});
+    console.log(err)
+    res.status(400).json({success: false, error: "Failed to get department session", message: err.message});
   }
 
 }
@@ -68,7 +71,8 @@ static async getSessionByFaculty(req: AuthenticatedRequest, res: Response){
       return res.status(404).json({ success: false, error: 'Department not found' });
     }
   } catch(err: any) {
-     res.status(400).json({success: false, error: "Failed to get department session", message: err.message});
+    console.log(err)
+    res.status(400).json({success: false, error: "Failed to get department session", message: err.message});
   }
 
 }

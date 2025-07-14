@@ -34,6 +34,7 @@ export default class AuthController {
       await AuthService.forgotPassword(req.body.email);
       res.json({ success: true, message: 'Password reset email sent' });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'invalid_request', message: err.message });
     }
   }
@@ -44,6 +45,7 @@ export default class AuthController {
       await AuthService.resetPassword(token, newPassword);
       res.json({ success: true, message: 'Password has been reset' });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({ success: false, error: 'invalid_token', message: err.message });
     }
   }
