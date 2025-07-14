@@ -96,7 +96,7 @@ export default function DashboardShell() {
             className="w-6 h-6 text-gray-600 cursor-pointer"
             onClick={() => setIsMenuOpen((o) => !o)}
           />
-          <span className="text-gray-700">Welcome, {userName}</span>
+          <span className="text-gray-700 capitalize">Welcome, {userName}</span>
         </div>
 
         {/* Side‑menu */}

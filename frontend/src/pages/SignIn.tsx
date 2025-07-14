@@ -1,6 +1,6 @@
 // src/SignIn.tsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +32,11 @@ const SignIn = () => {
     try {
       await login(formData.email, formData.password);
 
-      // Wait a bit to ensure `user` is populated
+      // small delay so `user` is populated
       setTimeout(() => {
         switch (user?.role) {
           case "hod":
-          case "pg_coord":
+          case "pgcord":
           case "provost":
             navigate("/dashboard");
             break;
@@ -52,18 +52,21 @@ const SignIn = () => {
           case "student":
             navigate("/student");
             break;
-          
+          default:
+            toast({
+              title: "Unknown Role",
+              description: "Cannot redirect—role not recognized.",
+              variant: "destructive",
+            });
         }
       }, 300);
     } catch (err) {
       console.error(err);
-      
       toast({
         title: "Login Failed",
         description: "Please check your email and password.",
         variant: "destructive",
       });
-
     } finally {
       setLoading(false);
     }
@@ -79,24 +82,20 @@ const SignIn = () => {
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
-      ></div>
+      />
 
       {/* Right side with form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="max-w-md w-full">
           <div className="mb-8">
-            <h1 className="text-4xl font-semibold text-gray-800 mb-2">
-              Sign In
-            </h1>
+            <h1 className="text-4xl font-semibold text-gray-800 mb-2">Sign In</h1>
             <p className="text-gray-600">Fill in your details to sign in</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div>
-              <label className="block text-gray-700 font-medium mb-3">
-                Email:
-              </label>
+              <label className="block text-gray-700 font-medium mb-3">Email:</label>
               <Input
                 type="email"
                 value={formData.email}
@@ -106,18 +105,14 @@ const SignIn = () => {
               />
             </div>
 
-            {/* Password */}
+            {/* Password + Forgot link */}
             <div>
-              <label className="block text-gray-700 font-medium mb-3">
-                Password:
-              </label>
+              <label className="block text-gray-700 font-medium mb-3">Password:</label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) =>
-                    handleInputChange("password", e.target.value)
-                  }
+                  onChange={(e) => handleInputChange("password", e.target.value)}
                   className="w-full border-gray-300 rounded-full px-6 py-4 pr-14 text-lg"
                   required
                 />
@@ -128,6 +123,14 @@ const SignIn = () => {
                 >
                   {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
                 </button>
+              </div>
+              <div className="text-right mt-2">
+                <Link
+                  to="/forget-password"
+                  className="text-sm text-amber-700 hover:underline"
+                >
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
