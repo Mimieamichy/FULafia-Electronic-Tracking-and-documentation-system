@@ -1,6 +1,5 @@
 // src/services/AdminService.ts
 import { Request, Response } from 'express';
-import ActivityLogService from '../../src/services/activity_log'
 import SessionService from '../../src/services/session'
 
 
@@ -32,7 +31,7 @@ export default class SessionController {
     const { sessionName, startDate, endDate } = req.body;
 
     // Assuming req.user contains the authenticated user's ID
-    const userId = req.user?._id;
+    const userId = req.user?.id || '';
 
     const sessionData = {
       sessionName,
