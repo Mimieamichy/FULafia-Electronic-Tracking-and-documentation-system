@@ -26,7 +26,8 @@ export default class UserController {
    static async updatePassword(req: AuthenticatedRequest, res: Response) {
     try {
       const {oldPassword, newPassword} = req.body;
-      await UserService.updatePassword(req.user?._id, oldPassword, newPassword);
+      const userId = req.user?.id || ""
+      await UserService.updatePassword(userId, oldPassword, newPassword);
       res.json({ success: true, data: newPassword });
     } catch (err: any) {
       console.log(err)
