@@ -155,7 +155,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   [Role.PROVOST]: [
     Permission.VIEW_ALL_LECTURERS,
-    Permission.VIEW_SESSIONS,
+    Permission.VIEW_ALL_SESSIONS,
     Permission.SCHEDULE_DEFENSE,
     Permission.GENERATE_GENERAL_SCORE_SHEET,
     Permission.ADD_EXTERNAL_EXAMINER,

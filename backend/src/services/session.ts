@@ -25,7 +25,7 @@ export default class SessionService {
         return await Session.find();
     }
 
-    static async getSessionByDepartment(userId: string) {
+    static async getSessionsByDept(userId: string) {
         const lecturer = await Lecturer.findOne({ user: userId });
 
         if (!lecturer) throw new Error("Lecturer not found");

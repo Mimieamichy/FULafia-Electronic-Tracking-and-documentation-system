@@ -16,8 +16,7 @@ const SessionSchema = Joi.object({
 });
 
 
-router.post('/sessions', authenticate, checkPermission(Permission.CREATE_SESSION), validateBody(SessionSchema), SessionController.createSession);
+router.post('/', authenticate, checkPermission(Permission.CREATE_SESSION), validateBody(SessionSchema), SessionController.createSession);
+router.get('/department', authenticate, checkPermission(Permission.VIEW_SESSIONS), SessionController.getSessionsByDept);
 router.get('/sessions', authenticate, checkPermission(Permission.VIEW_ALL_SESSIONS), SessionController.getAllSessions);
-
-
 export default router

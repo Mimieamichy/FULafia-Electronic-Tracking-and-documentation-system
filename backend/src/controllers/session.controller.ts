@@ -26,6 +26,17 @@ export default class SessionController {
     }
   }
 
+
+  static async getSessionsByDept(req: Request, res: Response) {
+    try {
+      const sessions = await SessionService.getSessionsByDept();
+      res.json({ success: true, data: sessions });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to get all sessions for this department', message: err.message });
+    }
+  }
+
  static async createSession(req: AuthenticatedRequest, res: Response) {
   try {
     const { sessionName, startDate, endDate } = req.body;

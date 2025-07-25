@@ -76,8 +76,6 @@ export default class LecturerService {
         });
     }
 
-   
-
 
     static async addHOD(data: {
         email: string;
@@ -111,7 +109,6 @@ export default class LecturerService {
             staffId: data.staffId,
         });
     }
-
 
     static async addProvost(data: {
         email: string;
