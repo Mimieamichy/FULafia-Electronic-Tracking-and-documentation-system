@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function Admin() {
   const { user, token, logout } = useAuth();
@@ -25,10 +26,9 @@ export default function Admin() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [showOld, setShowOld] = useState(false);
-const [showNew, setShowNew] = useState(false);
+  const [showNew, setShowNew] = useState(false);
 
-
-  const baseUrl = import.meta.env.VITE_BACKEND_URL;
+  
 
   // 1️⃣ Inject / remove axios Authorization header when token changes
   useEffect(() => {
@@ -158,7 +158,7 @@ const [showNew, setShowNew] = useState(false);
               }
 
               try {
-                await axios.post(
+                await axios.put(
                   `${baseUrl}/user/update-password`,
                   { oldPassword, newPassword },
                   { headers: { Authorization: `Bearer ${token}` } }
