@@ -27,6 +27,7 @@ export default class SessionService {
 
     static async getSessionsByDept(userId: string) {
         const lecturer = await Lecturer.findOne({ user: userId });
+        console.log('Lecturer ID', userId)
 
         if (!lecturer) throw new Error("Lecturer not found");
 

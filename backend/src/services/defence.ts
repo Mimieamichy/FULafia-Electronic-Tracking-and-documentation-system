@@ -1,4 +1,5 @@
 import { Defence, Student, User} from '../models/index';
+import NotificationService from '../services/notification'
 import {Types} from 'mongoose';
 
 
@@ -21,7 +22,7 @@ export default class DefenceService {
   static async createDefence(defenceData: CreateDefenceInput) {
   const { stage, session, date, panelMembers } = defenceData;
 
-  // ✅ Validate session and stage students
+  // Validate session and stage students
   const students = await Student.find({
     currentStage: stage,
     session: new Types.ObjectId(session),
@@ -31,7 +32,7 @@ export default class DefenceService {
     throw new Error('No students found for this stage and session.');
   }
 
-  // ✅ Validate that each panelMember ID is a real user with isPanelMember: true
+  // Validate that each panelMember ID is a real user with isPanelMember: true
   const validPanelMembers = await User.find({
     _id: { $in: panelMembers.map(id => new Types.ObjectId(id)) },
     isPanelMember: true,
@@ -49,6 +50,9 @@ export default class DefenceService {
     panelMembers: validPanelMembers.map(u => u._id),
   });
 
-  return await defence.save();
+   await defence.save()
+  await NotificationService.sendStudentDefenceNotifications(students, stage, date);
+await NotificationService.sendPanelDefenceNotifications(panelMembers, stage, date);
+return defence
 }
 }
