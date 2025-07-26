@@ -36,7 +36,7 @@ const CreateSession = ({ isOpen, onClose, onCreated }: Props) => {
   setLoading(true);
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${baseUrl}/sessions/`, {
+    const response = await fetch(`${baseUrl}/session/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

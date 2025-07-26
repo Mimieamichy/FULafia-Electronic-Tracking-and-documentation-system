@@ -77,7 +77,7 @@ const StudentSessionManagement = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const response = await fetch(`${baseUrl}/session/sessions`, {
+        const response = await fetch(`${baseUrl}/session/department`, {
           headers: {
             Authorization: `Bearer ${token}`, // 🔐 attach token
             "Content-Type": "application/json",
