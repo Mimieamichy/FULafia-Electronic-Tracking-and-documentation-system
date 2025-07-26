@@ -27,9 +27,10 @@ export default class SessionController {
   }
 
 
-  static async getSessionsByDept(req: Request, res: Response) {
+  static async getSessionsByDept(req: AuthenticatedRequest, res: Response) {
     try {
-      const sessions = await SessionService.getSessionsByDept();
+      const userId = req.user?.id || ''
+      const sessions = await SessionService.getSessionsByDept(userId);
       res.json({ success: true, data: sessions });
     } catch (err: any) {
       console.log(err)
@@ -60,19 +61,7 @@ export default class SessionController {
   }
 }
 
-static async getSessionByDepartment(req: AuthenticatedRequest, res: Response){
-  try {
-    const userId = req.user?._id;
-    const department = await SessionService.getSessionByDepartment(userId);
-    if (!department) {
-      return res.status(404).json({ success: false, error: 'Department not found' });
-    }
-  } catch(err: any) {
-    console.log(err)
-    res.status(400).json({success: false, error: "Failed to get department session", message: err.message});
-  }
 
-}
 static async getSessionByFaculty(req: AuthenticatedRequest, res: Response){
   try {
     const userId = req.user?._id;
