@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Pen  } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pen } from "lucide-react";
 import AssignSupervisorModal from "./AssignSupervisorModal";
 import SetDefenseModal from "./SetDefenseModal";
 import { mockSaveDefense } from "@/lib/mockDefenseService";
@@ -37,29 +37,29 @@ interface StudentStage {
   faculty: string;
 }
 
-const defenseOptions = [
-  "First Seminar",
-  "Second Seminar",
-  "Third Seminar",
-  "External Defense",
-] as const;
-
-const stageFlow = [
-  "First Seminar",
-  "Second Seminar",
-  "Third Seminar",
-  "External Defense",
-] as const;
-
-// Mock sessions — swap for real fetch
-const sessionNames = ["2023/2024", "2024/2025", "2025/2026"];
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const StudentSessionManagement = () => {
-  const { role } = useAuth(); // 'HOD' or 'PGC'
-  const isHod = role === "HOD";
-  const isProvost = role === "PROVOST";
+  const { token, user } = useAuth(); // 'HOD' or 'PGC'
+  const isHod = user?.role?.toUpperCase() === "HOD";
+  const isProvost = user?.role?.toUpperCase() === "PROVOST";
+  const [sessionNames, setSessionNames] = useState<string[]>([]);
 
   // Modal & selection state
+  const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
+  const defenseOptions = useMemo<string[]>(() => {
+    return degreeTab === "MSc"
+      ? ["Proposal Defense", "Internal Defense", "External Defense"]
+      : [
+          "Proposal Defense / 1st Seminar",
+          "2nd Seminar",
+          "3rd Seminar / Internal Defense",
+          "External Defense",
+        ];
+  }, [degreeTab]);
+
+  // If you use stageFlow for advancing stages, you can just mirror defenseOptions:
+  const stageFlow = defenseOptions;
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
@@ -73,6 +73,40 @@ const StudentSessionManagement = () => {
   const [selectedSession, setSelectedSession] = useState<string>(
     sessionNames[0]
   );
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/session/sessions`, {
+          headers: {
+            Authorization: `Bearer ${token}`, // 🔐 attach token
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Sessions from API:", data);
+
+        if (Array.isArray(data)) {
+          setSessionNames(data); // ✅ only set if it's an array
+          if (data.length > 0 && !selectedSession) {
+            setSelectedSession(data[0]);
+          }
+        } else {
+          console.error("Expected array but got:", data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch sessions:", error);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+
   // track which student we’re acting on
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [actionStudentId, setActionStudentId] = useState<string | null>(null);
@@ -107,7 +141,7 @@ const StudentSessionManagement = () => {
   };
 
   // Degree tab & search
-  const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
+
   const [search, setSearch] = useState("");
 
   // Students state
@@ -291,6 +325,7 @@ const StudentSessionManagement = () => {
         </h2>
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center w-full sm:w-auto">
           {/* Defense Stage */}
+
           <div className="flex items-center gap-2">
             <span className="text-gray-700 text-sm">Defense:</span>
             <Select
@@ -303,19 +338,15 @@ const StudentSessionManagement = () => {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder={selectedDefense} />
               </SelectTrigger>
-
               <SelectContent>
-                {(isProvost ? ["External Defense"] : defenseOptions).map(
-                  (opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
-                    </SelectItem>
-                  )
-                )}
+                {defenseOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-
           {/* Search */}
           <Input
             placeholder="Search Mat. No, Name or Topic"
@@ -326,7 +357,6 @@ const StudentSessionManagement = () => {
               setPage(1);
             }}
           />
-
           {/* Session Dropdown */}
           <div className="flex items-center gap-2">
             <span className="text-gray-700 text-sm">Session:</span>
@@ -338,11 +368,17 @@ const StudentSessionManagement = () => {
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
               <SelectContent>
-                {sessionNames.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
+                {Array.isArray(sessionNames) && sessionNames.length > 0 ? (
+                  sessionNames.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-gray-500 text-sm">
+                    No sessions available
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>

@@ -4,6 +4,7 @@ import { Power, Lock, EyeOff, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddHodModal, { NewHodData } from "@/components/AddHodModal";
 import AdminStaffManagement from "./AdminStaffManagement";
+import UpdatePasswordModal from "./UpdatePasswordModal";
 import axios from "axios";
 import { useAuth } from "./AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -27,8 +28,6 @@ export default function Admin() {
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
-
-  
 
   // 1️⃣ Inject / remove axios Authorization header when token changes
   useEffect(() => {
@@ -131,111 +130,10 @@ export default function Admin() {
       />
 
       {/* Update Password Modal */}
-      <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Update Password</DialogTitle>
-          </DialogHeader>
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const form = e.currentTarget;
-              const oldPassword = (
-                form.elements.namedItem("oldPassword") as HTMLInputElement
-              ).value;
-              const newPassword = (
-                form.elements.namedItem("newPassword") as HTMLInputElement
-              ).value;
-
-              if (!oldPassword || !newPassword) {
-                toast({
-                  title: "Missing Fields",
-                  description: "Please fill in both fields.",
-                  variant: "destructive",
-                });
-                return;
-              }
-
-              try {
-                await axios.put(
-                  `${baseUrl}/user/update-password`,
-                  { oldPassword, newPassword },
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-                toast({ title: "Success", description: "Password updated." });
-                setResetModalOpen(false);
-              } catch (err) {
-                console.error("Password update failed", err);
-                toast({
-                  title: "Error",
-                  description: "Failed to update password. Check credentials.",
-                  variant: "destructive",
-                });
-              }
-            }}
-            className="space-y-4 p-2"
-          >
-            {/* Password visibility states */}
-            <div className="space-y-4">
-              <div className="relative">
-                <label className="block text-sm text-gray-700 mb-1">
-                  Old Password
-                </label>
-                <input
-                  name="oldPassword"
-                  type={showOld ? "text" : "password"}
-                  required
-                  className="w-full border rounded px-3 py-2 pr-10"
-                  placeholder="Enter old password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowOld((prev) => !prev)}
-                  className="absolute top-9 right-3 text-gray-500"
-                  tabIndex={-1}
-                >
-                  {showOld ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-
-              <div className="relative">
-                <label className="block text-sm text-gray-700 mb-1">
-                  New Password
-                </label>
-                <input
-                  name="newPassword"
-                  type={showNew ? "text" : "password"}
-                  required
-                  className="w-full border rounded px-3 py-2 pr-10"
-                  placeholder="Enter new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew((prev) => !prev)}
-                  className="absolute top-9 right-3 text-gray-500"
-                  tabIndex={-1}
-                >
-                  {showNew ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            <DialogFooter className="mt-4 flex justify-end gap-3">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setResetModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button className="bg-amber-700 text-white" type="submit">
-                Update Password
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <UpdatePasswordModal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+      />
 
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>

@@ -2,7 +2,10 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
+
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -16,39 +19,69 @@ export interface Session {
   endDate: string;
 }
 
-// Simulate session creation
-const mockCreateSession = async (
-  session: Omit<Session, "id">
-): Promise<Session> => {
-  return new Promise((resolve) =>
-    setTimeout(() => {
-      resolve({ id: Date.now().toString(), ...session });
-    }, 500)
-  );
-};
+
 
 const CreateSession = ({ isOpen, onClose, onCreated }: Props) => {
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   if (!isOpen) return null;
 
-  const handleSubmit = async () => {
-    if (!name || !startDate || !endDate) return;
+ const handleSubmit = async () => {
+  if (!name || !startDate || !endDate) return;
 
-    setLoading(true);
-    try {
-      const newSession = await mockCreateSession({ name, startDate, endDate });
-      onCreated(newSession);
-      onClose();
-    } catch (err) {
-      alert("Error creating session");
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrl}/sessions/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        sessionName: name,
+        startDate,
+        endDate,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create session");
     }
-  };
+
+    const result = await response.json();
+    onCreated({
+      id: result.data._id,
+      name: result.data.sessionName,
+      startDate: result.data.startDate,
+      endDate: result.data.endDate,
+    });
+    toast({
+      title: "Success",
+      description: "Session created successfully.",
+      variant: "success",
+    });
+
+    onClose();
+    console.log("Session created successfully:", result.data);
+    
+  } catch (err) {
+    console.error(err);
+    
+    toast({
+      title: "Error",
+      description: "Failed to create session. See console for details.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50 p-4 sm:p-6">

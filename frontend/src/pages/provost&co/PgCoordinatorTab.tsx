@@ -1,19 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+
 import { useAuth } from "../AuthProvider";
 
 interface PGCoordinator {
@@ -27,10 +13,9 @@ export default function PgCoordinatorTab() {
   const { token, user } = useAuth();
   const isHod = user?.role?.toUpperCase() === "HOD";
 
-  const [lecturers, setLecturers] = useState<PGCoordinator[]>([]);
+  
   const [currentCord, setCurrentCord] = useState<PGCoordinator | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,7 +40,7 @@ export default function PgCoordinatorTab() {
             name: `${item.title} ${item.user.firstName} ${item.user.lastName}`,
           }));
         console.log("pgcord filtered:", pgList);
-        setLecturers(pgList);
+        
         setCurrentCord(pgList[0] || null);
       } catch (err) {
         console.error("Error fetching PG Coordinators:", err);

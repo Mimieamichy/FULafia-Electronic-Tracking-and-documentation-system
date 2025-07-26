@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
+import UpdatePasswordModal from "./UpdatePasswordModal";
 import HodDashboardOverview from "./provost&co/HodDashboardOverview";
 import PgLecturerManagement from "./provost&co/PgLecturerManagement";
 import StudentSessionManagement from "./provost&co/StudentSessionManagement";
@@ -209,25 +209,10 @@ export default function DashboardShell() {
       )}
 
       {/* Reset Password Modal */}
-      <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
-          </DialogHeader>
-          <p className="p-4">A reset link will be emailed to you.</p>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setResetModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-amber-700 text-white"
-              onClick={() => setResetModalOpen(false)}
-            >
-              Send
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+       <UpdatePasswordModal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+      />
 
       {/* Logout Confirmation Modal */}
       <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
