@@ -64,14 +64,14 @@ export default class SessionController {
 
 static async getSessionByFaculty(req: AuthenticatedRequest, res: Response){
   try {
-    const userId = req.user?._id;
-    const department = await SessionService.getSessionByFaculty(userId);
-    if (!department) {
-      return res.status(404).json({ success: false, error: 'Department not found' });
+    const userId = req.user?.id || '';
+    const sessions = await SessionService.getSessionByFaculty(userId);
+    if (!sessions) {
+      res.status(404).json({ success: false, error: 'Faculty Sessions not found' });
     }
   } catch(err: any) {
     console.log(err)
-    res.status(400).json({success: false, error: "Failed to get department session", message: err.message});
+    res.status(400).json({success: false, error: "Failed to get faculty session", message: err.message});
   }
 
 }

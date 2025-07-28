@@ -39,6 +39,8 @@ export enum Permission {
 
   // PG Coord
   GENERATE_DEPT_SCORE_SHEET = 'generate_dept_score_sheet',
+  ADD_STUDENTS = 'add_students',
+  VIEW_ALL_STUDENTS = 'view_all_students',
 
   // Dean
   VIEW_FACULTY_LECTURERS = 'view_faculty_lecturers',
@@ -71,7 +73,6 @@ export enum Permission {
   VIEW_ALL_LECTURERS = 'view_all_lecturers',
   DELETE_LECTURER = 'delete-lecturer',
   ADD_HOD = 'add_hod',
-  VIEW_ALL_STUDENTS = 'view_all_students',
   VIEW_ALL_PROJECTS = 'view_all_projects',
   VIEW_ALL_DEFENSES = 'view_all_defenses',
   VIEW_ACTIVITY_LOGS = 'view_activity_logs',
@@ -112,13 +113,17 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.ADD_PANEL_MEMBERS,
     Permission.ASSIGN_SUPERVISORS,
     Permission.DOWNLOAD_PROJECT,
-    Permission.DELETE_LECTURER
+    Permission.DELETE_LECTURER,
+    Permission.ADD_STUDENTS,
+    Permission.VIEW_ALL_STUDENTS
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
     Permission.ADD_LECTURER,
     Permission.DELETE_LECTURER,
     Permission.GENERATE_DEPT_SCORE_SHEET,
+    Permission.ADD_STUDENTS,
+    Permission.VIEW_ALL_STUDENTS
   ],
   [Role.DEAN]: [
     Permission.VIEW_FACULTY_LECTURERS, 

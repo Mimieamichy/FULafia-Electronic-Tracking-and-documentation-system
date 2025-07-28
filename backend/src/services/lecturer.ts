@@ -89,8 +89,20 @@ export default class LecturerService {
         faculty: string;
     }) {
 
+        //check if HOD has been added
+        const existingHOD = await Lecturer.findOne({
+            department: data.department,
+        }).populate({
+            path: 'user',
+            match: { roles: Role.HOD },
+        });
+
+        if (existingHOD && existingHOD.user) {
+            throw new Error(`A HOD has already been added for the ${data.department} department.`);
+        }
 
         const roles = [Role.HOD, Role.GENERAL];
+
 
         // Create User with dynamic roles
         const user = await User.create({
@@ -169,12 +181,14 @@ export default class LecturerService {
     }
 
     static async getLecturerById(userId: string) {
-  const lecturer = await Lecturer.findOne({ user: userId }).populate("user");
-  if (!lecturer) {
-    throw new Error("Lecturer not found");
-  }
-  return lecturer;
-}
+        const lecturer = await Lecturer.findOne({ user: userId }).populate("user");
+        if (!lecturer) {
+            throw new Error("Lecturer not found");
+        }
+        return lecturer;
+    }
+
+    
 
 
 }

@@ -26,13 +26,8 @@ export interface IStudent extends Document {
 }
 
 const stageScoresSchema = new Schema<IStageScores>(
-  {
-    firstSeminar: { type: Number, min: 0, max: 100, default: 0 },
-    secondSeminar: { type: Number, min: 0, max: 100, default: 0 },
-    thirdSeminar: { type: Number, min: 0, max: 100, default: 0 },
-    externalDefense: { type: Number, min: 0, max: 100, default: 0 },
-  },
-  { _id: false }
+  {},
+  { _id: false, strict: false }
 );
 
 const studentSchema = new Schema<IStudent>(

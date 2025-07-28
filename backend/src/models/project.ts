@@ -1,52 +1,41 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, model, Types } from 'mongoose';
 
-export interface IComment {
-  author: mongoose.Types.ObjectId;
-  text: string;
-  date: Date;
-}
+const commentSchema = new Schema(
+  {
+    author: { type: Types.ObjectId, ref: 'User', required: true },
+    text:   { type: String, required: true },
+    date:   { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
 
-export interface IVersion {
-  versionNumber: number;
-  fileUrl: string;
-  topic: string;
-  uploadedBy: mongoose.Types.ObjectId;
-  uploadedAt: Date;
-  comments: IComment[];
-}
+const versionSchema = new Schema(
+  {
+    versionNumber: { type: Number, required: true },
+    fileUrl:       { type: String, required: true },
+    topic:         { type: String, required: true },
+    uploadedBy:    { type: Types.ObjectId, ref: 'User', required: true },
+    uploadedAt:    { type: Date, default: Date.now },
+    comments:      { type: [commentSchema], default: [] },
+  },
+  { _id: false }
+);
 
-export interface IProject extends Document {
-  student: mongoose.Types.ObjectId;
-  versions: IVersion[];
-}
+const projectSchema = new Schema(
+  {
+    student:  { type: Types.ObjectId, ref: 'Student', required: true },
+    versions: { type: [versionSchema], default: [] },
+  },
+  { timestamps: true }
+);
 
-const commentSchema = new Schema<IComment>({
-  author:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  text:      { type: String, required: true },
-  date:      { type: Date, default: Date.now },
-}, { _id: false });
-
-const versionSchema = new Schema<IVersion>({
-  versionNumber: { type: Number, required: true },
-  fileUrl:       { type: String, required: true },
-  topic:         { type: String, required: true },
-  uploadedBy:    { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  uploadedAt:    { type: Date, default: Date.now },
-  comments:      { type: [commentSchema], default: [] },
-}, { _id: false });
-
-const projectSchema = new Schema<IProject>({
-  student:  { type: Schema.Types.ObjectId, ref: 'Student', required: true },
-  versions: { type: [versionSchema], default: [] },
-}, { timestamps: true });
-
-// Optional helper: auto-increment versionNumber on push
-projectSchema.methods.addVersion = function(
+// Helper method to add a new version
+projectSchema.methods.addVersion = function (
   fileUrl: string,
   topic: string,
-  uploadedBy: mongoose.Types.ObjectId
+  uploadedBy: Types.ObjectId
 ) {
-  const nextVersion = (this.versions.length > 0)
+  const nextVersion = this.versions.length
     ? this.versions[this.versions.length - 1].versionNumber + 1
     : 1;
 
@@ -56,12 +45,22 @@ projectSchema.methods.addVersion = function(
     topic,
     uploadedBy,
     uploadedAt: new Date(),
-    comments: []
+    comments: [],
   });
 
   return this.save();
 };
 
+export type IComment = typeof commentSchema extends Schema<infer T> ? T : never;
+export type IVersion = typeof versionSchema extends Schema<infer T> ? T : never;
+export type IProject = mongoose.Document & {
+  student: Types.ObjectId;
+  versions: IVersion[];
+  addVersion: (
+    fileUrl: string,
+    topic: string,
+    uploadedBy: Types.ObjectId
+  ) => Promise<IProject>;
+};
 
-
-export default mongoose.model<IProject>('Project', projectSchema);
+export default model<IProject>('Project', projectSchema);

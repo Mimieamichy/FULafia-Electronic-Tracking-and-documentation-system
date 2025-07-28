@@ -1,110 +1,95 @@
-import { Project, IProject } from "../models/index";
-import { Response } from "express";
-import fs from "fs"
-import path from "path"
-import { Types } from "mongoose";
+import { Project, Student } from '../models/index';
+import { Types } from 'mongoose';
 
 export default class ProjectService {
-  static async addProject(projectData: IProject) {
-    const project = new Project(projectData);
-    return project.save();
-  }
-
-  static async getAllProjects() {
-    return Project.find()
-      .populate({
-        path: "student",
-        populate: { path: "user" },
-      })
-      .lean();
-  }
-
-  static async getProjectByDepartment(department: string) {
-    return Project.find()
-      .populate({
-        path: "student",
-        match: { department },
-        populate: { path: "user" },
-      })
-      .lean()
-      .then(projects => projects.filter(p => p.student)); // drop non‑matches
-  }
-
-  static async getProjectByFaculty(faculty: string) {
-    return Project.find()
-      .populate({
-        path: "student",
-        match: { faculty },
-        populate: { path: "user" },
-      })
-      .lean()
-      .then(projects => projects.filter(p => p.student));
-  }
-
-  static async deleteProject(projectId: string) {
-    return Project.findByIdAndDelete(projectId);
-  }
-
-  static async downloadProjectFile(projectId: string, fileUrl: string, res: Response) {
-    const project = await Project.findById(projectId).lean();
-
-    if (!project) {
-      throw new Error("Project not found");
-    }
-
-    const filePath = path.resolve(fileUrl); 
-
-    if (!fs.existsSync(filePath)) {
-      throw new Error("File does not exist on the server");
-    }
-
-    // Set appropriate headers and stream the file
-    res.download(filePath, path.basename(filePath));
-  }
-
-
-  static async uploadVersion({
-    studentId,
-    topic,
-    fileUrl,
-    uploadedBy,
-  }: {
-    studentId: Types.ObjectId | string;
-    topic: string;
-    fileUrl: string;
-    uploadedBy: Types.ObjectId | string;
-  }): Promise<IProject> {
+  static async uploadProject(studentId: string, fileUrl: string, topic: string) {
     let project = await Project.findOne({ student: studentId });
 
-    // Create a new project if none exists
     if (!project) {
-      project = new Project({
-        student: studentId,
-        versions: [],
-      });
+      project = new Project({ student: studentId, versions: [] });
     }
 
-    // Add new version
-    await project.addVersion(fileUrl, topic, new Types.ObjectId(uploadedBy));
+    const nextVersion = project.versions.length + 1;
 
+    project.versions.push({
+      versionNumber: nextVersion,
+      fileUrl,
+      topic,
+      uploadedBy: new Types.ObjectId(studentId),
+      uploadedAt: new Date(),
+      comments: [],
+    });
+
+    await project.save();
+    await Student.findByIdAndUpdate(studentId, { projectTopic: topic });
     return project;
   }
 
-
-  static async getProjectById(projectId: string) {
-    return Project.findById(projectId)
-      .populate({ path: "student", populate: { path: "user" } })
-      .lean();
+  static async getProjectVersions(studentId: string) {
+    const project = await Project.findOne({ student: studentId }).populate('versions.uploadedBy', 'name');
+    if (!project) throw new Error('No project found for this student');
+    return project.versions;
   }
 
+  static async commentOnVersion(studentId: string, versionNumber: number, authorId: string, text: string) {
+    const project = await Project.findOne({ student: studentId });
+    if (!project) throw new Error('Project not found');
 
-  static async getProjectByStudentId(studentId: string) {
-    return Project.findOne({ student: studentId })
-      .populate({ path: "student", populate: { path: "user" } })
-      .lean();
+    const version = project.versions.find(v => v.versionNumber === versionNumber);
+    if (!version) throw new Error('Version not found');
+
+    version.comments.push({
+      author: new Types.ObjectId(authorId),
+      text,
+      date: new Date(),
+    });
+
+    return await project.save();
   }
 
+  static async getComments(studentId: string, versionNumber: number) {
+    const project = await Project.findOne({ student: studentId })
+      .populate('versions.comments.author', 'name');
 
+    if (!project) throw new Error('Project not found');
+
+    const version = project.versions.find(v => v.versionNumber === versionNumber);
+    if (!version) throw new Error('Version not found');
+
+    return version.comments;
+  }
+
+  static async supervisorUploadCorrection(studentId: string, fileUrl: string, topic: string, supervisorId: string) {
+    const project = await Project.findOne({ student: studentId });
+    if (!project) throw new Error('Project not found');
+
+    const nextVersion = project.versions.length + 1;
+
+    project.versions.push({
+      versionNumber: nextVersion,
+      fileUrl,
+      topic,
+      uploadedBy: new Types.ObjectId(supervisorId),
+      uploadedAt: new Date(),
+      comments: [],
+    });
+
+    return await project.save();
+  }
+
+  static async downloadProjectVersion(studentId: string, versionNumber: number) {
+    const project = await Project.findOne({ student: studentId });
+
+    if (!project) throw new Error('Project not found');
+
+    const version = project.versions.find(v => v.versionNumber === versionNumber);
+    if (!version) throw new Error('Version not found');
+
+    return {
+      fileUrl: version.fileUrl,
+      topic: version.topic,
+      uploadedAt: version.uploadedAt,
+      uploadedBy: version.uploadedBy,
+    };
+  }
 }
-// This service handles project-related operations such as adding, retrieving, deleting projects, and managing project versions.
-// It also includes methods for downloading project files and uploading new project versions.
