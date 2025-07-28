@@ -43,7 +43,6 @@ const StudentSessionManagement = () => {
   const { token, user } = useAuth(); // 'HOD' or 'PGC'
   const isHod = user?.role?.toUpperCase() === "HOD";
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
-  const [sessionNames, setSessionNames] = useState<string[]>([]);
 
   // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
@@ -70,42 +69,49 @@ const StudentSessionManagement = () => {
   const [selectedDepartmentForDefense, setSelectedDepartmentForDefense] =
     useState<string>("");
 
-  const [selectedSession, setSelectedSession] = useState<string>(
-    sessionNames[0]
-  );
+  const [sessionNames, setSessionNames] = useState<string[]>([]);
+  const [selectedSession, setSelectedSession] = useState<string>("");
 
   useEffect(() => {
     const fetchSessions = async () => {
       try {
         const response = await fetch(`${baseUrl}/session/department`, {
           headers: {
-            Authorization: `Bearer ${token}`, // 🔐 attach token
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
-
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
-        const data = await response.json();
-        console.log("Sessions from API:", data);
+        const json = await response.json();
+        console.log("Raw payload:", json);
 
-        if (Array.isArray(data)) {
-          setSessionNames(data); // ✅ only set if it's an array
-          if (data.length > 0 && !selectedSession) {
-            setSelectedSession(data[0]);
-          }
-        } else {
-          console.error("Expected array but got:", data);
-        }
+        // Grab the array from json.data (or fallback)
+        const sessionsArray: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+
+        // Extract just the names
+        const names = sessionsArray.map((s) => s.sessionName);
+        console.log("Extracted session names:", names);
+
+        setSessionNames(names);
+
+        // If none selected yet, pick the first
+        
       } catch (error) {
         console.error("Failed to fetch sessions:", error);
       }
     };
 
     fetchSessions();
-  }, []);
+  }, [token, selectedSession]);
+
+  
 
   // track which student we’re acting on
   const [actionModalOpen, setActionModalOpen] = useState(false);
@@ -360,24 +366,19 @@ const StudentSessionManagement = () => {
           {/* Session Dropdown */}
           <div className="flex items-center gap-2">
             <span className="text-gray-700 text-sm">Session:</span>
-            <Select
-              value={selectedSession}
-              onValueChange={(v) => setSelectedSession(v)}
-            >
+            <Select value={selectedSession} onValueChange={setSelectedSession}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
               <SelectContent>
-                {Array.isArray(sessionNames) && sessionNames.length > 0 ? (
+                {sessionNames.length > 0 ? (
                   sessionNames.map((name) => (
                     <SelectItem key={name} value={name}>
                       {name}
                     </SelectItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-gray-500 text-sm">
-                    No sessions available
-                  </div>
+                  <SelectItem disabled>No sessions available</SelectItem>
                 )}
               </SelectContent>
             </Select>

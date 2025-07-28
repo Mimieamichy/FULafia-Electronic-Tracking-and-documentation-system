@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,18 +8,15 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "../AuthProvider";
 
 interface AddStudentFormProps {
   onClose?: () => void;
 }
 
 const degreeOptions = ["MSc", "PhD"];
-const stageOptions = [
-  "First Seminar",
-  "Second Seminar",
-  "Third Seminar",
-  "External Defense",
-];
+
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const facultyOptions = ["Engineering", "Science", "Social Sciences"];
 const departmentOptions = ["Computer Science", "Electrical Eng.", "Statistics"];
@@ -32,28 +29,84 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   const [email, setEmail] = useState("");
   const [faculty, setFaculty] = useState("");
   const [department, setDepartment] = useState("");
-  const [stage, setStage] = useState(stageOptions[0]);
+  const [session, setSession] = useState("");
 
-  const handleSubmit = () => {
-    console.log({
-      degree,
-      matNo,
-      name: `${firstName} ${lastName}`,
+  const { token } = useAuth(); // 🔐 Get token from auth context
+
+  useEffect(() => {
+    const fetchLatestSession = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${baseUrl}/session/department`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const result = await response.json();
+        console.log("SESSION API RESPONSE:", result); // 👈 check this
+
+        const sessions = Array.isArray(result) ? result : result?.data || [];
+
+        const sorted = [...sessions].sort(
+          (a, b) =>
+            new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        );
+
+        const latestSessionName = sorted[0]?.sessionName || "";
+        setSession(latestSessionName);
+      } catch (error) {
+        console.error("Error fetching latest session:", error);
+      }
+    };
+
+    fetchLatestSession();
+  }, []);
+
+  const handleSubmit = async () => {
+
+    
+
+    const payload = {
       email,
-      faculty,
-      department,
-      stage,
-    });
+      firstName,
+      lastName,
+      matNo,
+      degree: degree.toLowerCase(),
+      session,
+    };
 
-    setMatNo("");
-    setFirstName("");
-    setLastName("");
-    setEmail("");
-    setFaculty("");
-    setDepartment("");
-    setStage(stageOptions[0]);
+    try {
+      const response = await fetch(`${baseUrl}/student/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // 🔐 include if required
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (onClose) onClose();
+      if (!response.ok) {
+        throw new Error(`Failed to add student. Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Student added:", result);
+
+      // Optionally reset
+      setMatNo("");
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setFaculty("");
+      setDepartment("");
+      setSession("");
+
+      if (onClose) onClose();
+    } catch (error) {
+      console.error("Submission error:", error);
+    }
   };
 
   return (
@@ -84,7 +137,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
 
       {/* Matric No */}
       <div className="mb-5">
-        <label className="block text-sm font-medium mb-1">Matriculation No.</label>
+        <label className="block text-sm font-medium mb-1">
+          Matriculation No.
+        </label>
         <Input
           value={matNo}
           onChange={(e) => setMatNo(e.target.value)}
@@ -96,18 +151,28 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         <div>
           <label className="block text-sm font-medium mb-1">First Name</label>
-          <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          <Input
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Last Name</label>
-          <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          <Input
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
         </div>
       </div>
 
       {/* Email */}
       <div className="mb-5">
         <label className="block text-sm font-medium mb-1">Email</label>
-        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
       </div>
 
       {/* Faculty & Department */}
@@ -145,21 +210,11 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Stage */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-1">Starting Stage</label>
-        <Select value={stage} onValueChange={setStage}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select stage" />
-          </SelectTrigger>
-          <SelectContent>
-            {stageOptions.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Session */}
+      {/* Latest Session */}
+      <div className="mb-5">
+        <label className="block text-sm font-medium mb-1">Session</label>
+        <Input value={session} disabled />
       </div>
 
       {/* Actions */}
