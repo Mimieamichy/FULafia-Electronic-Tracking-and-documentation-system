@@ -18,18 +18,15 @@ const degreeOptions = ["MSc", "PhD"];
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-const facultyOptions = ["Engineering", "Science", "Social Sciences"];
-const departmentOptions = ["Computer Science", "Electrical Eng.", "Statistics"];
-
 const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   const [degree, setDegree] = useState<"MSc" | "PhD">("MSc");
   const [matNo, setMatNo] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [faculty, setFaculty] = useState("");
-  const [department, setDepartment] = useState("");
   const [session, setSession] = useState("");
+  const [sessionId, setSessionId] = useState("");
+  const [sessionName, setSessionName] = useState("");
 
   const { token } = useAuth(); // 🔐 Get token from auth context
 
@@ -45,8 +42,6 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
         });
 
         const result = await response.json();
-        console.log("SESSION API RESPONSE:", result); // 👈 check this
-
         const sessions = Array.isArray(result) ? result : result?.data || [];
 
         const sorted = [...sessions].sort(
@@ -54,8 +49,11 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
             new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         );
 
-        const latestSessionName = sorted[0]?.sessionName || "";
-        setSession(latestSessionName);
+        const latest = sorted[0];
+        if (latest) {
+          setSessionId(latest._id); // for backend
+          setSessionName(latest.sessionName); // for display
+        }
       } catch (error) {
         console.error("Error fetching latest session:", error);
       }
@@ -65,16 +63,13 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   }, []);
 
   const handleSubmit = async () => {
-
-    
-
     const payload = {
       email,
       firstName,
       lastName,
       matNo,
       degree: degree.toLowerCase(),
-      session,
+      session: sessionId, // 👈 ObjectId goes to backend
     };
 
     try {
@@ -99,8 +94,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       setFirstName("");
       setLastName("");
       setEmail("");
-      setFaculty("");
-      setDepartment("");
+
       setSession("");
 
       if (onClose) onClose();
@@ -175,46 +169,11 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
         />
       </div>
 
-      {/* Faculty & Department */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-        <div>
-          <label className="block text-sm font-medium mb-1">Faculty</label>
-          <Select value={faculty} onValueChange={setFaculty}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select faculty" />
-            </SelectTrigger>
-            <SelectContent>
-              {facultyOptions.map((opt) => (
-                <SelectItem key={opt} value={opt}>
-                  {opt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Department</label>
-          <Select value={department} onValueChange={setDepartment}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select department" />
-            </SelectTrigger>
-            <SelectContent>
-              {departmentOptions.map((opt) => (
-                <SelectItem key={opt} value={opt}>
-                  {opt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Session */}
       {/* Latest Session */}
       <div className="mb-5">
-        <label className="block text-sm font-medium mb-1">Session</label>
-        <Input value={session} disabled />
+        <p className="text-sm text-gray-700 mb-4">
+          Current Session: <strong>{sessionName}</strong>
+        </p>
       </div>
 
       {/* Actions */}
