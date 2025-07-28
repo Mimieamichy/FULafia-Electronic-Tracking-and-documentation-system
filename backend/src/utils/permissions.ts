@@ -123,7 +123,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DELETE_LECTURER,
     Permission.GENERATE_DEPT_SCORE_SHEET,
     Permission.ADD_STUDENTS,
-    Permission.VIEW_ALL_STUDENTS
+    Permission.VIEW_ALL_STUDENTS,
+    Permission.VIEW_SESSIONS
   ],
   [Role.DEAN]: [
     Permission.VIEW_FACULTY_LECTURERS, 
