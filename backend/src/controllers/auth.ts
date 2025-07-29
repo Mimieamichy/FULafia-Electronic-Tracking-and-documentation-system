@@ -6,7 +6,7 @@ import AuthService from '../../src/services/auth';
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    role: string[];
     permissions: string[];
     [key: string]: any;
   };

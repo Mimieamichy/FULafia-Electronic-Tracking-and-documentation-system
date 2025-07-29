@@ -4,7 +4,7 @@ import NotificationService from "../services/notification"
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    role: string[];
     permissions: string[];
     [key: string]: any;
   }

@@ -5,7 +5,7 @@ import { Permission } from '../utils/permissions';
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    roles: string[];
+    role: string[];
     permissions: string[];
     [key: string]: any;
   };

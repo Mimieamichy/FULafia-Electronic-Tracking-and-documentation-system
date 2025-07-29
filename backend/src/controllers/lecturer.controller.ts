@@ -4,7 +4,7 @@ import LecturerService from '../services/lecturer'
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: string;
+    role: string[];
     permissions: string[];
     [key: string]: any;
   };

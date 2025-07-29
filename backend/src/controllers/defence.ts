@@ -1,5 +1,5 @@
 import  { Request, Response } from 'express';
-import DefenceService from '../../services/defence';
+import DefenceService from '../services/defence';
 
 export default class DefenceController {
   static async getAllDefences(req: Request, res: Response) {

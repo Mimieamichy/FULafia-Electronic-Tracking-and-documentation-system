@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    roles: string[];
+    role: string[];
     permissions: string[];
     [key: string]: any;
   };
@@ -37,14 +37,14 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
-      roles: string[]; 
+      role: string[]; 
       permissions?: string[];
       [key: string]: any;
     };
 
     const user = {
       id: decoded.id,
-      roles: decoded.roles,
+      role: decoded.roles,
       permissions: Array.isArray(decoded.permissions) ? decoded.permissions : [],
     };
 
