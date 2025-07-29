@@ -12,6 +12,7 @@ const PgLecturerManagement = () => {
   const { user } = useAuth(); // 'HOD', 'PGC', or 'PROVOST'
   const isHod = user?.role?.toUpperCase() === "HOD";
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
+  const isPgc = user?.role?.toUpperCase() === "PGCORD";
 
   // Default tab choice
   const defaultTab = isHod ? "pg" : isProvost ? "external" : "students";

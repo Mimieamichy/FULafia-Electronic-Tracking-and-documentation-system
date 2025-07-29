@@ -36,8 +36,19 @@ userSchema.pre('save', async function (next) {
 });
 
 // Add comparePassword method
-userSchema.methods.comparePassword = function (candidatePassword: string) {
-  return bcrypt.compare(candidatePassword, this.password);
+// Add comparePassword method
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  console.log('--- Inside comparePassword ---');
+  console.log('Candidate Password:', candidatePassword);
+  console.log('Stored Hashed Password:', this.password);
+  try {
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    console.log('Passwords Match:', isMatch);
+    return isMatch;
+  } catch (error) {
+    console.error('Error during password comparison:', error);
+    return false; // Or rethrow, depending on desired error handling
+  }
 };
 
 export default mongoose.model<IUser>('User', userSchema);
