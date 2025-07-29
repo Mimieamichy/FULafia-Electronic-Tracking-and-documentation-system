@@ -8,6 +8,19 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Add these new configurations
+    allowedHosts: [
+      "fulafia-electronic-tracking-and-x643.onrender.com",
+      "localhost"
+    ],
+    proxy: {
+      '/api': {
+        target: 'https://fulafia-electronic-tracking-and.onrender.com', // Replace with your actual backend URL
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   },
   plugins: [
     react(),
@@ -19,4 +32,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Add base URL configuration for production
+  base: mode === 'production' 
+    ? 'https://fulafia-electronic-tracking-and-x643.onrender.com' 
+    : '/'
 }));
