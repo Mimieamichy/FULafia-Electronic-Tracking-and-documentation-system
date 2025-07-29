@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "../AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddStudentFormProps {
   onClose?: () => void;
@@ -29,7 +30,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   const [sessionName, setSessionName] = useState("");
 
   const { token } = useAuth(); // 🔐 Get token from auth context
-
+  const { toast } = useToast();
   useEffect(() => {
     const fetchLatestSession = async () => {
       try {
@@ -88,6 +89,11 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
 
       const result = await response.json();
       console.log("Student added:", result);
+      toast({
+        title: "Success",
+        description: `Student ${firstName} ${lastName} added successfully!`,
+        variant: "success",
+      });
 
       // Optionally reset
       setMatNo("");

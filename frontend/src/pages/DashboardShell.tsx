@@ -124,7 +124,9 @@ export default function DashboardShell() {
               >
                 {isProvost
                   ? "External Examiners & Lecturers"
-                  : "PG Coordinator & Lecturers"}
+                  : isHod
+                  ? "PG Coordinators & Lecturers"
+                  : "Students & Lecturers"}
               </li>
               <li
                 onClick={() => {

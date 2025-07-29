@@ -22,19 +22,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface StudentStage {
-  id: string;
-  matNo: string;
-  fullName: string;
-  topic: string;
-  firstSem: number | null;
-  secondSem: number | null;
-  thirdSem: number | null;
-  externalDefenseDate: number | null;
-  supervisor1: string;
-  supervisor2: string;
-  department: string; // new
+interface StudentFromAPI {
+  _id: string;
+  matricNo: string;
+  level: "msc" | "phd";
+  currentStage: string;
+  department: string;
   faculty: string;
+  projectTopic: string;
+  stageScores: Record<string, number>;
+  majorSupervisor?: { firstName: string; lastName: string } | string;
+  minorSupervisor?: { firstName: string; lastName: string } | string;
+  internalExaminer?: { firstName: string; lastName: string } | string;
+  user?: { firstName: string; lastName: string };
 }
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
@@ -48,8 +48,9 @@ const StudentSessionManagement = () => {
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
   const defenseOptions = useMemo<string[]>(() => {
     return degreeTab === "MSc"
-      ? ["Proposal Defense", "Internal Defense", "External Defense"]
+      ? ["Start", "Proposal Defense", "Internal Defense", "External Defense"]
       : [
+          "Start",
           "Proposal Defense / 1st Seminar",
           "2nd Seminar",
           "3rd Seminar / Internal Defense",
@@ -71,7 +72,26 @@ const StudentSessionManagement = () => {
 
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
+  // Degree tab & search
 
+  const [search, setSearch] = useState("");
+
+  // Students state
+  const [students, setStudents] = useState<StudentFromAPI[]>([]);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 7;
+
+  // Selected defense stage
+  const [selectedDefense, setSelectedDefense] = useState<string>(
+    isProvost ? defenseOptions[3] : defenseOptions[0]
+  );
+  // track which student we’re acting on
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+
+  // Fetch sessions on mount
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -102,7 +122,6 @@ const StudentSessionManagement = () => {
         setSessionNames(names);
 
         // If none selected yet, pick the first
-        
       } catch (error) {
         console.error("Failed to fetch sessions:", error);
       }
@@ -111,11 +130,23 @@ const StudentSessionManagement = () => {
     fetchSessions();
   }, [token, selectedSession]);
 
-  
-
-  // track which student we’re acting on
-  const [actionModalOpen, setActionModalOpen] = useState(false);
-  const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+  // Fetch students on mount
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/student/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(res.statusText);
+        const json = await res.json();
+        // assume json.data is the array
+        setStudents(Array.isArray(json.data) ? json.data : []);
+      } catch (err) {
+        console.error("Failed to load students:", err);
+      }
+    };
+    fetchStudents();
+  }, [token]);
 
   // open the modal for a given student
   const openActionModal = (studentId: string) => {
@@ -146,94 +177,6 @@ const StudentSessionManagement = () => {
     await mockSaveDefense(data);
   };
 
-  // Degree tab & search
-
-  const [search, setSearch] = useState("");
-
-  // Students state
-  const [students, setStudents] = useState<StudentStage[]>([
-    {
-      id: "1",
-      matNo: "220976762",
-      fullName: "Camilla Park",
-      topic: "Secure Online Auction System",
-      firstSem: 100,
-      secondSem: 80,
-      thirdSem: 90,
-      externalDefenseDate: 0,
-      supervisor1: "Not Assigned",
-      supervisor2: "Not Assigned",
-      department: "Computer Science", // new
-      faculty: "Faculty of Engineering",
-    },
-    {
-      id: "2",
-      matNo: "220976765",
-      fullName: "Jacob Philip",
-      topic: "E-Commerce Platform",
-      firstSem: 72,
-      secondSem: null,
-      thirdSem: null,
-      externalDefenseDate: null,
-      supervisor1: "Not Assigned",
-      supervisor2: "Not Assigned",
-      department: "Med Lab Science", // new
-      faculty: "Faculty of Medicine",
-    },
-    {
-      id: "3",
-      matNo: "220976768",
-      fullName: "Sarah Johnson",
-      topic: "AI-Powered Chatbot",
-      firstSem: 85,
-      secondSem: 90,
-      thirdSem: null,
-      externalDefenseDate: null,
-      supervisor1: "Not Assigned",
-      supervisor2: "Not Assigned",
-      department: "Mathematics", // new
-      faculty: "Faculty of Sciences",
-    },
-    {
-      id: "4",
-      matNo: "220976769",
-      fullName: "Michael Smith",
-      topic: "Blockchain-Based Voting System",
-      firstSem: 95,
-      secondSem: 100,
-      thirdSem: 100,
-      externalDefenseDate: null,
-      supervisor1: "Not Assigned",
-      supervisor2: "Not Assigned",
-      department: "Political Science", // new
-      faculty: "Faculty of Social Sciences",
-    },
-    {
-      id: "4",
-      matNo: "220976769",
-      fullName: "Michael Smith",
-      topic: "Blockchain-Based Voting System",
-      firstSem: 95,
-      secondSem: 100,
-      thirdSem: 100,
-      externalDefenseDate: null,
-      supervisor1: "Not Assigned",
-      supervisor2: "Not Assigned",
-      department: "Computer Science", // new
-      faculty: "Faculty of Engineering",
-    },
-    // …more rows
-  ]);
-
-  // Pagination
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 7;
-
-  // Selected defense stage
-  const [selectedDefense, setSelectedDefense] = useState<string>(
-    isProvost ? defenseOptions[3] : defenseOptions[0]
-  );
-
   // Assign supervisor handler
   const handleAssign = (
     studentId: string,
@@ -242,7 +185,7 @@ const StudentSessionManagement = () => {
   ) => {
     setStudents((prev) =>
       prev.map((s) =>
-        s.id === studentId ? { ...s, [supType]: lecturerName } : s
+        s._id === studentId ? { ...s, [supType]: lecturerName } : s
       )
     );
   };
@@ -273,23 +216,23 @@ const StudentSessionManagement = () => {
   // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return students.filter((s) => {
-      const base =
-        s.matNo.includes(term) ||
-        s.fullName.toLowerCase().includes(term) ||
-        s.topic.toLowerCase().includes(term);
-
-      if (isProvost) {
-        // Provost can also search by dept/faculty
-        return (
-          base ||
-          s.department.toLowerCase().includes(term) ||
-          s.faculty.toLowerCase().includes(term)
-        );
-      }
-      return base;
-    });
-  }, [students, search, isProvost]);
+    return (
+      students
+        // only those whose currentStage matches the dropdown
+        .filter((s) => s.currentStage === selectedDefense.toLowerCase())
+        // then apply the existing search filter
+        .filter((s) => {
+          const fullName = s.user
+            ? `${s.user.firstName} ${s.user.lastName}`.toLowerCase()
+            : "";
+          return (
+            s.matricNo.includes(term) ||
+            fullName.includes(term) ||
+            s.projectTopic.toLowerCase().includes(term)
+          );
+        })
+    );
+  }, [students, search, selectedDefense]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice(
@@ -458,10 +401,7 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">MAT NO.</th>
                   <th className="p-3 border">Full Name</th>
                   <th className="p-3 border">Topic</th>
-                  <th className="p-3 border">First Seminar</th>
-                  <th className="p-3 border">Second Seminar</th>
-                  <th className="p-3 border">Third Seminar</th>
-                  <th className="p-3 border">External Defense</th>
+                  <th className="p-3 border">Score for {selectedDefense}</th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
                   {isHod && <th className="p-3 border">Action</th>}
@@ -478,12 +418,14 @@ const StudentSessionManagement = () => {
                 const currentStage = defenseStage;
                 return (
                   <tr
-                    key={s.id}
+                    key={s._id}
                     className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                   >
-                    <td className="p-3 border">{s.matNo}</td>
-                    <td className="p-3 border">{s.fullName}</td>
-                    <td className="p-3 border">{s.topic}</td>
+                    <td className="p-3 border">{s.matricNo}</td>
+                    <td className="p-3 border">
+                      {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                    </td>
+                    <td className="p-3 border">{s.projectTopic}</td>
                     <td className="p-3 border">{currentStage}</td>
                     <td className="p-3 border">{s.department}</td>
                     <td className="p-3 border">{s.faculty}</td>
@@ -492,35 +434,41 @@ const StudentSessionManagement = () => {
               }
 
               // HOD/PGC row:
-              const done =
-                (defenseStage === "First Seminar" && s.firstSem === 100) ||
-                (defenseStage === "Second Seminar" && s.secondSem === 100) ||
-                (defenseStage === "Third Seminar" && s.thirdSem === 100);
 
               const notFinal =
                 stageFlow.indexOf(defenseStage as any) < stageFlow.length - 1;
 
               return (
                 <tr
-                  key={s.id}
+                  key={s._id}
                   className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                 >
-                  <td className="p-3 border">{s.matNo}</td>
-                  <td className="p-3 border">{s.fullName}</td>
-                  <td className="p-3 border">{s.topic}</td>
-                  <td className="p-3 border">{s.firstSem ?? "—"}</td>
-                  <td className="p-3 border">{s.secondSem ?? "—"}</td>
-                  <td className="p-3 border">{s.thirdSem ?? "—"}</td>
-                  <td className="p-3 border">{s.externalDefenseDate ?? "—"}</td>
-                  <td className="p-3 border">{s.supervisor1}</td>
-                  <td className="p-3 border">{s.supervisor2}</td>
+                  <td className="p-3 border">{s.matricNo}</td>
+                  <td className="p-3 border">
+                    {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                  </td>
+                  <td className="p-3 border">{s.projectTopic}</td>
+                  <td className="p-3 border">
+                    {s.stageScores?.[selectedDefense.toLowerCase()] ?? "—"}
+                  </td>
+                  <td className="p-3 border">
+                    {typeof s.majorSupervisor === "string"
+                      ? "Not Assigned"
+                      : `${s.majorSupervisor?.firstName} ${s.majorSupervisor?.lastName}`}
+                  </td>
+                  <td className="p-3 border">
+                    {typeof s.minorSupervisor === "string"
+                      ? "Not Assigned"
+                      : `${s.minorSupervisor?.firstName} ${s.minorSupervisor?.lastName}`}
+                  </td>
+
                   {isHod && (
                     <td className="p-3 border">
                       {done && notFinal ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openActionModal(s.id)}
+                          onClick={() => openActionModal(s._id)}
                           aria-label="Open action menu"
                         >
                           <Pen className="w-4 h-4" />
