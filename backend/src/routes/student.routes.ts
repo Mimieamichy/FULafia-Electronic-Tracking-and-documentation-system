@@ -29,7 +29,7 @@ export const addSupervisorSchema = Joi.object({
 // Routes
 router.post('/add', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ADD_STUDENTS),StudentController.addStudent);
 router.get('/', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllStudentsByDepartment);
-router.post('/assignSupervisor', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
+router.post('/assignSupervisor', validateBody(addSupervisorSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
 
 
 
