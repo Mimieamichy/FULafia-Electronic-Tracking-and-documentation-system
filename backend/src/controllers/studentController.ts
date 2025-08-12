@@ -11,7 +11,6 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-
 export default class StudentController {
   static async addStudent(req: AuthenticatedRequest, res: Response) {
     try {
@@ -46,7 +45,7 @@ export default class StudentController {
       const userId = req.user?.id || ''
 
       const students = await StudentService.getAllStudentsInDepartment(department, userId)
-      res.status(201).json({ success: true, data: students });
+      res.status(200).json({ success: true, data: students });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({
