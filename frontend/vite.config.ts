@@ -4,9 +4,11 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
+const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
+
 export default defineConfig(({ mode }) => ({
   server: {
-    port: 8080, 
+    port: PORT, 
   },
   plugins: [
     react(),
