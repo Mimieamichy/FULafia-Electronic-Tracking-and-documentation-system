@@ -11,6 +11,8 @@ import notificationRoutes from './routes/notification';
 import sessionRoutes from './routes/session'
 import projectRoutes from './routes/project.routes'
 import studentRoutes from './routes/student.routes'
+import departmentRoutes from './routes/department.routes';
+import facultyRoutes from "./routes/faculty.routes";
 
 
 const app = express();
@@ -26,6 +28,8 @@ app.use('/api', notificationRoutes)
 app.use('/api/session', sessionRoutes)
 app.use('/api/project', projectRoutes)
 app.use('/api/student', studentRoutes)
+app.use("/api/department", departmentRoutes);
+app.use("/api/faculty", facultyRoutes);
 
 
 export default app;
