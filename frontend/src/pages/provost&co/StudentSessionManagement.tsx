@@ -69,6 +69,11 @@ const StudentSessionManagement = () => {
   // 👇 new state
   const [selectedDepartmentForDefense, setSelectedDepartmentForDefense] =
     useState<string>("");
+    // Departments for Provost
+const [departments, setDepartments] = useState<string[]>([]);
+const [departmentsLoading, setDepartmentsLoading] = useState(false);
+const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
 
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
@@ -140,6 +145,7 @@ const StudentSessionManagement = () => {
         if (!res.ok) throw new Error(res.statusText);
         const json = await res.json();
         // assume json.data is the array
+        console.log("Fetched students:", json.data);
         setStudents(Array.isArray(json.data) ? json.data : []);
       } catch (err) {
         console.error("Failed to load students:", err);
