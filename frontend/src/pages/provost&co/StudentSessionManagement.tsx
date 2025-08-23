@@ -37,14 +37,22 @@ interface StudentFromAPI {
   user?: { firstName: string; lastName: string };
 }
 
+interface Faculty {
+  _id: string;
+  name: string;
+}
+interface Department {
+  _id: string;
+  name: string;
+}
+
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const StudentSessionManagement = () => {
   const { token, user } = useAuth(); // 'HOD' or 'PGC'
   const isHod = user?.role?.toUpperCase() === "HOD";
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
-
-  // Modal & selection state
+    // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
   const defenseOptions = useMemo<string[]>(() => {
     return degreeTab === "MSc"
@@ -57,6 +65,7 @@ const StudentSessionManagement = () => {
           "External Defense",
         ];
   }, [degreeTab]);
+  
 
   // If you use stageFlow for advancing stages, you can just mirror defenseOptions:
   const stageFlow = defenseOptions;
@@ -69,11 +78,6 @@ const StudentSessionManagement = () => {
   // 👇 new state
   const [selectedDepartmentForDefense, setSelectedDepartmentForDefense] =
     useState<string>("");
-    // Departments for Provost
-const [departments, setDepartments] = useState<string[]>([]);
-const [departmentsLoading, setDepartmentsLoading] = useState(false);
-const [departmentsError, setDepartmentsError] = useState<string | null>(null);
-
 
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
@@ -95,6 +99,116 @@ const [departmentsError, setDepartmentsError] = useState<string | null>(null);
   // track which student we’re acting on
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [facultiesLoading, setFacultiesLoading] = useState(false);
+  const [facultiesError, setFacultiesError] = useState<string | null>(null);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
+// provost faculty/department fetch
+  useEffect(() => {
+    if (!isProvost) return;
+    let cancelled = false;
+    const fetchFaculties = async () => {
+      setFacultiesLoading(true);
+      setFacultiesError(null);
+      try {
+        const res = await fetch(`${baseUrl}/faculty/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
+        const arr: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+        if (!cancelled) {
+          const mapped = arr.map((f) => ({
+            _id: f._id ?? f.id ?? "",
+            name: f.name ?? f.facultyName ?? "",
+          }));
+          setFaculties(mapped);
+          // optional: auto-select first faculty:
+          // if (mapped[0]) setSelectedFacultyId(mapped[0]._id);
+          console.log("Fetched faculties:", json);
+          
+        }
+      } catch (err: any) {
+        if (!cancelled)
+          setFacultiesError(err?.message ?? "Failed to load faculties");
+        setFaculties([]);
+      } finally {
+        if (!cancelled) setFacultiesLoading(false);
+      }
+    };
+    fetchFaculties();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProvost, token]);
+
+  useEffect(() => {
+    if (!isProvost) return;
+    if (!selectedFacultyId) {
+      setDepartments([]);
+      setSelectedDepartmentForDefense("");
+      return;
+    }
+    let cancelled = false;
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      setDepartmentsError(null);
+      try {
+        // If your API expects a query param, change to:
+        // const url = `${baseUrl}/department?facultyId=${selectedFacultyId}`;
+        const url = `${baseUrl}/department/${selectedFacultyId}`;
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
+        const arr: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+        if (!cancelled) {
+          const mapped = arr.map((d) => ({
+            _id: d._id ?? d.id ?? "",
+            name: d.name ?? d.departmentName ?? "",
+          }));
+          setDepartments(mapped);
+          // optionally auto-select first department:
+          // setSelectedDepartmentForDefense(mapped[0]?._id ?? "");
+          console.log("Fetched departments:", json);
+          
+        }
+      } catch (err: any) {
+        if (!cancelled)
+          setDepartmentsError(err?.message ?? "Failed to load departments");
+        setDepartments([]);
+        setSelectedDepartmentForDefense("");
+      } finally {
+        if (!cancelled) setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProvost, selectedFacultyId, token]);
+
 
   // Fetch sessions on mount
   useEffect(() => {
@@ -136,23 +250,82 @@ const [departmentsError, setDepartmentsError] = useState<string | null>(null);
   }, [token, selectedSession]);
 
   // Fetch students on mount
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const res = await fetch(`${baseUrl}/student/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(res.statusText);
-        const json = await res.json();
-        // assume json.data is the array
-        console.log("Fetched students:", json.data);
-        setStudents(Array.isArray(json.data) ? json.data : []);
-      } catch (err) {
-        console.error("Failed to load students:", err);
+
+useEffect(() => {
+  const resolveDepartmentName = () => {
+    if (isProvost) {
+      // Provost: lookup the department name from the selected department id
+      if (!selectedDepartmentForDefense) return "";
+      const found = departments.find((d) => d._id === selectedDepartmentForDefense);
+      return found?.name ?? "";
+    }
+
+    // HOD/PGC: user.department is already a string name
+    return user?.department || "";
+  };
+
+  let cancelled = false;
+
+  const fetchStudents = async () => {
+    const departmentName = resolveDepartmentName();
+
+    // Skip fetch until provost chooses a department
+    if (isProvost && !departmentName) {
+      setStudents([]);
+      return;
+    }
+
+    try {
+      const url = `${baseUrl}/student/${encodeURIComponent(departmentName)}`;
+      console.log("Fetching students:", url);
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("Failed fetching students:", res.status, txt);
+        throw new Error(`Failed to fetch students (${res.status})`);
       }
-    };
-    fetchStudents();
-  }, [token]);
+
+      const json = await res.json();
+      console.log("students payload:", json);
+
+      if (cancelled) return;
+
+      const dataArr = Array.isArray(json)
+        ? json
+        : Array.isArray(json.data)
+        ? json.data
+        : [];
+
+      setStudents(dataArr);
+    } catch (err) {
+      console.error("Error loading students:", err);
+      if (!cancelled) setStudents([]); // optional: clear on error
+    }
+  };
+
+  fetchStudents();
+
+  return () => {
+    cancelled = true;
+  };
+}, [
+  token,
+  user?.department,              // HOD/PGC
+  selectedDepartmentForDefense,  // Provost
+  departments,                   // needed for lookup
+  isProvost,
+]);
+
+
+
 
   // open the modal for a given student
   const openActionModal = (studentId: string) => {
@@ -351,25 +524,74 @@ const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
         {isProvost && selectedDefense === "External Defense" && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
+            {/* Faculty Selector */}
+            <Select
+              value={selectedFacultyId}
+              onValueChange={setSelectedFacultyId}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue
+                  placeholder={
+                    facultiesLoading ? "Loading..." : "Select Faculty"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {facultiesLoading ? (
+                  <SelectItem disabled>Loading faculties...</SelectItem>
+                ) : facultiesError ? (
+                  <SelectItem disabled>{facultiesError}</SelectItem>
+                ) : faculties.length ? (
+                  faculties.map((f) => (
+                    <SelectItem key={f._id} value={f._id}>
+                      {f.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem disabled>No faculties</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+
             {/* Department Selector */}
             <Select
               value={selectedDepartmentForDefense}
               onValueChange={setSelectedDepartmentForDefense}
+              disabled={
+                !selectedFacultyId ||
+                departmentsLoading ||
+                departments.length === 0
+              }
             >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select Department" />
+              <SelectTrigger className="w-56">
+                <SelectValue
+                  placeholder={
+                    !selectedFacultyId
+                      ? "Choose faculty first"
+                      : departmentsLoading
+                      ? "Loading departments..."
+                      : "Select Department"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {/* replace with your real departments */}
-                {[
-                  "Computer Science",
-                  "Electrical Engineering",
-                  "Statistics" /*…*/,
-                ].map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept}
+                {departmentsLoading ? (
+                  <SelectItem disabled>Loading departments...</SelectItem>
+                ) : departmentsError ? (
+                  <SelectItem disabled>{departmentsError}</SelectItem>
+                ) : departments.length ? (
+                  departments.map((d) => (
+                    <SelectItem key={d._id} value={d._id}>
+                      {d.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem disabled>
+                    {selectedFacultyId
+                      ? "No departments"
+                      : "Select faculty first"}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
 

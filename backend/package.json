@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
-    "build": "tsc", 
+    "build": "tsc",
     "start": "node server.js"
   },
   "keywords": [],
@@ -23,9 +23,12 @@
     "express": "^5.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "login": "^0.8.0",
+    "logout": "^1.0.2",
     "mongoose": "^8.16.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
+    "node-cache": "^5.1.2",
     "nodemailer": "^7.0.3"
   },
   "devDependencies": {
