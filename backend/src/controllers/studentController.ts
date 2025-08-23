@@ -42,7 +42,7 @@ export default class StudentController {
 
   static async getAllStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
   try {
-    const { department = '' } = req.body;
+    const { department } = req.params;
     const userId = req.user?.id || '';
 
     // Query params for pagination
