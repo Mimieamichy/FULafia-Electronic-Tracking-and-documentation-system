@@ -41,22 +41,32 @@ export default class StudentController {
 
 
   static async getAllStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { department } = req.body
-      const userId = req.user?.id || ''
+  try {
+    const { department = '' } = req.body;
+    const userId = req.user?.id || '';
 
-      const students = await StudentService.getAllStudentsInDepartment(department, userId)
-      res.status(201).json({ success: true, data: students });
-    } catch (err: any) {
-      console.log(err)
-      res.status(400).json({
-        success: false,
-        error: 'Failed to get students',
-        message: err.message,
-      });
-    }
+    // Query params for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
 
+    const students = await StudentService.getAllStudentsInDepartment(
+      department,
+      userId,
+      page,
+      limit
+    );
+
+    res.status(200).json({ success: true, ...students });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get students',
+      message: err.message,
+    });
   }
+}
+
 
   static async assignSupervisor(req: Request, res: Response) {
     try {

@@ -1,5 +1,5 @@
 // src/services/AuthService.ts
-import { User } from '../models/index';
+import { User, Student, Lecturer } from '../models/index';
 import jwt from 'jsonwebtoken';
 import EmailService from '../utils/helpers';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
@@ -18,12 +18,34 @@ export default class AuthService {
     const roles = user.roles as Role[];
     const permissions = getPermissionsFromRoles(roles);
 
+    // Defaults
+    let department = "none"
+    let faculty = "none"
 
+    if (roles.includes(Role.STUDENT)) {
+      const student = await Student.findOne({ user: user._id });
+      if (!student) {
+        throw new Error('Inconsistency: user has STUDENT role but no Student record found');
+      }
+      department = student.department;
+      faculty = student.faculty;
+    }
+
+    if (roles.includes(Role.LECTURER)) {
+      const lecturer = await Lecturer.findOne({ user: user._id });
+      if (!lecturer) {
+        throw new Error('Inconsistency: user has LECTURER role but no Lecturer record found');
+      }
+      department = lecturer.department || "none"
+      faculty = lecturer.faculty || "none"
+    }
     const token = jwt.sign(
       {
         id: user._id,
         roles,
         permissions,
+        department,
+        faculty,
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -37,6 +59,8 @@ export default class AuthService {
         lastName: user.lastName,
         roles,
         isPanelMember: user.isPanelMember,
+        department,
+        faculty,
       },
       token,
     };

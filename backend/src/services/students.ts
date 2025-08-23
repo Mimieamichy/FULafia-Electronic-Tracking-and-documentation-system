@@ -1,6 +1,7 @@
 import { Student, User } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
+import { paginateWithCache } from "../utils/paginatedCache"
 
 
 
@@ -80,16 +81,31 @@ export default class StudentService {
         return await Student.findByIdAndDelete(studentId);
     }
 
-    static async getAllStudentsInDepartment(department: string, userId: string) {
-        if (department == '') {
+    static async getAllStudentsInDepartment(
+        department: string,
+        userId: string,
+        page = 1,
+        limit = 10
+    ) {
+        if (!department || department.trim() === '') {
             const lecturer = await LecturerService.getLecturerById(userId);
-            // Get lecturer's department and faculty if no lecturer exists return null
-            department = lecturer?.department ?? "none";
+            // If lecturer not found, default to "none"
+            department = lecturer?.department ?? 'none';
         }
-        return await Student.find({ department })
-            .populate('user')
-            .lean();
+
+        // Use pagination + cache utility
+        return paginateWithCache(
+            Student,
+            page,
+            limit,
+            `students:dept=${department}`,
+            120, // cache TTL in seconds
+            { department }
+        );
     }
+
+
+
 
     static async assignSupervisor(staffId: string, type: string, matricNo: string) {
         const updateField =
