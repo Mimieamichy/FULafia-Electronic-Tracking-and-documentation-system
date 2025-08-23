@@ -16,7 +16,8 @@ interface UserProfile {
   role: string;
   email: string;
   id: string;
-  department?: string; // Optional, if not always present
+  department: string; 
+  faculty: string // Optional, if not always present
 }
 
 interface AuthContextProps {
@@ -58,7 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role: user.roles[0], // assuming only one role
       email: user.email,
       id: user._id,
-      
+      department: user.department,
+      faculty: user.faculty
+
+
+
     };
 
     setUser(userProfile);
