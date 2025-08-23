@@ -101,7 +101,7 @@ export default class LecturerService {
             throw new Error(`A HOD has already been added for the ${data.department} department.`);
         }
 
-        const roles = [Role.HOD, Role.GENERAL];
+        const roles = [Role.HOD, Role.GENERAL, Role.LECTURER];
 
 
         // Create User with dynamic roles
@@ -132,7 +132,7 @@ export default class LecturerService {
     }) {
 
 
-        const roles = [Role.PROVOST, Role.GENERAL];
+        const roles = [Role.PROVOST, Role.GENERAL, Role.LECTURER];
 
         // Create User with dynamic roles
         const user = await User.create({

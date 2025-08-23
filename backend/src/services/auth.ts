@@ -31,7 +31,7 @@ export default class AuthService {
       faculty = student.faculty;
     }
 
-    if (roles.includes(Role.LECTURER)) {
+    if (roles.includes(Role.LECTURER) || roles.includes(Role.HOD) ||  roles.includes(Role.PROVOST)) {
       const lecturer = await Lecturer.findOne({ user: user._id });
       if (!lecturer) {
         throw new Error('Inconsistency: user has LECTURER role but no Lecturer record found');
