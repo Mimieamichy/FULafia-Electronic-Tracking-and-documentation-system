@@ -81,7 +81,33 @@ export default class StudentService {
         return await Student.findByIdAndDelete(studentId);
     }
 
-    static async getAllStudentsInDepartment(
+    static async getAllMscStudentsInDepartment(
+        department: string,
+        userId: string,
+        page = 1,
+        limit = 10
+    ) {
+        if (!department || department.trim() === '') {
+            const lecturer = await LecturerService.getLecturerById(userId);
+            // If lecturer not found, default to "none"
+            department = lecturer?.department ?? 'none';
+        }
+        const level = "msc"
+
+        // Use pagination + cache utility
+        return paginateWithCache(
+            Student,
+            page,
+            limit,
+            `students:dept=${department}`,
+            120, // cache TTL in seconds
+            { department , level},
+            "user"
+        );
+    }
+
+
+    static async getAllPhdStudentsInDepartment(
         department: string,
         userId: string,
         page = 1,
@@ -93,6 +119,8 @@ export default class StudentService {
             department = lecturer?.department ?? 'none';
         }
 
+        const level = "phd"
+
         // Use pagination + cache utility
         return paginateWithCache(
             Student,
@@ -100,7 +128,7 @@ export default class StudentService {
             limit,
             `students:dept=${department}`,
             120, // cache TTL in seconds
-            { department },
+            { department, level },
             "user"
         );
     }

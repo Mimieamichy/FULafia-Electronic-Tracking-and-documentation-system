@@ -40,7 +40,7 @@ export default class StudentController {
   }
 
 
-  static async getAllStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
+  static async getAllMscStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
   try {
     const { department } = req.params;
     const userId = req.user?.id || '';
@@ -50,7 +50,36 @@ export default class StudentController {
     const limit = parseInt(req.query.limit as string) || 10;
     
 
-    const students = await StudentService.getAllStudentsInDepartment(
+    const students = await StudentService.getAllMscStudentsInDepartment(
+      department,
+      userId,
+      page,
+      limit
+    );
+
+    res.status(200).json({ success: true, ...students });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get students',
+      message: err.message,
+    });
+  }
+}
+
+
+static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { department } = req.params;
+    const userId = req.user?.id || '';
+
+    // Query params for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+
+    const students = await StudentService.getAllPhdStudentsInDepartment(
       department,
       userId,
       page,
