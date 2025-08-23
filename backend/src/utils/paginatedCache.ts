@@ -58,7 +58,8 @@ export async function paginateWithCache<T extends object>(
   limit = 10,
   cachePrefix = '',
   ttl = 120,
-  filter: Record<string, any> = {}
+  filter: Record<string, any> = {},
+  populate: string | string[] = []   // 👈 added populate option
 ): Promise<PaginatedResult<T>> {
   const cacheKey = `${cachePrefix}:page=${page}:limit=${limit}:filter=${JSON.stringify(filter)}`;
 
@@ -70,8 +71,15 @@ export async function paginateWithCache<T extends object>(
 
   // 2. Fetch from DB
   const skip = (page - 1) * limit;
+  const query = model.find(filter).skip(skip).limit(limit);
+
+  // apply populate if provided
+  if (populate && populate.length > 0) {
+    query.populate(populate);
+  }
+
   const [data, total] = await Promise.all([
-    model.find(filter).skip(skip).limit(limit).lean().exec().then(res => res as T[]),
+    query.lean().exec().then(res => res as T[]),
     model.countDocuments(filter),
   ]);
 
@@ -82,3 +90,4 @@ export async function paginateWithCache<T extends object>(
 
   return result;
 }
+

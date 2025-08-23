@@ -50,7 +50,7 @@ export default class LecturerService {
             throw new Error(`Invalid role: ${data.role}`);
         }
 
-        const roles: Role[] = [resolvedRole, Role.GENERAL];
+        const roles: Role[] = [resolvedRole, Role.GENERAL, Role.LECTURER];
         const lecturer = await LecturerService.getLecturerById(data.userId);
 
 

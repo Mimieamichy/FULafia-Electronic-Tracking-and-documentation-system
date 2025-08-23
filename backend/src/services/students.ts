@@ -100,7 +100,8 @@ export default class StudentService {
             limit,
             `students:dept=${department}`,
             120, // cache TTL in seconds
-            { department }
+            { department },
+            "user"
         );
     }
 
