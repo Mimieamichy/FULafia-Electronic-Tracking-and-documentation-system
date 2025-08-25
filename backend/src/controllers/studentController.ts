@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 
-export default class StudentController {
+export default class StudentController { 
   static async addStudent(req: AuthenticatedRequest, res: Response) {
     try {
       const { firstName, lastName, email, degree: level, matNo: matricNo, session } = req.body;

@@ -133,9 +133,6 @@ export default class StudentService {
         );
     }
 
-
-
-
     static async assignSupervisor(staffId: string, type: string, matricNo: string) {
         const updateField =
             type === 'major'
