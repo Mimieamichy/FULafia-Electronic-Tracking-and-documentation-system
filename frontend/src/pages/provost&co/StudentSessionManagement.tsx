@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { log } from "console";
 
 interface StudentFromAPI {
   _id: string;
@@ -50,10 +51,14 @@ const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const StudentSessionManagement = () => {
   const { token, user } = useAuth(); // 'HOD' or 'PGC'
+
   const isHod = user?.role?.toUpperCase() === "HOD";
+
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
-    // Modal & selection state
+
+  // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
+
   const defenseOptions = useMemo<string[]>(() => {
     return degreeTab === "MSc"
       ? ["Start", "Proposal Defense", "Internal Defense", "External Defense"]
@@ -65,7 +70,6 @@ const StudentSessionManagement = () => {
           "External Defense",
         ];
   }, [degreeTab]);
-  
 
   // If you use stageFlow for advancing stages, you can just mirror defenseOptions:
   const stageFlow = defenseOptions;
@@ -109,7 +113,7 @@ const StudentSessionManagement = () => {
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
-// provost faculty/department fetch
+  // provost faculty/department fetch
   useEffect(() => {
     if (!isProvost) return;
     let cancelled = false;
@@ -139,7 +143,6 @@ const StudentSessionManagement = () => {
           // optional: auto-select first faculty:
           // if (mapped[0]) setSelectedFacultyId(mapped[0]._id);
           console.log("Fetched faculties:", json);
-          
         }
       } catch (err: any) {
         if (!cancelled)
@@ -192,7 +195,6 @@ const StudentSessionManagement = () => {
           // optionally auto-select first department:
           // setSelectedDepartmentForDefense(mapped[0]?._id ?? "");
           console.log("Fetched departments:", json);
-          
         }
       } catch (err: any) {
         if (!cancelled)
@@ -208,7 +210,6 @@ const StudentSessionManagement = () => {
       cancelled = true;
     };
   }, [isProvost, selectedFacultyId, token]);
-
 
   // Fetch sessions on mount
   useEffect(() => {
@@ -251,81 +252,84 @@ const StudentSessionManagement = () => {
 
   // Fetch students on mount
 
-useEffect(() => {
-  const resolveDepartmentName = () => {
-    if (isProvost) {
-      // Provost: lookup the department name from the selected department id
-      if (!selectedDepartmentForDefense) return "";
-      const found = departments.find((d) => d._id === selectedDepartmentForDefense);
-      return found?.name ?? "";
-    }
+  useEffect(() => {
+    const resolveDepartmentName = () => {
+      if (isProvost) {
+        if (!selectedDepartmentForDefense) return "";
+        const found = departments.find(
+          (d) => d._id === selectedDepartmentForDefense
+        );
+        return found?.name ?? "";
+      }
+      return user?.department || ""; // HOD/PGC: already a name string
+    };
 
-    // HOD/PGC: user.department is already a string name
-    return user?.department || "";
-  };
+    let cancelled = false;
 
-  let cancelled = false;
+    const fetchStudents = async () => {
+      const departmentName = resolveDepartmentName();
 
-  const fetchStudents = async () => {
-    const departmentName = resolveDepartmentName();
-
-    // Skip fetch until provost chooses a department
-    if (isProvost && !departmentName) {
-      setStudents([]);
-      return;
-    }
-
-    try {
-      const url = `${baseUrl}/student/${encodeURIComponent(departmentName)}`;
-      console.log("Fetching students:", url);
-
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        console.error("Failed fetching students:", res.status, txt);
-        throw new Error(`Failed to fetch students (${res.status})`);
+      // Skip fetch until provost picks a department
+      if (isProvost && !departmentName) {
+        setStudents([]);
+        return;
       }
 
-      const json = await res.json();
-      console.log("students payload:", json);
+      // Choose the correct API segment based on the active tab
+      const levelSeg = degreeTab === "MSc" ? "msc" : "phd";
+      const url = `${baseUrl}/student/${levelSeg}/${encodeURIComponent(
+        departmentName
+      )}`;
+      console.log("Fetching students from:", url);
 
-      if (cancelled) return;
+      try {
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-      const dataArr = Array.isArray(json)
-        ? json
-        : Array.isArray(json.data)
-        ? json.data
-        : [];
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("Failed fetching students:", res.status, txt);
+          throw new Error(`Failed to fetch students (${res.status})`);
+        }
 
-      setStudents(dataArr);
-    } catch (err) {
-      console.error("Error loading students:", err);
-      if (!cancelled) setStudents([]); // optional: clear on error
-    }
-  };
+        const json = await res.json();
+        console.log("students payload:", json);
 
-  fetchStudents();
+        if (cancelled) return;
 
-  return () => {
-    cancelled = true;
-  };
-}, [
-  token,
-  user?.department,              // HOD/PGC
-  selectedDepartmentForDefense,  // Provost
-  departments,                   // needed for lookup
-  isProvost,
-]);
+        const dataArr = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
 
+        setStudents(dataArr);
+        const studentmat = dataArr.map((s) => s.matricNo);
+        console.log(studentmat);
+      } catch (err) {
+        console.error("Error loading students:", err);
+        if (!cancelled) setStudents([]);
+      }
+    };
 
+    fetchStudents();
 
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    token,
+    user?.department, // HOD/PGC name
+    selectedDepartmentForDefense, // Provost selection (id)
+    departments, // used to look up name
+    isProvost,
+    degreeTab, // 👈 re-fetch when switching MSc/PhD
+  ]);
 
   // open the modal for a given student
   const openActionModal = (studentId: string) => {
@@ -357,16 +361,62 @@ useEffect(() => {
   };
 
   // Assign supervisor handler
-  const handleAssign = (
+  const handleAssign = async (
     studentId: string,
     supType: "supervisor1" | "supervisor2" | "internalExaminer",
+    lecturerId: string,
     lecturerName: string
   ) => {
+    // find student to get matricNo (fallback to studentId if needed)
+    const student = students.find((s) => s._id === studentId);
+    const matricNo = student?.matricNo ?? studentId;
+
+    // optimistic UI update (optional) — update local students immediately
     setStudents((prev) =>
       prev.map((s) =>
-        s._id === studentId ? { ...s, [supType]: lecturerName } : s
+        s._id === studentId
+          ? {
+              ...s,
+              // store assignment as object so you have both id+name
+              [supType]: { staffId: lecturerId, staffName: lecturerName },
+            }
+          : s
       )
     );
+
+    try {
+      const res = await fetch(
+        `${baseUrl}/student/assignSupervisor/${encodeURIComponent(matricNo)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            supervisorType: supType,
+            staffId: lecturerId,
+            staffName: lecturerName,
+            matricNo,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to assign supervisor (${res.status}): ${text}`);
+      }
+
+      // if backend returns updated student, you can use it to replace local record:
+      // const updated = await res.json();
+      // setStudents(prev => prev.map(s => s._id === studentId ? updated : s));
+
+      console.log("Supervisor assigned successfully");
+    } catch (err) {
+      console.error("Error assigning supervisor:", err);
+      // rollback optimistic update if you want (optional)
+      // refetch students or revert change
+    }
   };
 
   // Advance student stage handler
@@ -662,7 +712,10 @@ useEffect(() => {
               }
 
               // HOD/PGC row:
-
+              const done =
+                s.stageScores &&
+                Object.keys(s.stageScores).length > 0 &&
+                s.stageScores[selectedDefense.toLowerCase()] !== undefined;
               const notFinal =
                 stageFlow.indexOf(defenseStage as any) < stageFlow.length - 1;
 
@@ -711,7 +764,7 @@ useEffect(() => {
                       size="sm"
                       className="bg-amber-700 text-white"
                       onClick={() => {
-                        setCurrentStudentId(s.id);
+                        setCurrentStudentId(s._id); // <-- use _id
                         setAssignModalOpen(true);
                       }}
                     >

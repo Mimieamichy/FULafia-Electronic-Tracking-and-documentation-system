@@ -55,6 +55,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
           setSessionId(latest._id); // for backend
           setSessionName(latest.sessionName); // for display
         }
+        console.log("Latest session fetched:", latest);
+        
       } catch (error) {
         console.error("Error fetching latest session:", error);
       }
