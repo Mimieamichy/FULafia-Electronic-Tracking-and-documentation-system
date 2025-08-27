@@ -1,4 +1,4 @@
-import { Student, User } from "../models/index";
+import { Student, User, Lecturer } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateWithCache } from "../utils/paginatedCache"
@@ -75,7 +75,6 @@ export default class StudentService {
 
         return await student.save();
     }
-
 
     static async deleteStudent(studentId: string) {
         return await Student.findByIdAndDelete(studentId);
@@ -159,8 +158,13 @@ export default class StudentService {
         if (type === 'internal_examiner') roleToAdd = 'INTERNAL_EXAMINER';
 
         // Update lecturer role
+        const lecturer = await Lecturer.findById(staffId);
+        if (!lecturer) throw new Error("Lecturer not found");
+
+        //Get the userId from lecturer.user
+        const userId = lecturer.user;
         await User.updateOne(
-            { _id: staffId },
+            { _id: userId },
             { $addToSet: { role: roleToAdd } } // prevents duplicates
         );
 

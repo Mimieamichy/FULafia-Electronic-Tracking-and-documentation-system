@@ -39,9 +39,9 @@ const studentSchema = new Schema<IStudent>(
     department: { type: String, required: true },
     faculty: { type: String, required: true },
     session: { type: Schema.Types.ObjectId, ref: 'Session', required: true },
-    majorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer' },
-    minorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer' },
-    internalExaminer: { type: Schema.Types.ObjectId, ref: 'Lecturer' },
+    majorSupervisor: { type: String, default: '' },
+    minorSupervisor: { type: String, default:  ''},
+    internalExaminer: { type: String, default: '' },
     projectTopic: { type: String, default: '' },
     stageScores: { type: stageScoresSchema, default: () => ({}) },
     approvalStatus: {
