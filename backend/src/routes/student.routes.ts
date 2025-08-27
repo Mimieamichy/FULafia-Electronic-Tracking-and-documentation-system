@@ -22,6 +22,7 @@ export const addStudentSchema = Joi.object({
 
 export const addSupervisorSchema = Joi.object({
   staffId: Joi.string().required(),
+  staffName: Joi.string().required(),
   type: Joi.string().valid('major', 'minor', 'internal_examiner').required(), 
   matNo: Joi.string().required(),
 })
@@ -30,7 +31,7 @@ export const addSupervisorSchema = Joi.object({
 router.post('/add', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ADD_STUDENTS),StudentController.addStudent);
 router.get('/msc/:department', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllMscStudentsByDepartment);
 router.get('/phd/:department', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsByDepartment);
-router.post('/assignSupervisor/:matricNo', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
+router.post('/assignSupervisor/:matricNo', validateBody(addSupervisorSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
 
 
 
