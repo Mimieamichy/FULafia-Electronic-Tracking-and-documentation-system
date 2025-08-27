@@ -2,7 +2,7 @@ import { Project, Student } from '../models/index';
 import { Types } from 'mongoose';
 
 export default class ProjectService {
-  static async uploadProject(studentId: string, fileUrl: string, topic: string) {
+  static async uploadProject(studentId: string, fileUrl: string) {
     let project = await Project.findOne({ student: studentId });
 
     if (!project) {
@@ -11,32 +11,44 @@ export default class ProjectService {
 
     const nextVersion = project.versions.length + 1;
 
+    const student = await Student.findById(studentId);
+    if (!student) throw new Error("Student not found");
+
     project.versions.push({
       versionNumber: nextVersion,
       fileUrl,
-      topic,
       uploadedBy: new Types.ObjectId(studentId),
       uploadedAt: new Date(),
       comments: [],
+      topic: student.projectTopic 
     });
 
     await project.save();
-    await Student.findByIdAndUpdate(studentId, { projectTopic: topic });
     return project;
   }
 
   static async getProjectVersions(studentId: string) {
-    const project = await Project.findOne({ student: studentId }).populate('versions.uploadedBy', 'name');
-    if (!project) throw new Error('No project found for this student');
+    const project = await Project.findOne({ student: studentId }).populate(
+      "versions.uploadedBy",
+      "name"
+    );
+    if (!project) throw new Error("No project found for this student");
     return project.versions;
   }
 
-  static async commentOnVersion(studentId: string, versionNumber: number, authorId: string, text: string) {
+  static async commentOnVersion(
+    studentId: string,
+    versionNumber: number,
+    authorId: string,
+    text: string
+  ) {
     const project = await Project.findOne({ student: studentId });
-    if (!project) throw new Error('Project not found');
+    if (!project) throw new Error("Project not found");
 
-    const version = project.versions.find(v => v.versionNumber === versionNumber);
-    if (!version) throw new Error('Version not found');
+    const version = project.versions.find(
+      (v) => v.versionNumber === versionNumber
+    );
+    if (!version) throw new Error("Version not found");
 
     version.comments.push({
       author: new Types.ObjectId(authorId),
@@ -48,48 +60,76 @@ export default class ProjectService {
   }
 
   static async getComments(studentId: string, versionNumber: number) {
-    const project = await Project.findOne({ student: studentId })
-      .populate('versions.comments.author', 'name');
+    const project = await Project.findOne({ student: studentId }).populate(
+      "versions.comments.author",
+      "name"
+    );
 
-    if (!project) throw new Error('Project not found');
+    if (!project) throw new Error("Project not found");
 
-    const version = project.versions.find(v => v.versionNumber === versionNumber);
-    if (!version) throw new Error('Version not found');
+    const version = project.versions.find(
+      (v) => v.versionNumber === versionNumber
+    );
+    if (!version) throw new Error("Version not found");
 
     return version.comments;
   }
 
-  static async supervisorUploadCorrection(studentId: string, fileUrl: string, topic: string, supervisorId: string) {
+  static async supervisorUploadCorrection(
+    studentId: string,
+    fileUrl: string,
+    supervisorId: string,
+    comments: string
+  ) {
     const project = await Project.findOne({ student: studentId });
-    if (!project) throw new Error('Project not found');
+    if (!project) throw new Error("Project not found");
 
     const nextVersion = project.versions.length + 1;
+    const student = await Student.findById(studentId);
+    if (!student) throw new Error("Student not found");
 
     project.versions.push({
       versionNumber: nextVersion,
       fileUrl,
-      topic,
       uploadedBy: new Types.ObjectId(supervisorId),
       uploadedAt: new Date(),
-      comments: [],
+      comments: [comments],
+      topic: student.projectTopic,
     });
 
     return await project.save();
   }
 
-  static async downloadProjectVersion(studentId: string, versionNumber: number) {
+  static async downloadProjectVersion(
+    studentId: string,
+    versionNumber: number
+  ) {
     const project = await Project.findOne({ student: studentId });
 
-    if (!project) throw new Error('Project not found');
+    if (!project) throw new Error("Project not found");
 
-    const version = project.versions.find(v => v.versionNumber === versionNumber);
-    if (!version) throw new Error('Version not found');
+    const version = project.versions.find(
+      (v) => v.versionNumber === versionNumber
+    );
+    if (!version) throw new Error("Version not found");
+
+    //Get student project toopic
+    const student = await Student.findById(studentId);
+    if (!student) throw new Error("Student not found");
 
     return {
       fileUrl: version.fileUrl,
-      topic: version.topic,
+      topic: student.projectTopic,
       uploadedAt: version.uploadedAt,
       uploadedBy: version.uploadedBy,
     };
+  }
+
+  static async addProjectTopic(studentId: string, topic: string) {
+    const student = await Student.findById(studentId);
+    if (!student) throw new Error("Student not found");
+    student.projectTopic = topic;
+    await student.save();
+    return student;
   }
 }

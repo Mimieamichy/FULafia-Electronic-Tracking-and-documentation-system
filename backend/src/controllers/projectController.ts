@@ -18,7 +18,7 @@ export default class ProjectController {
       const fileUrl = req.file?.path || req.body.fileUrl;
       const studentId = req.user?.id || ''
 
-      const project = await ProjectService.uploadProject(studentId, fileUrl, topic);
+      const project = await ProjectService.uploadProject(studentId, fileUrl);
       res.status(201).json({ success: true, message: 'Project uploaded successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -74,19 +74,33 @@ export default class ProjectController {
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || ''
-      const { studentId, topic } = req.body;
+      const { studentId } = req.params;
+      const {comments} = req.body
       const fileUrl = req.file?.path || req.body.fileUrl;
 
       const project = await ProjectService.supervisorUploadCorrection(
         studentId,
         fileUrl,
-        topic,
-        userId
+        userId,
+        comments
       );
       res.status(200).json({ success: true, message: 'Project uploaded succesfully', data: project });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
+    }
+  }
+
+  static async addProjectTopic(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {matricNo} = req.params
+      const { topic } = req.body;
+
+      const student = await ProjectService.addProjectTopic(matricNo, topic);
+      res.status(200).json({ success: true, message: 'Project topic added successfully', data: student });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to add project topic', message: err.message });
     }
   }
 

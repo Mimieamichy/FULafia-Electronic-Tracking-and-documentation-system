@@ -2,6 +2,7 @@ import { Student, User, Lecturer } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateWithCache } from "../utils/paginatedCache"
+import NotificationService from "./notification";
 
 
 
@@ -100,11 +101,10 @@ export default class StudentService {
             limit,
             `students:dept=${department}`,
             120, // cache TTL in seconds
-            { department , level},
+            { department, level },
             "user"
         );
     }
-
 
     static async getAllPhdStudentsInDepartment(
         department: string,
@@ -168,6 +168,21 @@ export default class StudentService {
             { $addToSet: { role: roleToAdd } } // prevents duplicates
         );
 
+        // Create notifications:
+        // 1) Notify the lecturer that they have been assigned
+        await NotificationService.createNotifications({
+            lecturerIds: [staffId],
+            role: roleToAdd[0] || 'SUPERVISOR',
+            message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
+        });
+
+        // 2) Notify the student that a supervisor/examiner was assigned
+        await NotificationService.createNotifications({
+            studentIds: [matricNo],
+            role: 'STUDENT',
+            message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
+        });
         return student;
     }
+
 }
