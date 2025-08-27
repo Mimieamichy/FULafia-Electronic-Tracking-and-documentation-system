@@ -100,8 +100,9 @@ static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Respo
 
   static async assignSupervisor(req: Request, res: Response) {
     try {
-      const {staffId, type, matricNo} = req.body
-      const assignedStudent = await StudentService.assignSupervisor(staffId, type, matricNo)
+      const {staffId, staffName, type} = req.body
+      const { matricNo } = req.params;
+      const assignedStudent = await StudentService.assignSupervisor(staffId, staffName, type, matricNo)
       res.status(201).json({ success: true, data: assignedStudent });
     } catch (err: any) {
       console.log(err)

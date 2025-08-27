@@ -133,14 +133,14 @@ export default class StudentService {
         );
     }
 
-    static async assignSupervisor(staffId: string, type: string, matricNo: string) {
+    static async assignSupervisor(staffId: string, staffName: string, type: string, matricNo: string) {
         const updateField =
             type === 'major'
-                ? { majorSupervisor: staffId }
+                ? { majorSupervisor: staffName }
                 : type === 'minor'
-                    ? { minorSupervisor: staffId }
+                    ? { minorSupervisor: staffName }
                     : type === 'internal_examiner'
-                        ? { internalExaminer: staffId }
+                        ? { internalExaminer: staffName }
                         : {};
 
         const student = await Student.findOneAndUpdate(
@@ -160,7 +160,7 @@ export default class StudentService {
 
         // Update lecturer role
         await User.updateOne(
-            { staffId },
+            { _id: staffId },
             { $addToSet: { role: roleToAdd } } // prevents duplicates
         );
 

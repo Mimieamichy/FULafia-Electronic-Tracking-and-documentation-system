@@ -30,7 +30,7 @@ export const addSupervisorSchema = Joi.object({
 router.post('/add', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ADD_STUDENTS),StudentController.addStudent);
 router.get('/msc/:department', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllMscStudentsByDepartment);
 router.get('/phd/:department', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsByDepartment);
-router.post('/assignSupervisor', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
+router.post('/assignSupervisor/:matricNo', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
 
 
 
