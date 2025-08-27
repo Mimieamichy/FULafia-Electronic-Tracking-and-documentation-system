@@ -16,7 +16,7 @@ interface AssignSupervisorModalProps {
   onClose: () => void;
   onSubmit: (
     studentId: string,
-    supervisorType: "supervisor1" | "supervisor2" | "internalExaminer",
+    supervisorType: "major" | "minor" | "internal_examiner",
     lecturerId: string,
     lecturerName: string
   ) => void;
@@ -38,8 +38,8 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
   const { token } = useAuth();
 
   const [supervisorType, setSupervisorType] = useState<
-    "supervisor1" | "supervisor2" | "internalExaminer"
-  >("supervisor1");
+    "major" | "minor" | "internal_examiner"
+  >("major");
 
   const [lecturers, setLecturers] = useState<LecturerOption[]>([]);
   const [loadingLecturers, setLoadingLecturers] = useState(false);
@@ -142,7 +142,7 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
             value={supervisorType}
             onValueChange={(v) =>
               setSupervisorType(
-                v as "supervisor1" | "supervisor2" | "internalExaminer"
+                v as "major" | "minor" | "internal_examiner"
               )
             }
           >
@@ -150,9 +150,9 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="supervisor1">1st Supervisor</SelectItem>
-              <SelectItem value="supervisor2">2nd Supervisor</SelectItem>
-              <SelectItem value="internalExaminer">
+              <SelectItem value="major">1st Supervisor</SelectItem>
+              <SelectItem value="minor">2nd Supervisor</SelectItem>
+              <SelectItem value="internal_examiner">
                 Internal Examiner
               </SelectItem>
             </SelectContent>

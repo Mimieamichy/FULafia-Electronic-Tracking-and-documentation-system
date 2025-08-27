@@ -363,7 +363,7 @@ const StudentSessionManagement = () => {
   // Assign supervisor handler
   const handleAssign = async (
     studentId: string,
-    supType: "supervisor1" | "supervisor2" | "internalExaminer",
+    supType: "major" | "minor" | "internal_examiner",
     lecturerId: string,
     lecturerName: string
   ) => {
@@ -394,10 +394,10 @@ const StudentSessionManagement = () => {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            supervisorType: supType,
+            type: supType,
             staffId: lecturerId,
             staffName: lecturerName,
-            matricNo,
+            matNo: matricNo
           }),
         }
       );
