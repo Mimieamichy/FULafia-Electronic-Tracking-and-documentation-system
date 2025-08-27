@@ -1,7 +1,8 @@
 import { useAuth } from "../AuthProvider";
 
 export default function StudentDashboard() {
-  const { userName } = useAuth();
+  const { user } = useAuth();
+  const userName = user?.userName || "Student";
 
   // Mock session and stage data (replace with real data when API is available)
   const currentSession = "2024/2025";

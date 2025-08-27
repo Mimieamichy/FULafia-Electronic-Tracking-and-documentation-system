@@ -32,9 +32,9 @@ interface StudentFromAPI {
   faculty: string;
   projectTopic: string;
   stageScores: Record<string, number>;
-  majorSupervisor?: { firstName: string; lastName: string } | string;
-  minorSupervisor?: { firstName: string; lastName: string } | string;
-  internalExaminer?: { firstName: string; lastName: string } | string;
+  majorSupervisor?:  string;
+  minorSupervisor?: string;
+  internalExaminer?: string;
   user?: { firstName: string; lastName: string };
 }
 
@@ -309,8 +309,7 @@ const StudentSessionManagement = () => {
           : [];
 
         setStudents(dataArr);
-        const studentmat = dataArr.map((s) => s.matricNo);
-        console.log(studentmat);
+        
       } catch (err) {
         console.error("Error loading students:", err);
         if (!cancelled) setStudents([]);
@@ -397,7 +396,7 @@ const StudentSessionManagement = () => {
             type: supType,
             staffId: lecturerId,
             staffName: lecturerName,
-            matNo: matricNo
+            matNo: matricNo,
           }),
         }
       );
@@ -407,15 +406,9 @@ const StudentSessionManagement = () => {
         throw new Error(`Failed to assign supervisor (${res.status}): ${text}`);
       }
 
-      // if backend returns updated student, you can use it to replace local record:
-      // const updated = await res.json();
-      // setStudents(prev => prev.map(s => s._id === studentId ? updated : s));
-
       console.log("Supervisor assigned successfully");
     } catch (err) {
       console.error("Error assigning supervisor:", err);
-      // rollback optimistic update if you want (optional)
-      // refetch students or revert change
     }
   };
 
@@ -733,14 +726,10 @@ const StudentSessionManagement = () => {
                     {s.stageScores?.[selectedDefense.toLowerCase()] ?? "—"}
                   </td>
                   <td className="p-3 border">
-                    {typeof s.majorSupervisor === "string"
-                      ? "Not Assigned"
-                      : `${s.majorSupervisor?.firstName} ${s.majorSupervisor?.lastName}`}
+                   { s.majorSupervisor || "Not Assigned"}
                   </td>
                   <td className="p-3 border">
-                    {typeof s.minorSupervisor === "string"
-                      ? "Not Assigned"
-                      : `${s.minorSupervisor?.firstName} ${s.minorSupervisor?.lastName}`}
+                    {s.minorSupervisor || "Not Assigned"}
                   </td>
 
                   {isHod && (

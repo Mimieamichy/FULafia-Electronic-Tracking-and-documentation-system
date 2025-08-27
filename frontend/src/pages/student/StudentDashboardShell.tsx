@@ -17,7 +17,8 @@ import StudentNotifications from "./Notifications";
 export type StudentView = "dashboard" | "uploadWork" | "notifications";
 
 const StudentDashboardShell = () => {
-  const { userName, role } = useAuth();
+  const { user } = useAuth();
+  const userName = user?.userName || "Student";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
