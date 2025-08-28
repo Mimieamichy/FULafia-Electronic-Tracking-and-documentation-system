@@ -148,58 +148,69 @@ export default class StudentService {
         );
     }
 
-    static async assignSupervisor(staffId: string, staffName: string, type: string, matricNo: string) {
-        const updateField =
-            type === 'major'
-                ? { majorSupervisor: staffName }
-                : type === 'minor'
-                    ? { minorSupervisor: staffName }
-                    : type === 'internal_examiner'
-                        ? { internalExaminer: staffName }
-                        : {};
+    static async assignSupervisor(
+    staffId: string,
+    staffName: string,
+    type: string,
+    matricNo: string
+) {
+    // Decide field to update
+    const updateField =
+        type === 'major'
+            ? { majorSupervisor: staffName }
+            : type === 'minor'
+            ? { minorSupervisor: staffName }
+            : type === 'internal_examiner'
+            ? { internalExaminer: staffName }
+            : {};
 
-        const student = await Student.findOneAndUpdate(
-            { matricNo },
-            { $set: updateField },
-            { new: true }
-        );
+    // Update student
+    const student = await Student.findOneAndUpdate(
+        { matricNo },
+        { $set: updateField },
+        { new: true }
+    );
+    if (!student) throw new Error('Student not found');
 
-        if (!student) {
-            throw new Error('Student not found');
-        }
+    // Roles to add
+    let roleToAdd: string[] = [];
+    if (type === 'major') roleToAdd = ['major_supervisor', 'supervisor'];
+    else if (type === 'minor') roleToAdd = ['supervisor'];
+    else if (type === 'internal_examiner') roleToAdd = ['internal_examiner'];
 
-        // Determine role to add
-        let roleToAdd = 'SUPERVISOR';
-        if (type === 'major') roleToAdd = 'MAJOR_SUPERVISOR', 'SUPERVISOR';
-        if (type === 'internal_examiner') roleToAdd = 'INTERNAL_EXAMINER';
+    // Get lecturer
+    const lecturer = await Lecturer.findOne({ _id: staffId });
+    if (!lecturer) throw new Error('Lecturer not found');
 
-        // Update lecturer role
-        const lecturer = await Lecturer.findOne({ _id: staffId }); 
-        if (!lecturer) throw new Error("Lecturer not found");
+    const userId = lecturer.user;
 
-        //Get the userId from lecturer.user
-        const userId = lecturer.user;
+    // Ensure roles at beginning (unique)
+    for (const role of roleToAdd) {
         await User.updateOne(
             { _id: userId },
-            { $addToSet: { role: roleToAdd }} // prevents duplicates
+            { $pull: { roles: role } } // remove if exists
         );
-
-        // Create notifications:
-        // 1) Notify the lecturer that they have been assigned
-        await NotificationService.createNotifications({
-            lecturerIds: [staffId],
-            role: roleToAdd[0] || 'SUPERVISOR',
-            message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
-        });
-
-    
-        // 2) Notify the student that a supervisor/examiner was assigned
-        await NotificationService.createNotifications({
-            studentIds: [String(student._id)],
-            role: 'STUDENT',
-            message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
-        });
-        return student;
+        await User.updateOne(
+            { _id: userId },
+            { $push: { roles: { $each: [role], $position: 0 } } }
+        );
     }
+
+    // Notifications
+    await NotificationService.createNotifications({
+        lecturerIds: [staffId],
+        role: roleToAdd[0] || 'supervisor',
+        message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
+    });
+
+    await NotificationService.createNotifications({
+        studentIds: [String(student._id)],
+        role: 'student',
+        message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
+    });
+
+    return student;
+}
+
 
 }
