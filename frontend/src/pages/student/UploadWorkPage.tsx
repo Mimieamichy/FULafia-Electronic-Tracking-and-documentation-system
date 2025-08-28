@@ -244,7 +244,7 @@ export default function UploadWorkPage() {
         {/* Student Comment */}
         <div className="space-y-1 mt-4">
           <label className="text-gray-700 font-medium block">
-            Comment to Supervisor:
+            Comments:
           </label>
           <Textarea
             rows={4}
@@ -254,10 +254,10 @@ export default function UploadWorkPage() {
             className="w-full"
           />
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center  justify-end gap-2">
             <Button
               onClick={handleSendComment}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-600 hover:bg-amber-700 mt-5 text-white"
               disabled={sendingComment}
             >
               <Send className="mr-2 h-4 w-4" />{" "}
