@@ -2,24 +2,25 @@ import { Project, Student } from '../models/index';
 import { Types } from 'mongoose';
 
 export default class ProjectService {
-  static async uploadProject(studentId: string, fileUrl: string) {
-    let project = await Project.findOne({ student: studentId });
+  static async uploadProject(userId: string, fileUrl: string) {
+  // Find student linked to this user
+  const student = await Student.findOne({ user: userId });
+  if (!student) throw new Error("Student not found");
 
-    if (!project) {
-      project = new Project({ student: studentId, versions: [] });
-    }
+  // Find or create project for student
+  let project = await Project.findOne({ student: student._id });
+  if (!project) {
+    project = new Project({ student: student._id, versions: [] });
+  }
 
     const nextVersion = project.versions.length + 1;
-
-    const student = await Student.findById(studentId);
-    if (!student) throw new Error("Student not found");
 
     project.versions.push({
       versionNumber: nextVersion,
       fileUrl,
-      uploadedBy: new Types.ObjectId(studentId),
+      uploadedBy: (student._id),
       uploadedAt: new Date(),
-      comments: [],
+      comments: [], 
       topic: student.projectTopic 
     });
 

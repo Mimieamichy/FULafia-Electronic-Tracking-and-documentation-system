@@ -14,7 +14,6 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      const { topic } = req.body;
       const fileUrl = req.file?.path || req.body.fileUrl;
       const studentId = req.user?.id || ''
 
