@@ -181,7 +181,7 @@ export default class StudentService {
         const userId = lecturer.user;
         await User.updateOne(
             { _id: userId },
-            { $addToSet: { role: roleToAdd } } // prevents duplicates
+            { $addToSet: { role: roleToAdd }} // prevents duplicates
         );
 
         // Create notifications:

@@ -31,7 +31,7 @@ export default class ProjectService {
   const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
 
   if (supervisorNames.length > 0) {
-    const supervisors = await Lecturer.find({ name: { $in: supervisorNames } });
+    const supervisors = await User.find({ name: { $in: supervisorNames } });
 
     if (supervisors.length > 0) {
       await NotificationService.createNotifications({
