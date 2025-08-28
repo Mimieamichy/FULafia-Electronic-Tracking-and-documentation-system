@@ -41,6 +41,8 @@ export enum Permission {
   GENERATE_DEPT_SCORE_SHEET = 'generate_dept_score_sheet',
   ADD_STUDENTS = 'add_students',
   VIEW_ALL_STUDENTS = 'view_all_students',
+  ADD_PROJECT_TOPIC = 'add_project_topic',
+  
 
   // Dean
   VIEW_FACULTY_LECTURERS = 'view_faculty_lecturers',
@@ -124,7 +126,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GENERATE_DEPT_SCORE_SHEET,
     Permission.ADD_STUDENTS,
     Permission.VIEW_ALL_STUDENTS,
-    Permission.VIEW_SESSIONS
+    Permission.VIEW_SESSIONS,
+    Permission.ASSIGN_SUPERVISORS,
+    Permission.ADD_PROJECT_TOPIC,
   ],
   [Role.DEAN]: [
     Permission.VIEW_FACULTY_LECTURERS, 
