@@ -15,9 +15,9 @@ export interface IStudent extends Document {
   department: string;
   faculty: string;
   session: mongoose.Types.ObjectId;
-  majorSupervisor?: mongoose.Types.ObjectId;
-  minorSupervisor?: mongoose.Types.ObjectId;
-  internalExaminer?: mongoose.Types.ObjectId;
+  majorSupervisor?: string;
+  minorSupervisor?: string;
+  internalExaminer?: string;
   projectTopic?: string;
   stageScores: IStageScores;
   approvalStatus: 'pending' | 'approved' | 'rejected';

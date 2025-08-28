@@ -117,7 +117,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DOWNLOAD_PROJECT,
     Permission.DELETE_LECTURER,
     Permission.ADD_STUDENTS,
-    Permission.VIEW_ALL_STUDENTS
+    Permission.VIEW_ALL_STUDENTS,
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
+    Permission.UPLOAD_PROJECT,
+    Permission.VIEW_COMMENTS,
+    Permission.COMMENT,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -128,6 +134,12 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_ALL_STUDENTS,
     Permission.VIEW_SESSIONS,
     Permission.ASSIGN_SUPERVISORS,
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
+    Permission.UPLOAD_PROJECT,
+    Permission.VIEW_COMMENTS,
+    Permission.COMMENT,
     
   ],
   [Role.DEAN]: [

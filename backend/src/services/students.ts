@@ -184,17 +184,32 @@ export default class StudentService {
 
     const userId = lecturer.user;
 
-    // Ensure roles at beginning (unique)
     for (const role of roleToAdd) {
-        await User.updateOne(
-            { _id: userId },
-            { $pull: { roles: role } } // remove if exists
-        );
-        await User.updateOne(
-            { _id: userId },
-            { $push: { roles: { $each: [role], $position: 0 } } }
-        );
-    }
+  // Check if user has hod or pgcord
+  const user = await User.findById(userId);
+
+  if (!user) continue;
+
+  if (user.roles.includes("hod") || user.roles.includes("pgcord")) {
+    // ✅ If user is HOD or PG CORD → remove role only
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { roles: role } }
+    );
+  } else {
+    // ✅ Normal users → ensure uniqueness and add at beginning
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { roles: role } } // remove if exists to avoid dup
+    );
+
+    await User.updateOne(
+      { _id: userId },
+      { $push: { roles: { $each: [role], $position: 0 } } }
+    );
+  }
+}
+
 
     // Notifications
     await NotificationService.createNotifications({

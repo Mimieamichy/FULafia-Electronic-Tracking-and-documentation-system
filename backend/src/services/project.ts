@@ -1,4 +1,4 @@
-import { Project, Student , Lecturer} from '../models/index';
+import { Project, Student , Lecturer, User} from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 
@@ -28,19 +28,47 @@ export default class ProjectService {
     await project.save();
 
     // 4. Notify major & minor supervisors (lookup by name if exists)
-  const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
+  // Split supervisor full name into parts (assuming format: "Title FirstName LastName")
+function parseName(fullName: string) {
+  const parts = fullName.trim().split(" ");
+  if (parts.length < 2) return { firstName: fullName, lastName: "" }; 
 
-  if (supervisorNames.length > 0) {
-    const supervisors = await Lecturer.find({ name: { $in: supervisorNames } });
+  // Last part = lastName, rest (except title) = firstName
+  const lastName = parts.pop()!;
+  const title = parts[0].endsWith(".") ? parts.shift() : null;
+  const firstName = parts.join(" ");
+  return { firstName, lastName, title };
+}
 
-    if (supervisors.length > 0) {
-      await NotificationService.createNotifications({
-        lecturerIds: supervisors.map((sup) => sup._id),
-        role: "lecturer",
-        message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
-      });
-    }
+const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
+
+if (supervisorNames.length > 0) {
+  const lecturerIds: string[] = [];
+
+  for (const supName of supervisorNames) {
+    if (!supName) continue; // Type guard to ensure supName is string
+    const { firstName, lastName } = parseName(supName);
+
+    // Find User by name
+    const user = await User.findOne({ firstName, lastName });
+    if (!user) continue;
+
+    // Find Lecturer by user
+    const lecturer = await Lecturer.findOne({ user: user._id });
+    if (!lecturer) continue;
+
+    lecturerIds.push(String(lecturer._id));
   }
+
+  if (lecturerIds.length > 0) {
+    await NotificationService.createNotifications({
+      lecturerIds,
+      role: "lecturer",
+      message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
+    });
+  }
+}
+
     return project;
   }
 
