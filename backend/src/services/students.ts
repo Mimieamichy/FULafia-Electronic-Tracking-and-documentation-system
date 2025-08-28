@@ -174,7 +174,7 @@ export default class StudentService {
         if (type === 'internal_examiner') roleToAdd = 'INTERNAL_EXAMINER';
 
         // Update lecturer role
-        const lecturer = await Lecturer.findById(staffId);
+        const lecturer = await Lecturer.findOne({ staffId: staffId }); 
         if (!lecturer) throw new Error("Lecturer not found");
 
         //Get the userId from lecturer.user

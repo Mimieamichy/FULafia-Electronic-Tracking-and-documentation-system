@@ -1,4 +1,5 @@
-import { Project, Student } from '../models/index';
+import { Project, Student , Lecturer} from '../models/index';
+import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 
 export default class ProjectService {
@@ -25,6 +26,21 @@ export default class ProjectService {
     });
 
     await project.save();
+
+    // 4. Notify major & minor supervisors (lookup by name if exists)
+  const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
+
+  if (supervisorNames.length > 0) {
+    const supervisors = await Lecturer.find({ name: { $in: supervisorNames } });
+
+    if (supervisors.length > 0) {
+      await NotificationService.createNotifications({
+        lecturerIds: supervisors.map((sup) => sup._id),
+        role: "lecturer",
+        message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
+      });
+    }
+  }
     return project;
   }
 
