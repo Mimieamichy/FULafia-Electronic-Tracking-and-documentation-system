@@ -2,8 +2,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Upload, FileText, MessageCircle } from "lucide-react";
+import { Upload, FileText } from "lucide-react";
 import { Send } from "lucide-react";
 import { useAuth } from "../AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -14,16 +13,14 @@ export default function UploadWorkPage() {
   // state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | null>(null);
-  const [projectTopic, setProjectTopic] = useState("");
+
   const [studentComment, setStudentComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [uploadingTopic, setUploadingTopic] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
 
   // new: keep a record of last-submitted values for preview after clearing inputs
-  const [lastSubmittedTopic, setLastSubmittedTopic] = useState<string | null>(
-    null
-  );
+
   const [lastSubmittedFileName, setLastSubmittedFileName] = useState<
     string | null
   >(null);
@@ -101,9 +98,10 @@ export default function UploadWorkPage() {
       const commentEndpoint = `${baseUrl}/project/comment`; // adjust if your backend uses a different route
       const payload: any = {
         comment: studentComment.trim(),
-        projectTopic: projectTopic.trim() || undefined,
       };
       if (user?.id) payload.studentId = user.id;
+
+      
 
       const res = await fetch(commentEndpoint, {
         method: "POST",
@@ -145,18 +143,10 @@ export default function UploadWorkPage() {
   };
 
   const handleSubmitTopic = async () => {
-    if (!projectTopic.trim()) {
-      toast({
-        title: "Project Topic Required",
-        description: "Please enter your project topic.",
-        variant: "destructive",
-      });
-      return;
-    }
     if (!selectedFile) {
       toast({
         title: "File Required",
-        description: "Please select a file to upload with your topic.",
+        description: "Please select a file to upload.",
         variant: "destructive",
       });
       return;
@@ -165,43 +155,39 @@ export default function UploadWorkPage() {
     setUploadingTopic(true);
     try {
       const form = new FormData();
-      form.append("topic", projectTopic.trim());
+      // keep the field name your backend expects (you used "project")
       form.append("project", selectedFile);
       if (user?.id) form.append("studentId", String(user.id));
 
       const res = await fetch(`${baseUrl}/project/upload`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: form, // browser sets Content-Type boundary automatically
+        body: form,
       });
 
       const text = await res.text().catch(() => null);
-      console.log("Topic upload response:", res.status, text);
+      console.log("File upload response:", res.status, text);
 
       if (res.ok) {
-        // store last-submitted values for preview
-        setLastSubmittedTopic(projectTopic.trim());
-        setLastSubmittedFileName(previewFileName);
-
-        // clear the input fields
-        setProjectTopic("");
+        // clear inputs
         setSelectedFile(null);
         setPreviewFileName(null);
-        // clear the actual file input element value
         if (fileInputRef.current) fileInputRef.current.value = "";
 
+        // keep "submitted" for preview section if you still want it
         setSubmitted(true);
+        // remember last file name for preview
+        setLastSubmittedFileName(previewFileName);
 
         toast({
           title: "Upload Successful",
-          description: "Your project topic and file have been uploaded.",
+          description: "Your project file has been uploaded.",
           variant: "default",
         });
       } else {
         toast({
           title: "Upload Failed",
-          description:
-            "There was an error uploading your project topic and file.",
+          description: `There was an error uploading your file. (${res.status})`,
           variant: "destructive",
         });
       }
@@ -222,20 +208,6 @@ export default function UploadWorkPage() {
       <h1 className="text-2xl font-bold text-gray-800">Upload Work</h1>
 
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow space-y-5 w-full max-w-2xl mx-auto">
-        {/* Project Topic */}
-        <div className="space-y-1">
-          <label className="text-gray-700 font-medium block">
-            Project Topic:
-          </label>
-          <Input
-            value={projectTopic}
-            onChange={(e) => setProjectTopic(e.target.value)}
-            placeholder="Enter your project topic"
-            className="w-full"
-            name="topic"
-          />
-        </div>
-
         {/* File Upload */}
 
         <div className="space-y-1">
@@ -293,24 +265,6 @@ export default function UploadWorkPage() {
             </Button>
           </div>
         </div>
-
-        {/* Preview After Submission */}
-        {submitted && (
-          <div className="border-t pt-4 mt-6 space-y-3">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Submitted Preview
-            </h2>
-            <div className="text-sm text-gray-700 space-y-1">
-              <p>
-                <strong>Project Topic:</strong> {lastSubmittedTopic ?? "—"}
-              </p>
-              <p>
-                <strong>Uploaded File:</strong> {lastSubmittedFileName ?? "—"}
-              </p>
-            </div>
-            ...
-          </div>
-        )}
       </div>
     </div>
   );
