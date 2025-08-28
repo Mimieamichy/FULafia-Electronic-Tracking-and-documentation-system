@@ -174,7 +174,7 @@ export default class StudentService {
         if (type === 'internal_examiner') roleToAdd = 'INTERNAL_EXAMINER';
 
         // Update lecturer role
-        const lecturer = await Lecturer.findOne({ staffId: staffId }); 
+        const lecturer = await Lecturer.findOne({ _id: staffId }); 
         if (!lecturer) throw new Error("Lecturer not found");
 
         //Get the userId from lecturer.user
@@ -192,9 +192,10 @@ export default class StudentService {
             message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
         });
 
+    
         // 2) Notify the student that a supervisor/examiner was assigned
         await NotificationService.createNotifications({
-            studentIds: [matricNo],
+            studentIds: [String(student._id)],
             role: 'STUDENT',
             message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
         });
