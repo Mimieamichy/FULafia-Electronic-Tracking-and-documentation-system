@@ -98,7 +98,7 @@ static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Respo
 }
 
 
-  static async assignSupervisor(req: Request, res: Response) {
+static async assignSupervisor(req: Request, res: Response) {
     try {
       const {staffId, staffName, type} = req.body
       const { matricNo } = req.params;
@@ -109,6 +109,29 @@ static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Respo
       res.status(400).json({
         success: false,
         error: 'Failed to assign supervisors',
+        message: err.message,
+      });
+    }
+}
+
+
+static async editStudent(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { studentId } = req.params;
+      const { matricNo, firstName, lastName, projectTopic } = req.body;
+      const updatedStudent = await StudentService.editStudent( studentId,{
+        matricNo,
+        firstName,
+        lastName,
+        projectTopic
+
+      });
+      res.status(200).json({ success: true, data: updatedStudent });
+    } catch (err: any) {
+      console.error(err);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to update student',
         message: err.message,
       });
     }

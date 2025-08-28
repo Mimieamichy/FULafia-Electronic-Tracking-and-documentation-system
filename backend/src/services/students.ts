@@ -77,6 +77,20 @@ export default class StudentService {
         return await student.save();
     }
 
+    static async editStudent(studentId: string, updateData: Partial<{
+        matricNo: string;
+        firstName:  string;
+        lastName: string;
+        projectTopic: string
+    }>) {
+        const student = await Student.findById(studentId);
+        if (!student) {
+            throw new Error('Student not found');
+        }   
+        const updatedStudent = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
+        return updatedStudent;
+    }
+
     static async deleteStudent(studentId: string) {
         return await Student.findByIdAndDelete(studentId);
     }
