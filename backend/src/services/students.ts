@@ -33,6 +33,7 @@ export default class StudentService {
         level: 'msc' | 'phd';
         userId: string;
         session: string;
+        projectTopic: string;
     }) {
         // Step 1: Check if student with matricNo or email already exists
         const existingUser = await User.findOne({ email: data.email });
@@ -71,6 +72,7 @@ export default class StudentService {
             department,
             faculty,
             session: data.session,
+            projectTopic: data.projectTopic,
             stageScores: getDefaultStageScores(data.level)
         });
 

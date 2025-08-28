@@ -91,17 +91,5 @@ export default class ProjectController {
     }
   }
 
-  static async addProjectTopic(req: AuthenticatedRequest, res: Response) {
-    try {
-      const {matricNo} = req.params
-      const { topic } = req.body;
-
-      const student = await ProjectService.addProjectTopic(matricNo, topic);
-      res.status(200).json({ success: true, message: 'Project topic added successfully', data: student });
-    } catch (err: any) {
-      console.log(err)
-      res.status(400).json({ success: false, error: 'Failed to add project topic', message: err.message });
-    }
-  }
 
 }

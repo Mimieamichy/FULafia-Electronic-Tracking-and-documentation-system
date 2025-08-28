@@ -16,6 +16,7 @@ export const addStudentSchema = Joi.object({
   lastName: Joi.string().required(), 
   matNo: Joi.string().required(),
   degree: Joi.string().valid('msc', 'phd').required(), 
+  projectTopic: Joi.string().required(),
   session: Joi.string().required(),
 });
 

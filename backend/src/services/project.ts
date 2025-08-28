@@ -125,11 +125,5 @@ export default class ProjectService {
     };
   }
 
-  static async addProjectTopic(studentId: string, topic: string) {
-    const student = await Student.findById(studentId);
-    if (!student) throw new Error("Student not found");
-    student.projectTopic = topic;
-    await student.save();
-    return student;
-  }
+ 
 }
