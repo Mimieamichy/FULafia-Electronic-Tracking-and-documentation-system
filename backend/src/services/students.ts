@@ -1,4 +1,4 @@
-import { Student, User, Lecturer } from "../models/index";
+import { Student, User, Lecturer, Project} from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateWithCache } from "../utils/paginatedCache"
@@ -156,12 +156,24 @@ export default class StudentService {
   const user = lecturer.user as any;
   const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
 
-  return Student.find({
-    $or: [
-      { majorSupervisor: supervisorName },
-      { minorSupervisor: supervisorName }
-    ]
-  });
+
+
+  const students = await Student.find({
+  $or: [
+    { majorSupervisor: supervisorName },
+    { minorSupervisor: supervisorName }
+  ]
+});
+
+const results = await Promise.all(
+  students.map(async (student) => {
+    const project = await Project.findOne({ student: student._id })
+      .populate('versions.uploadedBy', 'firstName lastName email');
+    return { student, project };
+  })
+);
+
+return results;
 }
     static async assignSupervisor(
     staffId: string,
