@@ -1,4 +1,4 @@
-import { Student, User, Lecturer, Project} from "../models/index";
+import { Student, User, Lecturer, Project } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateWithCache } from "../utils/paginatedCache"
@@ -81,14 +81,14 @@ export default class StudentService {
 
     static async editStudent(studentId: string, updateData: Partial<{
         matricNo: string;
-        firstName:  string;
+        firstName: string;
         lastName: string;
         projectTopic: string
     }>) {
         const student = await Student.findById(studentId);
         if (!student) {
             throw new Error('Student not found');
-        }   
+        }
         const updatedStudent = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
         return updatedStudent;
     }
@@ -148,111 +148,111 @@ export default class StudentService {
         );
     }
 
-    
+
     static async getStudentsBySupervisor(userId: string) {
-  const lecturer = await Lecturer.findOne({ user: userId }).populate('user');
-  if (!lecturer) throw new Error('Lecturer not found');
+        const lecturer = await Lecturer.findOne({ user: userId }).populate('user');
+        if (!lecturer) throw new Error('Lecturer not found');
 
-  const user = lecturer.user as any;
-  const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
+        const user = lecturer.user as any;
+        const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
 
 
 
-  const students = await Student.find({
-  $or: [
-    { majorSupervisor: supervisorName },
-    { minorSupervisor: supervisorName }
-  ]
-});
+        const students = await Student.find({
+            $or: [
+                { majorSupervisor: supervisorName },
+                { minorSupervisor: supervisorName }
+            ]
+        }).populate('user');
 
-const results = await Promise.all(
-  students.map(async (student) => {
-    const project = await Project.findOne({ student: student._id })
-      .populate('versions.uploadedBy', 'firstName lastName email');
-    return { student, project };
-  })
-);
+        const results = await Promise.all(
+            students.map(async (student) => {
+                const project = await Project.findOne({ student: student._id })
+                    .populate('versions.uploadedBy', 'firstName lastName email');
+                return { student, project };
+            })
+        );
 
-return results;
-}
+        return results;
+    }
     static async assignSupervisor(
-    staffId: string,
-    staffName: string,
-    type: string,
-    matricNo: string
-) {
-    // Decide field to update
-    const updateField =
-        type === 'major'
-            ? { majorSupervisor: staffName }
-            : type === 'minor'
-            ? { minorSupervisor: staffName }
-            : type === 'internal_examiner'
-            ? { internalExaminer: staffName }
-            : {};
+        staffId: string,
+        staffName: string,
+        type: string,
+        matricNo: string
+    ) {
+        // Decide field to update
+        const updateField =
+            type === 'major'
+                ? { majorSupervisor: staffName }
+                : type === 'minor'
+                    ? { minorSupervisor: staffName }
+                    : type === 'internal_examiner'
+                        ? { internalExaminer: staffName }
+                        : {};
 
-    // Update student
-    const student = await Student.findOneAndUpdate(
-        { matricNo },
-        { $set: updateField },
-        { new: true }
-    );
-    if (!student) throw new Error('Student not found');
+        // Update student
+        const student = await Student.findOneAndUpdate(
+            { matricNo },
+            { $set: updateField },
+            { new: true }
+        );
+        if (!student) throw new Error('Student not found');
 
-    // Roles to add
-    let roleToAdd: string[] = [];
-    if (type === 'major') roleToAdd = ['major_supervisor', 'supervisor'];
-    else if (type === 'minor') roleToAdd = ['supervisor'];
-    else if (type === 'internal_examiner') roleToAdd = ['internal_examiner'];
+        // Roles to add
+        let roleToAdd: string[] = [];
+        if (type === 'major') roleToAdd = ['major_supervisor', 'supervisor'];
+        else if (type === 'minor') roleToAdd = ['supervisor'];
+        else if (type === 'internal_examiner') roleToAdd = ['internal_examiner'];
 
-    // Get lecturer
-    const lecturer = await Lecturer.findOne({ _id: staffId });
-    if (!lecturer) throw new Error('Lecturer not found');
+        // Get lecturer
+        const lecturer = await Lecturer.findOne({ _id: staffId });
+        if (!lecturer) throw new Error('Lecturer not found');
 
-    const userId = lecturer.user;
+        const userId = lecturer.user;
 
-    for (const role of roleToAdd) {
-  // Check if user has hod or pgcord
-  const user = await User.findById(userId);
+        for (const role of roleToAdd) {
+            // Check if user has hod or pgcord
+            const user = await User.findById(userId);
 
-  if (!user) continue;
+            if (!user) continue;
 
-  if (user.roles.includes("hod") || user.roles.includes("pgcord")) {
-    //If user is HOD or PG CORD → remove role only
-    await User.updateOne(
-      { _id: userId },
-      { $pull: { roles: role } }
-    );
-  } else {
-    //Normal users → ensure uniqueness and add at beginning
-    await User.updateOne(
-      { _id: userId },
-      { $pull: { roles: role } } // remove if exists to avoid dup
-    );
+            if (user.roles.includes("hod") || user.roles.includes("pgcord")) {
+                //If user is HOD or PG CORD → remove role only
+                await User.updateOne(
+                    { _id: userId },
+                    { $pull: { roles: role } }
+                );
+            } else {
+                //Normal users → ensure uniqueness and add at beginning
+                await User.updateOne(
+                    { _id: userId },
+                    { $pull: { roles: role } } // remove if exists to avoid dup
+                );
 
-    await User.updateOne(
-      { _id: userId },
-      { $push: { roles: { $each: [role], $position: 0 } } }
-    );
-  }
-}
+                await User.updateOne(
+                    { _id: userId },
+                    { $push: { roles: { $each: [role], $position: 0 } } }
+                );
+            }
+        }
 
 
-    // Notifications
-    await NotificationService.createNotifications({
-        lecturerIds: [staffId],
-        role: roleToAdd[0] || 'supervisor',
-        message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
-    });
+        // Notifications
+        await NotificationService.createNotifications({
+            lecturerIds: [staffId],
+            role: roleToAdd[0] || 'supervisor',
+            message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
+        });
 
-    await NotificationService.createNotifications({
-        studentIds: [String(student._id)],
-        role: 'student',
-        message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
-    });
+        await NotificationService.createNotifications({
+            studentIds: [String(student._id)],
+            role: 'student',
+            message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
+        });
 
-    return student;
-}
+        return student;
+    }
 
 
 }

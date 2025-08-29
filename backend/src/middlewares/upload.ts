@@ -17,6 +17,7 @@ const storage = multer.diskStorage({
   },
 });
 
+
 // File filter (optional)
 function fileFilter(req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) {
   const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
