@@ -19,7 +19,9 @@ import DefenseDayPage from "../DefenseDayPage";
 export type SupervisorView = "dashboard" | "myStudents" | "defenseDay" | "notifications";
 
 export default function SupervisorDashboardShell() {
-  const { role } = useAuth();
+  const { user } = useAuth();
+  
+  const role = user?.role || "User";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 

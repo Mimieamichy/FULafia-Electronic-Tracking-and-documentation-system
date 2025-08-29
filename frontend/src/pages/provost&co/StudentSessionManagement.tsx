@@ -718,17 +718,17 @@ const StudentSessionManagement = () => {
                   className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                 >
                   <td className="p-3 border">{s.matricNo}</td>
-                  <td className="p-3 border">
+                  <td className="p-3 border capitalize">
                     {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
                   </td>
-                  <td className="p-3 border">{s.projectTopic}</td>
+                  <td className="p-3 border capitalize">{s.projectTopic}</td>
                   <td className="p-3 border">
                     {s.stageScores?.[selectedDefense.toLowerCase()] ?? "—"}
                   </td>
-                  <td className="p-3 border">
+                  <td className="p-3 border capitalize">
                    { s.majorSupervisor || "Not Assigned"}
                   </td>
-                  <td className="p-3 border">
+                  <td className="p-3 border capitalize">
                     {s.minorSupervisor || "Not Assigned"}
                   </td>
 
