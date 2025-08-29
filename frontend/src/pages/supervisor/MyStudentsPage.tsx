@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,53 +10,184 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../AuthProvider";
 
 type Student = {
-  id: string;
-  name: string;
+  id: string; // derived from student._id
   matNo: string;
-  topic: string;
+  name: string;
+  topic: string; // project topic (fallback to project.latest.topic)
   stage: string;
   scores: {
     proposal: number | null;
     internal: number | null;
     external: number | null;
   };
-  fileUrl: string;
+  // project-specific:
+  projectId?: string;
+  projectVersions?: Array<{
+    versionNumber: number;
+    fileUrl?: string;
+    topic?: string;
+    comments?: { by?: string; text: string }[];
+    uploadedAt?: string;
+  }>;
+  latestVersionIndex?: number; // index into projectVersions (latest)
+  // UI-only:
   supervisorFileUrl?: string;
-  comments: { by: string; text: string }[];
+  comments: { by: string; text: string }[]; // comments from latest version
 };
 
-const mockMyStudents: Student[] = [
-  {
-    id: "s1",
-    name: "Alice Johnson",
-    matNo: "220976780",
-    topic: "AI in Healthcare",
-    stage: "Second Seminar",
-    scores: { proposal: 90, internal: 85, external: null },
-    fileUrl: "https://example.com/alice.pdf",
-    supervisorFileUrl: "", // 🔁 Initially empty
-    comments: [{ by: "Dr. Moses", text: "Well structured draft." }],
-  },
-  {
-    id: "s2",
-    name: "Bob Smith",
-    matNo: "220976781",
-    topic: "Blockchain Security",
-    stage: "First Seminar",
-    scores: { proposal: 75, internal: null, external: null },
-    fileUrl: "https://example.com/bob.pdf",
-    supervisorFileUrl: "", // 🔁 Initially empty
-    comments: [],
-  },
-];
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function MyStudentsPage() {
-  const { userName } = useAuth();
-  const [students, setStudents] = useState<Student[]>(mockMyStudents);
+  const { user, token } = useAuth();
+  const userName = user?.userName || "Supervisor";
+  // students + loading / error
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // modal / comment UI state
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
 
   const selected = selectedIdx !== null ? students[selectedIdx] : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const fetchMyStudents = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch(`${baseUrl}/student/getMyStudents`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(`Server returned ${res.status}: ${txt}`);
+        }
+
+        const raw = await res.json();
+        console.log("getMyStudents response:", raw);
+
+        // normalize potential shapes: raw array, raw.data, raw.students
+        // ... inside your fetch handler where `raw` is the response
+        const arr: any[] = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw.data)
+          ? raw.data
+          : Array.isArray(raw.students)
+          ? raw.students
+          : [];
+
+        const normalized: Student[] = arr.map((item: any) => {
+          // handle both shapes:
+          // - item may be the student directly
+          // - or item may be { student: {...}, project: {...} }
+          const studentObj = item.student ?? item;
+          const projectObj = item.project ?? item.project ?? item.project; // may be undefined
+
+          const stageScores = studentObj.stageScores ?? studentObj.scores ?? {};
+          const proposal =
+            stageScores.proposal ?? stageScores.proposalDefense ?? null;
+          const internal =
+            stageScores.internal ?? stageScores.internalDefense ?? null;
+          const external =
+            stageScores.external ?? stageScores.externalDefense ?? null;
+
+          const first =
+            studentObj.user?.firstName ?? studentObj.firstName ?? "";
+          const last = studentObj.user?.lastName ?? studentObj.lastName ?? "";
+
+          // project versions normalization
+          const versions: any[] =
+            Array.isArray(projectObj?.versions) &&
+            projectObj.versions.length > 0
+              ? projectObj.versions.slice()
+              : [];
+
+          // latest version is last in the versions array (based on your sample)
+          const latestIdx = versions.length > 0 ? versions.length - 1 : -1;
+          const latest = latestIdx >= 0 ? versions[latestIdx] : null;
+
+          // derive comments from latest
+          const latestComments: { by: string; text: string }[] = Array.isArray(
+            latest?.comments
+          )
+            ? latest.comments.map((c: any) => ({
+                by: c.by ?? c.uploadedBy ?? "Unknown", // ensure always a string
+                text: c.text ?? c.comment ?? c.body ?? "",
+              }))
+            : [];
+
+          return {
+            id:
+              studentObj._id ??
+              studentObj.id ??
+              studentObj.matricNo ??
+              Math.random().toString(36).slice(2),
+            matNo: studentObj.matricNo ?? studentObj.matNo ?? "",
+            name: `${first} ${last}`.trim(),
+            topic:
+              studentObj.projectTopic ??
+              latest?.topic ??
+              projectObj?.topic ??
+              studentObj.topic ??
+              "",
+            stage: studentObj.currentStage ?? "",
+
+            scores: {
+              proposal: typeof proposal === "number" ? proposal : null,
+              internal: typeof internal === "number" ? internal : null,
+              external: typeof external === "number" ? external : null,
+            },
+
+            projectId: projectObj?._id ?? projectObj?.id ?? undefined,
+            projectVersions: versions.map((v: any) => ({
+              versionNumber: v.versionNumber ?? v.version ?? 0,
+              fileUrl: v.fileUrl ?? v.fileUrlPath ?? "",
+              topic: v.topic ?? "",
+              comments: Array.isArray(v.comments)
+                ? v.comments.map((c: any) => ({
+                    by: c.by ?? "Unknown",
+                    text: c.text ?? "",
+                  }))
+                : [],
+              uploadedAt: v.uploadedAt ?? v.createdAt,
+            })),
+            latestVersionIndex: latestIdx,
+
+            supervisorFileUrl: "", // preserved for upload UI, if any
+            comments: latestComments,
+          };
+        });
+
+        if (!cancelled) setStudents(normalized);
+      } catch (err: any) {
+        if (!cancelled) {
+          console.error("Failed to fetch my students:", err);
+          setError(err?.message ?? "Failed to load students");
+          setStudents([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchMyStudents();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [token]);
 
   const handleComment = () => {
     if (selectedIdx === null || !commentText.trim()) return;
@@ -128,75 +259,78 @@ export default function MyStudentsPage() {
 
           {selected && (
             <div className="space-y-6">
-              {/* PDF Link */}
+              {/* Latest project version file link */}
               <div className="p-4 border rounded bg-gray-50">
                 <p className="text-sm text-gray-600 mb-2">
-                  Download Submitted Work:
+                  Latest Project File:
                 </p>
-                <a
-                  href={selected.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                  className="text-amber-700 underline break-all text-sm"
-                >
-                  {selected.topic}.pdf
-                </a>
-              </div>
-
-              {/* Supervisor Upload & Link */}
-              <div className="p-4 border rounded bg-gray-50 space-y-2">
-                <p className="text-sm text-gray-600 mb-1">
-                  Upload a file for this student:
-                </p>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    // For mock, simulate URL
-                    const fakeUrl = URL.createObjectURL(file);
-                    const copy = [...students];
-                    copy[selectedIdx].supervisorFileUrl = fakeUrl;
-                    setStudents(copy);
-                  }}
-                />
-                {selected.supervisorFileUrl && (
-                  <div className="text-sm mt-2">
-                    <span className="text-gray-600">Uploaded File: </span>
+                {selected.projectVersions &&
+                selected.latestVersionIndex !== undefined &&
+                selected.latestVersionIndex >= 0 ? (
+                  <>
                     <a
-                      href={selected.supervisorFileUrl}
-                      download
-                      className="text-amber-700 underline"
+                      href={
+                        selected.projectVersions[selected.latestVersionIndex]
+                          .fileUrl
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="text-amber-700 underline break-all text-sm"
                     >
-                      Supervisor Upload.pdf
+                      {selected.topic ||
+                        `version-${
+                          selected.projectVersions[selected.latestVersionIndex]
+                            .versionNumber
+                        }`}
                     </a>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Version #
+                      {
+                        selected.projectVersions[selected.latestVersionIndex]
+                          .versionNumber
+                      }
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-500">
+                    No project file uploaded yet.
                   </div>
                 )}
               </div>
 
-              {/* Existing Comments */}
+              {/* Comments (from latest version) */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Comments:</p>
-                {selected.comments.length === 0 ? (
+                <p className="text-sm font-medium text-gray-700">
+                  Comments (latest version):
+                </p>
+                {!selected.comments || selected.comments.length === 0 ? (
                   <p className="text-gray-500 italic text-sm">
                     No comments yet.
                   </p>
                 ) : (
                   <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
                     {selected.comments.map((c, i) => (
-                      <li key={i}>
-                        <span className="font-medium">by {c.by}:</span> {c.text}
+                      <li
+                        key={i}
+                        className="flex items-start justify-between gap-2"
+                      >
+                        <div>
+                          <span className="font-medium">by {c.by}:</span>{" "}
+                          {c.text}
+                        </div>
+                        <button
+                          className="text-sm text-red-600 hover:underline ml-4"
+                          // onClick={() => handleRemoveComment(i)}
+                        >
+                          Delete
+                        </button>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
 
-              {/* Add Comment */}
+              {/* Add new comment textarea */}
               <div className="space-y-2">
                 <Textarea
                   placeholder="Write your comment..."

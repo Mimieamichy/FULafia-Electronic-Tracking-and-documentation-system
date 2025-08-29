@@ -2,11 +2,12 @@ import { useAuth } from "../AuthProvider";
 import { CalendarCheck, Users, Bell } from "lucide-react";
 
 export default function SupervisorDashboard() {
-  const { userName } = useAuth();
+  const { user } = useAuth();
+  const userName = user?.userName || "User";
 
   return (
     <div className="space-y-6 px-4 sm:px-6">
-      <h1 className="text-2xl font-bold text-gray-800">
+      <h1 className="text-2xl font-bold text-gray-800 capitalize">
         Welcome back, {userName}
       </h1>
 
