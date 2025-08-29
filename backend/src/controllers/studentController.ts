@@ -115,6 +115,20 @@ static async assignSupervisor(req: Request, res: Response) {
     }
 }
 
+static async getStudentsBySupervisor(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id || '';
+      const students = await StudentService.getStudentsBySupervisor(userId);
+      res.status(200).json({ success: true, data: students });
+    } catch (err: any) {
+      console.error(err);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to get students',
+        message: err.message,
+      });
+    }
+  }
 
 static async editStudent(req: AuthenticatedRequest, res: Response) {
     try {

@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "ioredis": "^5.7.0",
-    "node-cache": "^5.1.2"
-  }
-}

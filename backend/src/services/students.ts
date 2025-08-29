@@ -148,6 +148,21 @@ export default class StudentService {
         );
     }
 
+    
+    static async getStudentsBySupervisor(userId: string) {
+  const lecturer = await Lecturer.findOne({ user: userId }).populate('user');
+  if (!lecturer) throw new Error('Lecturer not found');
+
+  const user = lecturer.user as any;
+  const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
+
+  return Student.find({
+    $or: [
+      { majorSupervisor: supervisorName },
+      { minorSupervisor: supervisorName }
+    ]
+  });
+}
     static async assignSupervisor(
     staffId: string,
     staffName: string,
@@ -191,13 +206,13 @@ export default class StudentService {
   if (!user) continue;
 
   if (user.roles.includes("hod") || user.roles.includes("pgcord")) {
-    // ✅ If user is HOD or PG CORD → remove role only
+    //If user is HOD or PG CORD → remove role only
     await User.updateOne(
       { _id: userId },
       { $pull: { roles: role } }
     );
   } else {
-    // ✅ Normal users → ensure uniqueness and add at beginning
+    //Normal users → ensure uniqueness and add at beginning
     await User.updateOne(
       { _id: userId },
       { $pull: { roles: role } } // remove if exists to avoid dup
