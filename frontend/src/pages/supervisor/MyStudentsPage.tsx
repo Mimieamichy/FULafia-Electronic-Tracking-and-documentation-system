@@ -200,6 +200,40 @@ export default function MyStudentsPage() {
     setCommentText("");
   };
 
+  const handleDownload = async (studentId: string, versionNumber: number) => {
+    try {
+      const res = await fetch(
+        `${baseUrl}/project/download/${studentId}/${versionNumber}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // 👈 token included
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to download: ${res.status}`);
+      }
+
+      // Convert response to blob
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Create hidden link and click it
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `project-${studentId}-v${versionNumber}`; // optional file name
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+    }
+  };
+
   return (
     <div className="space-y-6 px-4 sm:px-6">
       <h2 className="text-2xl font-semibold text-gray-800">My Students</h2>
@@ -265,31 +299,36 @@ export default function MyStudentsPage() {
                   Latest Project File:
                 </p>
                 {selected.projectVersions &&
-                selected.latestVersionIndex !== undefined &&
-                selected.latestVersionIndex >= 0 ? (
+                selected.projectVersions.length > 0 ? (
                   <>
-                    <a
-                      href={
-                        selected.projectVersions[selected.latestVersionIndex]
-                          .fileUrl
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-amber-700 underline break-all text-sm"
-                    >
-                      {selected.topic ||
-                        `version-${
-                          selected.projectVersions[selected.latestVersionIndex]
-                            .versionNumber
-                        }`}
-                    </a>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Version #
-                      {
-                        selected.projectVersions[selected.latestVersionIndex]
-                          .versionNumber
-                      }
-                    </div>
+                    {(() => {
+                      const latest =
+                        selected.projectVersions?.[
+                          selected.latestVersionIndex ?? -1
+                        ];
+
+                      return (
+                        <>
+                          <Button
+                            className="bg-amber-700 text-white"
+                            onClick={() =>
+                              handleDownload(
+                                selected.id,
+                                selected.projectVersions[
+                                  selected.latestVersionIndex
+                                ].versionNumber
+                              )
+                            }
+                          >
+                            Download Latest Project
+                          </Button>
+
+                          <div className="text-xs text-gray-500 mt-1">
+                            Version #{latest.versionNumber}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </>
                 ) : (
                   <div className="text-sm text-gray-500">
@@ -303,19 +342,22 @@ export default function MyStudentsPage() {
                 <p className="text-sm font-medium text-gray-700">
                   Comments (latest version):
                 </p>
-                {!selected.comments || selected.comments.length === 0 ? (
-                  <p className="text-gray-500 italic text-sm">
-                    No comments yet.
-                  </p>
-                ) : (
+                {selected.projectVersions &&
+                selected.projectVersions.length > 0 &&
+                selected.projectVersions[selected.projectVersions.length - 1]
+                  .comments.length > 0 ? (
                   <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
-                    {selected.comments.map((c, i) => (
+                    {selected.projectVersions[
+                      selected.projectVersions.length - 1
+                    ].comments.map((c, i) => (
                       <li
                         key={i}
                         className="flex items-start justify-between gap-2"
                       >
                         <div>
-                          <span className="font-medium">by {c.by}:</span>{" "}
+                          <span className="font-medium">
+                            by {c.by || "Supervisor"}:
+                          </span>{" "}
                           {c.text}
                         </div>
                         <button
@@ -327,6 +369,10 @@ export default function MyStudentsPage() {
                       </li>
                     ))}
                   </ul>
+                ) : (
+                  <p className="text-gray-500 italic text-sm">
+                    No comments yet.
+                  </p>
                 )}
               </div>
 
