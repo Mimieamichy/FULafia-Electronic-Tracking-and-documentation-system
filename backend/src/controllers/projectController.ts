@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import ProjectService from '../services/project';
+import path from 'path';
 
 
 export interface AuthenticatedRequest extends Request {
@@ -14,7 +15,7 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      const fileUrl = `/uploads/projects/${req.file?.filename}`;
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
       const studentId = req.user?.id || ''
 
       const project = await ProjectService.uploadProject(studentId, fileUrl);
@@ -62,8 +63,15 @@ export default class ProjectController {
     try {
       const { studentId, versionNumber } = req.params;
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
+      if (!project || !project.fileUrl) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
 
-      return res.download(project.fileUrl);
+    const fileName = path.basename(project.fileUrl);
+    //construct the full file path
+    const absolutePath = path.join('uploads', 'projects', fileName);
+
+      return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });

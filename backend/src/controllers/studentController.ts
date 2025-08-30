@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import StudentService from "../services/students";
+import { Types } from "mongoose";
 
 
 export interface AuthenticatedRequest extends Request {
@@ -43,18 +44,19 @@ export default class StudentController {
 
   static async getAllMscStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
   try {
-    const { department, session } = req.params;
+    const { department, session} = req.params;
     const userId = req.user?.id || '';
 
     // Query params for pagination
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const sessionId = new Types.ObjectId(session);
     
 
     const students = await StudentService.getAllMscStudentsInDepartment(
       department,
       userId,
-      session,
+      sessionId,
       page,
       limit
     );
@@ -79,12 +81,13 @@ static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Respo
     // Query params for pagination
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const sessionId = new Types.ObjectId(session);
     
 
     const students = await StudentService.getAllPhdStudentsInDepartment(
       department,
       userId,
-      session,
+      sessionId,
       page,
       limit
     );
