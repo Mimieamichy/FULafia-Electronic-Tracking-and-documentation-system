@@ -26,8 +26,7 @@ export default function Admin() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+ 
 
   // 1️⃣ Inject / remove axios Authorization header when token changes
   useEffect(() => {

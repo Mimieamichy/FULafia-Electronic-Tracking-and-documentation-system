@@ -1,5 +1,6 @@
 // pgc/StudentSessionManagement.tsx
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { log } from "console";
 
 interface StudentFromAPI {
   _id: string;
@@ -32,7 +32,7 @@ interface StudentFromAPI {
   faculty: string;
   projectTopic: string;
   stageScores: Record<string, number>;
-  majorSupervisor?:  string;
+  majorSupervisor?: string;
   minorSupervisor?: string;
   internalExaminer?: string;
   user?: { firstName: string; lastName: string };
@@ -55,6 +55,9 @@ const StudentSessionManagement = () => {
   const isHod = user?.role?.toUpperCase() === "HOD";
 
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
+
+  const { toast } = useToast();
+  const noSessionWarnedRef = useRef(false);
 
   // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
@@ -85,6 +88,11 @@ const StudentSessionManagement = () => {
 
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
+  // replace/alongside sessionNames state
+  const [sessionsList, setSessionsList] = useState<
+    { _id: string; sessionName: string }[]
+  >([]);
+
   // Degree tab & search
 
   const [search, setSearch] = useState("");
@@ -94,7 +102,9 @@ const StudentSessionManagement = () => {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const itemsPerPage = 7;
+  // pagination controlled by server
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10); // default, will be overwritten by API.limit
+  const [totalStudents, setTotalStudents] = useState<number>(0);
 
   // Selected defense stage
   const [selectedDefense, setSelectedDefense] = useState<string>(
@@ -221,29 +231,31 @@ const StudentSessionManagement = () => {
             "Content-Type": "application/json",
           },
         });
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const json = await response.json();
-        console.log("Raw payload:", json);
 
-        // Grab the array from json.data (or fallback)
-        const sessionsArray: any[] = Array.isArray(json)
+        const arr: any[] = Array.isArray(json)
           ? json
           : Array.isArray(json.data)
           ? json.data
           : [];
 
-        // Extract just the names
-        const names = sessionsArray.map((s) => s.sessionName);
-        console.log("Extracted session names:", names);
+        const mapped = arr.map((s) => ({
+          _id: s._id ?? s.id ?? s.sessionId ?? "",
+          sessionName: s.sessionName ?? s.name ?? s.title ?? String(s),
+        }));
 
-        setSessionNames(names);
+        setSessionsList(mapped);
+        setSessionNames(mapped.map((m) => m.sessionName)); // optional, if you use sessionNames elsewhere
 
-        // If none selected yet, pick the first
-      } catch (error) {
-        console.error("Failed to fetch sessions:", error);
+        // auto-select first session if none selected yet (optional)
+        if (!selectedSession && mapped.length) {
+          setSelectedSession(mapped[0]._id);
+        }
+
+        console.log("Fetched sessions:", mapped);
+      } catch (err) {
+        console.error("Failed to fetch sessions:", err);
       }
     };
 
@@ -267,19 +279,45 @@ const StudentSessionManagement = () => {
     let cancelled = false;
 
     const fetchStudents = async () => {
+      // require a session selection (you already handle this elsewhere)
+      if (!selectedSession) {
+        // show toast once (prevent repeated toasts on re-renders)
+        if (!noSessionWarnedRef.current) {
+          toast({
+            title: "No session selected",
+            description: "Please select a session to view students.",
+            variant: "destructive",
+          });
+          noSessionWarnedRef.current = true;
+        }
+        setStudents([]);
+        setTotalStudents(0);
+        return;
+      }
+
+      // reset the warned flag when a session is present so toast can show again later if needed
+      noSessionWarnedRef.current = false;
+
       const departmentName = resolveDepartmentName();
 
       // Skip fetch until provost picks a department
       if (isProvost && !departmentName) {
         setStudents([]);
+        setTotalStudents(0);
         return;
       }
 
-      // Choose the correct API segment based on the active tab
+      // level segment (msc | phd)
       const levelSeg = degreeTab === "MSc" ? "msc" : "phd";
+      // include page and limit as query params for server pagination
+      // selectedSession contains the session id (string)
+      // path-param style (replace previous URL building line)
       const url = `${baseUrl}/student/${levelSeg}/${encodeURIComponent(
         departmentName
-      )}`;
+      )}/${encodeURIComponent(
+        selectedSession
+      )}?page=${page}&limit=${itemsPerPage}`;
+
       console.log("Fetching students from:", url);
 
       try {
@@ -302,17 +340,28 @@ const StudentSessionManagement = () => {
 
         if (cancelled) return;
 
-        const dataArr = Array.isArray(json)
-          ? json
-          : Array.isArray(json.data)
+        // adapt to your API envelope (example shows success/data/total/page/limit)
+        const dataArr = Array.isArray(json.data)
           ? json.data
+          : Array.isArray(json)
+          ? json
           : [];
-
         setStudents(dataArr);
-        
+
+        // set server pagination values (guard with fallback)
+        setTotalStudents(
+          typeof json.total === "number" ? json.total : dataArr.length
+        );
+        // update page to server-reported page if present (keeps UI in sync)
+        if (typeof json.page === "number") setPage(json.page);
+        // update itemsPerPage from server limit if provided
+        if (typeof json.limit === "number") setItemsPerPage(json.limit);
       } catch (err) {
         console.error("Error loading students:", err);
-        if (!cancelled) setStudents([]);
+        if (!cancelled) {
+          setStudents([]);
+          setTotalStudents(0);
+        }
       }
     };
 
@@ -324,10 +373,14 @@ const StudentSessionManagement = () => {
   }, [
     token,
     user?.department, // HOD/PGC name
-    selectedDepartmentForDefense, // Provost selection (id)
+    selectedDepartmentForDefense, // provost selection (id)
     departments, // used to look up name
     isProvost,
-    degreeTab, // 👈 re-fetch when switching MSc/PhD
+    degreeTab, // re-fetch when switching MSc/PhD
+    selectedSession, // only fetch when a session is selected
+    page, // <-- re-run when page changes
+    itemsPerPage,
+    toast, // re-run when limit changes (or when user changes page size)
   ]);
 
   // open the modal for a given student
@@ -456,7 +509,9 @@ const StudentSessionManagement = () => {
     );
   }, [students, search, selectedDefense]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  // server-side pagination: compute pages from total + limit
+  const totalPages = Math.max(1, Math.ceil(totalStudents / itemsPerPage));
+
   const paginated = filtered.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
@@ -536,10 +591,11 @@ const StudentSessionManagement = () => {
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
               <SelectContent>
-                {sessionNames.length > 0 ? (
-                  sessionNames.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
+                {sessionsList.length > 0 ? (
+                  sessionsList.map((s) => (
+                    // value is the session _id, label shows sessionName
+                    <SelectItem key={s._id} value={s._id}>
+                      {s.sessionName}
                     </SelectItem>
                   ))
                 ) : (
@@ -675,7 +731,7 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">Score for {selectedDefense}</th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
-                  {isHod && <th className="p-3 border">Action</th>}
+                  
                   <th className="p-3 border">Assign</th>
                 </>
               )}
@@ -704,13 +760,7 @@ const StudentSessionManagement = () => {
                 );
               }
 
-              // HOD/PGC row:
-              const done =
-                s.stageScores &&
-                Object.keys(s.stageScores).length > 0 &&
-                s.stageScores[selectedDefense.toLowerCase()] !== undefined;
-              const notFinal =
-                stageFlow.indexOf(defenseStage as any) < stageFlow.length - 1;
+              
 
               return (
                 <tr
@@ -726,28 +776,13 @@ const StudentSessionManagement = () => {
                     {s.stageScores?.[selectedDefense.toLowerCase()] ?? "—"}
                   </td>
                   <td className="p-3 border capitalize">
-                   { s.majorSupervisor || "Not Assigned"}
+                    {s.majorSupervisor || "Not Assigned"}
                   </td>
                   <td className="p-3 border capitalize">
                     {s.minorSupervisor || "Not Assigned"}
                   </td>
 
-                  {isHod && (
-                    <td className="p-3 border">
-                      {done && notFinal ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openActionModal(s._id)}
-                          aria-label="Open action menu"
-                        >
-                          <Pen className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                  )}
+                  
                   <td className="p-3 border">
                     <Button
                       size="sm"
@@ -787,9 +822,10 @@ const StudentSessionManagement = () => {
         >
           <ChevronLeft />
         </button>
-        <span className="text-gray-700 text-sm">
-          {page} / {totalPages}
+        <span className="text-sm text-gray-600">
+          Showing page {page} of {totalPages}
         </span>
+
         <button
           onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
           disabled={page === totalPages}

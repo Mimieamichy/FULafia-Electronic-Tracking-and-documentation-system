@@ -257,14 +257,16 @@ export default function MyStudentsPage() {
                 key={stu.id}
                 className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
               >
-                <td
-                  className="p-3 border text-amber-700 hover:underline cursor-pointer"
-                  onClick={() => setSelectedIdx(idx)}
-                >
+                <td className="p-3 border capitalize ">
                   {stu.name}
                 </td>
                 <td className="p-3 border text-sm">{stu.matNo}</td>
-                <td className="p-3 border text-sm">{stu.topic}</td>
+                <td
+                  className="p-3 border text-sm text-amber-700 hover:underline cursor-pointer capitalize"
+                  onClick={() => setSelectedIdx(idx)}
+                >
+                  {stu.topic}
+                </td>
                 <td className="p-3 border text-sm">{stu.stage}</td>
                 <td className="p-3 border text-sm">
                   {stu.scores.proposal ?? "—"}

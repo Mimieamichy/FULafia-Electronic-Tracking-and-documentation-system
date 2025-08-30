@@ -1,7 +1,7 @@
 // src/SupervisorDashboardShell.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { Menu, Bell, Lock, Power } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthProvider";
 import {
   Dialog,
@@ -15,19 +15,26 @@ import SupervisorDashboard from "./SupervisorDashboard";
 import MyStudentsPage from "./MyStudentsPage";
 import SupervisorNotifications from "./SupervisorNotifications";
 import DefenseDayPage from "../DefenseDayPage";
+import UpdatePasswordModal from "../UpdatePasswordModal";
 
-export type SupervisorView = "dashboard" | "myStudents" | "defenseDay" | "notifications";
+export type SupervisorView =
+  | "dashboard"
+  | "myStudents"
+  | "defenseDay"
+  | "notifications";
 
 export default function SupervisorDashboardShell() {
-  const { user } = useAuth();
-  
+  const { user, logout } = useAuth();
+
   const role = user?.role || "User";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [currentView, setCurrentView] = useState<SupervisorView>("dashboard");
   const [resetModalOpen, setResetModalOpen] = useState(false);
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -52,6 +59,11 @@ export default function SupervisorDashboardShell() {
       default:
         return null;
     }
+  };
+  // Logout
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   return (
@@ -128,7 +140,7 @@ export default function SupervisorDashboardShell() {
           />
           <Power
             className="w-6 h-6 text-red-500 cursor-pointer hover:text-red-600"
-            onClick={() => setLogoutModalOpen(true)}
+            onClick={() => setShowLogoutModal(true)}
           />
         </div>
       </header>
@@ -139,55 +151,27 @@ export default function SupervisorDashboardShell() {
       </main>
 
       {/* Reset Password Modal */}
-      <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset Your Password</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-600 mb-4">
-            This is a placeholder. A reset link will be emailed to you.
-          </p>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setResetModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-amber-700 text-white"
-              onClick={() => setResetModalOpen(false)}
-            >
-              Send Reset Link
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpdatePasswordModal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+      />
 
       {/* Logout Confirmation Modal */}
-      <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-        <DialogContent className="max-w-md w-full mx-0 sm:mx-auto sm:rounded-lg">
+      <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
+        <DialogContent className="max-w-md bg-white rounded-lg">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">
-              Confirm Logout
-            </DialogTitle>
+            <DialogTitle>Confirm Logout</DialogTitle>
           </DialogHeader>
-
-          <p className="text-sm text-gray-600 mb-4">
-            Are you sure you want to logout?
+          <p className="text-gray-600 mt-2">
+            Are you sure you want to log out?
           </p>
-
-          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setLogoutModalOpen(false)}
-              className="w-full sm:w-auto"
-            >
+          <DialogFooter className="mt-6 flex justify-end gap-4">
+            <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
               Cancel
             </Button>
-
-            <Link to="/" className="w-full sm:w-auto">
-              <Button className="bg-red-600 text-white w-full sm:w-auto">
-                Logout
-              </Button>
-            </Link>
+            <Button className="bg-red-600 text-white" onClick={handleLogout}>
+              Log Out
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

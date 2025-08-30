@@ -123,8 +123,6 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
     };
   }, [isOpen, token]);
 
-  
-
   if (!isOpen) return null;
 
   return (
@@ -141,9 +139,7 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
           <Select
             value={supervisorType}
             onValueChange={(v) =>
-              setSupervisorType(
-                v as "major" | "minor" | "internal_examiner"
-              )
+              setSupervisorType(v as "major" | "minor" | "internal_examiner")
             }
           >
             <SelectTrigger className="w-full">
@@ -182,7 +178,9 @@ const AssignSupervisorModal: React.FC<AssignSupervisorModalProps> = ({
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Lecturer" />
               </SelectTrigger>
-              <SelectContent>
+
+              {/* Make the dropdown scrollable: max height + overflow */}
+              <SelectContent className="max-h-56 overflow-auto">
                 {lecturers.map((lec) => (
                   <SelectItem key={lec.id} value={lec.id}>
                     {lec.name}
