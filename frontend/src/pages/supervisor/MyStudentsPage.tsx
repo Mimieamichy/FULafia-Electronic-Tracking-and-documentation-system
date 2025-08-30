@@ -41,26 +41,39 @@ export default function MyStudentsPage() {
   const { user, token } = useAuth();
   const userName = user?.userName || "Supervisor";
   // students + loading / error
-  const [students, setStudents] = useState<Student[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // two separate lists
+  const [studentsMsc, setStudentsMsc] = useState<Student[]>([]);
+  const [studentsPhd, setStudentsPhd] = useState<Student[]>([]);
+
+  // loading / error per degree
+  const [loadingMsc, setLoadingMsc] = useState<boolean>(true);
+  const [loadingPhd, setLoadingPhd] = useState<boolean>(true);
+  const [errorMsc, setErrorMsc] = useState<string | null>(null);
+  const [errorPhd, setErrorPhd] = useState<string | null>(null);
+
+  // which degree tab is active
+  const [selectedDegree, setSelectedDegree] = useState<"MSc" | "PhD">("MSc");
 
   // modal / comment UI state
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
 
-  const selected = selectedIdx !== null ? students[selectedIdx] : null;
+  const displayedStudents =
+    selectedDegree === "MSc" ? studentsMsc : studentsPhd;
+
+  const selected = selectedIdx !== null ? displayedStudents[selectedIdx] : null;
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
 
-    const fetchMyStudents = async () => {
-      setLoading(true);
-      setError(null);
-
+    const fetchMyStudentsByDegree = async (degree: "msc" | "phd") => {
       try {
-        const res = await fetch(`${baseUrl}/student/getMyStudents`, {
+        const res = await fetch(`${baseUrl}/student/getMyStudents/${degree}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -75,10 +88,9 @@ export default function MyStudentsPage() {
         }
 
         const raw = await res.json();
-        console.log("getMyStudents response:", raw);
+        console.log(`getMyStudents ${degree} response:`, raw);
 
-        // normalize potential shapes: raw array, raw.data, raw.students
-        // ... inside your fetch handler where `raw` is the response
+        // normalize response
         const arr: any[] = Array.isArray(raw)
           ? raw
           : Array.isArray(raw.data)
@@ -88,11 +100,8 @@ export default function MyStudentsPage() {
           : [];
 
         const normalized: Student[] = arr.map((item: any) => {
-          // handle both shapes:
-          // - item may be the student directly
-          // - or item may be { student: {...}, project: {...} }
           const studentObj = item.student ?? item;
-          const projectObj = item.project ?? item.project ?? item.project; // may be undefined
+          const projectObj = item.project ?? item.project ?? undefined;
 
           const stageScores = studentObj.stageScores ?? studentObj.scores ?? {};
           const proposal =
@@ -106,23 +115,20 @@ export default function MyStudentsPage() {
             studentObj.user?.firstName ?? studentObj.firstName ?? "";
           const last = studentObj.user?.lastName ?? studentObj.lastName ?? "";
 
-          // project versions normalization
           const versions: any[] =
             Array.isArray(projectObj?.versions) &&
             projectObj.versions.length > 0
               ? projectObj.versions.slice()
               : [];
 
-          // latest version is last in the versions array (based on your sample)
           const latestIdx = versions.length > 0 ? versions.length - 1 : -1;
           const latest = latestIdx >= 0 ? versions[latestIdx] : null;
 
-          // derive comments from latest
           const latestComments: { by: string; text: string }[] = Array.isArray(
             latest?.comments
           )
             ? latest.comments.map((c: any) => ({
-                by: c.by ?? c.uploadedBy ?? "Unknown", // ensure always a string
+                by: c.by ?? c.uploadedBy ?? "Unknown",
                 text: c.text ?? c.comment ?? c.body ?? "",
               }))
             : [];
@@ -142,13 +148,11 @@ export default function MyStudentsPage() {
               studentObj.topic ??
               "",
             stage: studentObj.currentStage ?? "",
-
             scores: {
               proposal: typeof proposal === "number" ? proposal : null,
               internal: typeof internal === "number" ? internal : null,
               external: typeof external === "number" ? external : null,
             },
-
             projectId: projectObj?._id ?? projectObj?.id ?? undefined,
             projectVersions: versions.map((v: any) => ({
               versionNumber: v.versionNumber ?? v.version ?? 0,
@@ -163,25 +167,36 @@ export default function MyStudentsPage() {
               uploadedAt: v.uploadedAt ?? v.createdAt,
             })),
             latestVersionIndex: latestIdx,
-
-            supervisorFileUrl: "", // preserved for upload UI, if any
+            supervisorFileUrl: "",
             comments: latestComments,
           };
         });
 
-        if (!cancelled) setStudents(normalized);
+        if (!cancelled) {
+          if (degree === "msc") setStudentsMsc(normalized);
+          else setStudentsPhd(normalized);
+        }
       } catch (err: any) {
         if (!cancelled) {
-          console.error("Failed to fetch my students:", err);
-          setError(err?.message ?? "Failed to load students");
-          setStudents([]);
+          console.error(`Failed to fetch ${degree} students:`, err);
+          if (degree === "msc") {
+            setStudentsMsc([]);
+            setErrorMsc(err?.message ?? "Failed to load MSc students");
+          } else {
+            setStudentsPhd([]);
+            setErrorPhd(err?.message ?? "Failed to load PhD students");
+          }
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          if (degree === "msc") setLoadingMsc(false);
+          else setLoadingPhd(false);
+        }
       }
     };
 
-    fetchMyStudents();
+    fetchMyStudentsByDegree("msc");
+    fetchMyStudentsByDegree("phd");
 
     return () => {
       cancelled = true;
@@ -189,16 +204,63 @@ export default function MyStudentsPage() {
     };
   }, [token]);
 
-  const handleComment = () => {
-    if (selectedIdx === null || !commentText.trim()) return;
+  const fetchComments = async (studentId: string, versionNumber: number) => {
+  const res = await fetch(
+    `${baseUrl}/project/comments/${studentId}/${versionNumber}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    }
+  );
+  if (!res.ok) throw new Error("Failed to fetch comments");
+  return res.json(); // should be an array
+};
+
+
+  const handleComment = async () => {
+  if (selectedIdx === null || !commentText.trim() || !selected) return;
+
+  try {
+    const versionNumber =
+      selected.projectVersions?.[selected.latestVersionIndex ?? -1]
+        ?.versionNumber;
+
+    if (!versionNumber) return;
+
+    const res = await fetch(
+      `${baseUrl}/project/comments/${selected.id}/${versionNumber}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          text: commentText.trim(),
+          by: userName,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Failed to post comment: ${res.status} ${txt}`);
+    }
+
+    // refresh comments after posting
+    const updated = await fetchComments(selected.id, versionNumber);
+
     const copy = [...students];
-    copy[selectedIdx].comments.push({
-      by: userName,
-      text: commentText.trim(),
-    });
+    copy[selectedIdx].comments = updated;
     setStudents(copy);
     setCommentText("");
-  };
+  } catch (err) {
+    console.error("Error posting comment:", err);
+  }
+};
+
 
   const handleDownload = async (studentId: string, versionNumber: number) => {
     try {
@@ -238,6 +300,22 @@ export default function MyStudentsPage() {
     <div className="space-y-6 px-4 sm:px-6">
       <h2 className="text-2xl font-semibold text-gray-800">My Students</h2>
 
+      <div className="flex gap-2">
+        {(["MSc", "PhD"] as const).map((d) => (
+          <button
+            key={d}
+            onClick={() => setSelectedDegree(d)}
+            className={`px-3 py-1 rounded ${
+              selectedDegree === d
+                ? "bg-amber-700 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {d} ({d === "MSc" ? studentsMsc.length : studentsPhd.length})
+          </button>
+        ))}
+      </div>
+
       <div className="overflow-x-auto rounded-lg shadow bg-white">
         <table className="min-w-full text-left border-collapse">
           <thead>
@@ -252,14 +330,12 @@ export default function MyStudentsPage() {
             </tr>
           </thead>
           <tbody>
-            {students.map((stu, idx) => (
+            {displayedStudents.map((stu, idx) => (
               <tr
                 key={stu.id}
                 className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
               >
-                <td className="p-3 border capitalize ">
-                  {stu.name}
-                </td>
+                <td className="p-3 border capitalize">{stu.name}</td>
                 <td className="p-3 border text-sm">{stu.matNo}</td>
                 <td
                   className="p-3 border text-sm text-amber-700 hover:underline cursor-pointer capitalize"
