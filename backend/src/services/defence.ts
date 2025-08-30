@@ -51,8 +51,8 @@ export default class DefenceService {
     });
 
     await defence.save()
-    await NotificationService.sendStudentDefenceNotifications(students, stage, date);
-    await NotificationService.sendPanelDefenceNotifications(panelMembers, stage, date);
+    // await NotificationService.sendStudentDefenceNotifications(students, stage, date);
+    // await NotificationService.sendPanelDefenceNotifications(panelMembers, stage, date);
     return defence
   }
 
