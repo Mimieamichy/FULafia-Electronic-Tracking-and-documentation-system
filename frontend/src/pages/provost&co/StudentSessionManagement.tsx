@@ -1,5 +1,6 @@
 // pgc/StudentSessionManagement.tsx
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,21 +32,36 @@ interface StudentFromAPI {
   faculty: string;
   projectTopic: string;
   stageScores: Record<string, number>;
-  majorSupervisor?: { firstName: string; lastName: string } | string;
-  minorSupervisor?: { firstName: string; lastName: string } | string;
-  internalExaminer?: { firstName: string; lastName: string } | string;
+  majorSupervisor?: string;
+  minorSupervisor?: string;
+  internalExaminer?: string;
   user?: { firstName: string; lastName: string };
+}
+
+interface Faculty {
+  _id: string;
+  name: string;
+}
+interface Department {
+  _id: string;
+  name: string;
 }
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const StudentSessionManagement = () => {
   const { token, user } = useAuth(); // 'HOD' or 'PGC'
+
   const isHod = user?.role?.toUpperCase() === "HOD";
+
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
+
+  const { toast } = useToast();
+  const noSessionWarnedRef = useRef(false);
 
   // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
+
   const defenseOptions = useMemo<string[]>(() => {
     return degreeTab === "MSc"
       ? ["Start", "Proposal Defense", "Internal Defense", "External Defense"]
@@ -72,6 +88,11 @@ const StudentSessionManagement = () => {
 
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
+  // replace/alongside sessionNames state
+  const [sessionsList, setSessionsList] = useState<
+    { _id: string; sessionName: string }[]
+  >([]);
+
   // Degree tab & search
 
   const [search, setSearch] = useState("");
@@ -81,7 +102,9 @@ const StudentSessionManagement = () => {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const itemsPerPage = 7;
+  // pagination controlled by server
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10); // default, will be overwritten by API.limit
+  const [totalStudents, setTotalStudents] = useState<number>(0);
 
   // Selected defense stage
   const [selectedDefense, setSelectedDefense] = useState<string>(
@@ -90,6 +113,113 @@ const StudentSessionManagement = () => {
   // track which student we’re acting on
   const [actionModalOpen, setActionModalOpen] = useState(false);
   const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [facultiesLoading, setFacultiesLoading] = useState(false);
+  const [facultiesError, setFacultiesError] = useState<string | null>(null);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
+  // provost faculty/department fetch
+  useEffect(() => {
+    if (!isProvost) return;
+    let cancelled = false;
+    const fetchFaculties = async () => {
+      setFacultiesLoading(true);
+      setFacultiesError(null);
+      try {
+        const res = await fetch(`${baseUrl}/faculty/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
+        const arr: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+        if (!cancelled) {
+          const mapped = arr.map((f) => ({
+            _id: f._id ?? f.id ?? "",
+            name: f.name ?? f.facultyName ?? "",
+          }));
+          setFaculties(mapped);
+          // optional: auto-select first faculty:
+          // if (mapped[0]) setSelectedFacultyId(mapped[0]._id);
+          console.log("Fetched faculties:", json);
+        }
+      } catch (err: any) {
+        if (!cancelled)
+          setFacultiesError(err?.message ?? "Failed to load faculties");
+        setFaculties([]);
+      } finally {
+        if (!cancelled) setFacultiesLoading(false);
+      }
+    };
+    fetchFaculties();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProvost, token]);
+
+  useEffect(() => {
+    if (!isProvost) return;
+    if (!selectedFacultyId) {
+      setDepartments([]);
+      setSelectedDepartmentForDefense("");
+      return;
+    }
+    let cancelled = false;
+    const fetchDepartments = async () => {
+      setDepartmentsLoading(true);
+      setDepartmentsError(null);
+      try {
+        // If your API expects a query param, change to:
+        // const url = `${baseUrl}/department?facultyId=${selectedFacultyId}`;
+        const url = `${baseUrl}/department/${selectedFacultyId}`;
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
+        const arr: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+        if (!cancelled) {
+          const mapped = arr.map((d) => ({
+            _id: d._id ?? d.id ?? "",
+            name: d.name ?? d.departmentName ?? "",
+          }));
+          setDepartments(mapped);
+          // optionally auto-select first department:
+          // setSelectedDepartmentForDefense(mapped[0]?._id ?? "");
+          console.log("Fetched departments:", json);
+        }
+      } catch (err: any) {
+        if (!cancelled)
+          setDepartmentsError(err?.message ?? "Failed to load departments");
+        setDepartments([]);
+        setSelectedDepartmentForDefense("");
+      } finally {
+        if (!cancelled) setDepartmentsLoading(false);
+      }
+    };
+    fetchDepartments();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProvost, selectedFacultyId, token]);
 
   // Fetch sessions on mount
   useEffect(() => {
@@ -101,29 +231,31 @@ const StudentSessionManagement = () => {
             "Content-Type": "application/json",
           },
         });
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const json = await response.json();
-        console.log("Raw payload:", json);
 
-        // Grab the array from json.data (or fallback)
-        const sessionsArray: any[] = Array.isArray(json)
+        const arr: any[] = Array.isArray(json)
           ? json
           : Array.isArray(json.data)
           ? json.data
           : [];
 
-        // Extract just the names
-        const names = sessionsArray.map((s) => s.sessionName);
-        console.log("Extracted session names:", names);
+        const mapped = arr.map((s) => ({
+          _id: s._id ?? s.id ?? s.sessionId ?? "",
+          sessionName: s.sessionName ?? s.name ?? s.title ?? String(s),
+        }));
 
-        setSessionNames(names);
+        setSessionsList(mapped);
+        setSessionNames(mapped.map((m) => m.sessionName)); // optional, if you use sessionNames elsewhere
 
-        // If none selected yet, pick the first
-      } catch (error) {
-        console.error("Failed to fetch sessions:", error);
+        // auto-select first session if none selected yet (optional)
+        if (!selectedSession && mapped.length) {
+          setSelectedSession(mapped[0]._id);
+        }
+
+        console.log("Fetched sessions:", mapped);
+      } catch (err) {
+        console.error("Failed to fetch sessions:", err);
       }
     };
 
@@ -131,22 +263,125 @@ const StudentSessionManagement = () => {
   }, [token, selectedSession]);
 
   // Fetch students on mount
+
   useEffect(() => {
+    const resolveDepartmentName = () => {
+      if (isProvost) {
+        if (!selectedDepartmentForDefense) return "";
+        const found = departments.find(
+          (d) => d._id === selectedDepartmentForDefense
+        );
+        return found?.name ?? "";
+      }
+      return user?.department || ""; // HOD/PGC: already a name string
+    };
+
+    let cancelled = false;
+
     const fetchStudents = async () => {
+      // require a session selection (you already handle this elsewhere)
+      if (!selectedSession) {
+        // show toast once (prevent repeated toasts on re-renders)
+        if (!noSessionWarnedRef.current) {
+          toast({
+            title: "No session selected",
+            description: "Please select a session to view students.",
+            variant: "destructive",
+          });
+          noSessionWarnedRef.current = true;
+        }
+        setStudents([]);
+        setTotalStudents(0);
+        return;
+      }
+
+      // reset the warned flag when a session is present so toast can show again later if needed
+      noSessionWarnedRef.current = false;
+
+      const departmentName = resolveDepartmentName();
+
+      // Skip fetch until provost picks a department
+      if (isProvost && !departmentName) {
+        setStudents([]);
+        setTotalStudents(0);
+        return;
+      }
+
+      // level segment (msc | phd)
+      const levelSeg = degreeTab === "MSc" ? "msc" : "phd";
+      // include page and limit as query params for server pagination
+      // selectedSession contains the session id (string)
+      // path-param style (replace previous URL building line)
+      const url = `${baseUrl}/student/${levelSeg}/${encodeURIComponent(
+        departmentName
+      )}/${encodeURIComponent(
+        selectedSession
+      )}?page=${page}&limit=${itemsPerPage}`;
+
+      console.log("Fetching students from:", url);
+
       try {
-        const res = await fetch(`${baseUrl}/student/`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
-        if (!res.ok) throw new Error(res.statusText);
+
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("Failed fetching students:", res.status, txt);
+          throw new Error(`Failed to fetch students (${res.status})`);
+        }
+
         const json = await res.json();
-        // assume json.data is the array
-        setStudents(Array.isArray(json.data) ? json.data : []);
+        console.log("students payload:", json);
+
+        if (cancelled) return;
+
+        // adapt to your API envelope (example shows success/data/total/page/limit)
+        const dataArr = Array.isArray(json.data)
+          ? json.data
+          : Array.isArray(json)
+          ? json
+          : [];
+        setStudents(dataArr);
+
+        // set server pagination values (guard with fallback)
+        setTotalStudents(
+          typeof json.total === "number" ? json.total : dataArr.length
+        );
+        // update page to server-reported page if present (keeps UI in sync)
+        if (typeof json.page === "number") setPage(json.page);
+        // update itemsPerPage from server limit if provided
+        if (typeof json.limit === "number") setItemsPerPage(json.limit);
       } catch (err) {
-        console.error("Failed to load students:", err);
+        console.error("Error loading students:", err);
+        if (!cancelled) {
+          setStudents([]);
+          setTotalStudents(0);
+        }
       }
     };
+
     fetchStudents();
-  }, [token]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    token,
+    user?.department, // HOD/PGC name
+    selectedDepartmentForDefense, // provost selection (id)
+    departments, // used to look up name
+    isProvost,
+    degreeTab, // re-fetch when switching MSc/PhD
+    selectedSession, // only fetch when a session is selected
+    page, // <-- re-run when page changes
+    itemsPerPage,
+    toast, // re-run when limit changes (or when user changes page size)
+  ]);
 
   // open the modal for a given student
   const openActionModal = (studentId: string) => {
@@ -178,16 +413,56 @@ const StudentSessionManagement = () => {
   };
 
   // Assign supervisor handler
-  const handleAssign = (
+  const handleAssign = async (
     studentId: string,
-    supType: "supervisor1" | "supervisor2" | "internalExaminer",
+    supType: "major" | "minor" | "internal_examiner",
+    lecturerId: string,
     lecturerName: string
   ) => {
+    // find student to get matricNo (fallback to studentId if needed)
+    const student = students.find((s) => s._id === studentId);
+    const matricNo = student?.matricNo ?? studentId;
+
+    // optimistic UI update (optional) — update local students immediately
     setStudents((prev) =>
       prev.map((s) =>
-        s._id === studentId ? { ...s, [supType]: lecturerName } : s
+        s._id === studentId
+          ? {
+              ...s,
+              // store assignment as object so you have both id+name
+              [supType]: { staffId: lecturerId, staffName: lecturerName },
+            }
+          : s
       )
     );
+
+    try {
+      const res = await fetch(
+        `${baseUrl}/student/assignSupervisor/${encodeURIComponent(matricNo)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            type: supType,
+            staffId: lecturerId,
+            staffName: lecturerName,
+            matNo: matricNo,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to assign supervisor (${res.status}): ${text}`);
+      }
+
+      console.log("Supervisor assigned successfully");
+    } catch (err) {
+      console.error("Error assigning supervisor:", err);
+    }
   };
 
   // Advance student stage handler
@@ -234,7 +509,9 @@ const StudentSessionManagement = () => {
     );
   }, [students, search, selectedDefense]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  // server-side pagination: compute pages from total + limit
+  const totalPages = Math.max(1, Math.ceil(totalStudents / itemsPerPage));
+
   const paginated = filtered.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
@@ -314,10 +591,11 @@ const StudentSessionManagement = () => {
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
               <SelectContent>
-                {sessionNames.length > 0 ? (
-                  sessionNames.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
+                {sessionsList.length > 0 ? (
+                  sessionsList.map((s) => (
+                    // value is the session _id, label shows sessionName
+                    <SelectItem key={s._id} value={s._id}>
+                      {s.sessionName}
                     </SelectItem>
                   ))
                 ) : (
@@ -345,25 +623,74 @@ const StudentSessionManagement = () => {
 
         {isProvost && selectedDefense === "External Defense" && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
+            {/* Faculty Selector */}
+            <Select
+              value={selectedFacultyId}
+              onValueChange={setSelectedFacultyId}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue
+                  placeholder={
+                    facultiesLoading ? "Loading..." : "Select Faculty"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {facultiesLoading ? (
+                  <SelectItem disabled>Loading faculties...</SelectItem>
+                ) : facultiesError ? (
+                  <SelectItem disabled>{facultiesError}</SelectItem>
+                ) : faculties.length ? (
+                  faculties.map((f) => (
+                    <SelectItem key={f._id} value={f._id}>
+                      {f.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem disabled>No faculties</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+
             {/* Department Selector */}
             <Select
               value={selectedDepartmentForDefense}
               onValueChange={setSelectedDepartmentForDefense}
+              disabled={
+                !selectedFacultyId ||
+                departmentsLoading ||
+                departments.length === 0
+              }
             >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select Department" />
+              <SelectTrigger className="w-56">
+                <SelectValue
+                  placeholder={
+                    !selectedFacultyId
+                      ? "Choose faculty first"
+                      : departmentsLoading
+                      ? "Loading departments..."
+                      : "Select Department"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {/* replace with your real departments */}
-                {[
-                  "Computer Science",
-                  "Electrical Engineering",
-                  "Statistics" /*…*/,
-                ].map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept}
+                {departmentsLoading ? (
+                  <SelectItem disabled>Loading departments...</SelectItem>
+                ) : departmentsError ? (
+                  <SelectItem disabled>{departmentsError}</SelectItem>
+                ) : departments.length ? (
+                  departments.map((d) => (
+                    <SelectItem key={d._id} value={d._id}>
+                      {d.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem disabled>
+                    {selectedFacultyId
+                      ? "No departments"
+                      : "Select faculty first"}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
 
@@ -404,7 +731,7 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">Score for {selectedDefense}</th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
-                  {isHod && <th className="p-3 border">Action</th>}
+                  
                   <th className="p-3 border">Assign</th>
                 </>
               )}
@@ -433,10 +760,7 @@ const StudentSessionManagement = () => {
                 );
               }
 
-              // HOD/PGC row:
-
-              const notFinal =
-                stageFlow.indexOf(defenseStage as any) < stageFlow.length - 1;
+              
 
               return (
                 <tr
@@ -444,46 +768,27 @@ const StudentSessionManagement = () => {
                   className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                 >
                   <td className="p-3 border">{s.matricNo}</td>
-                  <td className="p-3 border">
+                  <td className="p-3 border capitalize">
                     {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
                   </td>
-                  <td className="p-3 border">{s.projectTopic}</td>
+                  <td className="p-3 border capitalize">{s.projectTopic}</td>
                   <td className="p-3 border">
                     {s.stageScores?.[selectedDefense.toLowerCase()] ?? "—"}
                   </td>
-                  <td className="p-3 border">
-                    {typeof s.majorSupervisor === "string"
-                      ? "Not Assigned"
-                      : `${s.majorSupervisor?.firstName} ${s.majorSupervisor?.lastName}`}
+                  <td className="p-3 border capitalize">
+                    {s.majorSupervisor || "Not Assigned"}
                   </td>
-                  <td className="p-3 border">
-                    {typeof s.minorSupervisor === "string"
-                      ? "Not Assigned"
-                      : `${s.minorSupervisor?.firstName} ${s.minorSupervisor?.lastName}`}
+                  <td className="p-3 border capitalize">
+                    {s.minorSupervisor || "Not Assigned"}
                   </td>
 
-                  {isHod && (
-                    <td className="p-3 border">
-                      {done && notFinal ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openActionModal(s._id)}
-                          aria-label="Open action menu"
-                        >
-                          <Pen className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                  )}
+                  
                   <td className="p-3 border">
                     <Button
                       size="sm"
                       className="bg-amber-700 text-white"
                       onClick={() => {
-                        setCurrentStudentId(s.id);
+                        setCurrentStudentId(s._id); // <-- use _id
                         setAssignModalOpen(true);
                       }}
                     >
@@ -517,9 +822,10 @@ const StudentSessionManagement = () => {
         >
           <ChevronLeft />
         </button>
-        <span className="text-gray-700 text-sm">
-          {page} / {totalPages}
+        <span className="text-sm text-gray-600">
+          Showing page {page} of {totalPages}
         </span>
+
         <button
           onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
           disabled={page === totalPages}

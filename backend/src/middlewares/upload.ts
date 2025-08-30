@@ -17,6 +17,9 @@ const storage = multer.diskStorage({
   },
 });
 
+
+
+
 // File filter (optional)
 function fileFilter(req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) {
   const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -32,7 +35,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 5 * 1024 * 1024, // 5MB
   },
 });
 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import ProjectService from '../services/project';
+import path from 'path';
 
 
 export interface AuthenticatedRequest extends Request {
@@ -14,11 +15,10 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      const { topic } = req.body;
-      const fileUrl = req.file?.path || req.body.fileUrl;
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
       const studentId = req.user?.id || ''
 
-      const project = await ProjectService.uploadProject(studentId, fileUrl, topic);
+      const project = await ProjectService.uploadProject(studentId, fileUrl);
       res.status(201).json({ success: true, message: 'Project uploaded successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -63,25 +63,35 @@ export default class ProjectController {
     try {
       const { studentId, versionNumber } = req.params;
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
+      if (!project || !project.fileUrl) {
+      res.status(404).json({ success: false, error: 'Project not found' });
+    }
 
-      return res.download(project.fileUrl);
+    const fileName = path.basename(project.fileUrl);
+    //construct the full file path
+    const absolutePath = path.join('uploads', 'projects', fileName);
+
+      return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });
     }
   }
 
+  
+
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || ''
-      const { studentId, topic } = req.body;
+      const { studentId } = req.params;
+      const {comments} = req.body
       const fileUrl = req.file?.path || req.body.fileUrl;
 
       const project = await ProjectService.supervisorUploadCorrection(
         studentId,
         fileUrl,
-        topic,
-        userId
+        userId,
+        comments
       );
       res.status(200).json({ success: true, message: 'Project uploaded succesfully', data: project });
     } catch (err: any) {
@@ -89,5 +99,6 @@ export default class ProjectController {
       res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
     }
   }
+
 
 }

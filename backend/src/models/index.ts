@@ -36,3 +36,11 @@ export type { INotification } from './notification';
 // ActivityLog
 export { default as ActivityLog } from './activity_log';
 export type { IActivityLog } from './activity_log';
+
+// Faculty
+export { default as Faculty } from './faculty';
+export type { IFaculty } from './faculty';
+
+// Department
+export { default as Department } from './department';
+export type { IDepartment } from './department';

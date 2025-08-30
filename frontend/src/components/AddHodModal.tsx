@@ -1,5 +1,5 @@
 // src/components/AddHodModal.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/pages/AuthProvider";
 
 export interface NewHodData {
   title: string;
@@ -23,16 +24,20 @@ export interface NewHodData {
   lastName: string;
   staffId: string;
   email: string;
-  faculty: string;
-  department: string;
-  role: string; // new field
+  faculty: string; // will contain faculty id
+  department: string; // will contain department id
+  role: string; // "hod" | "provost"
 }
-
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
 interface AddHodModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: NewHodData) => Promise<void>;
 }
+
+type ApiItem = Record<string, any>;
+type Fac = { id: string; name: string };
+type Dept = { id: string; name: string };
 
 export default function AddHodModal({
   isOpen,
@@ -45,25 +50,174 @@ export default function AddHodModal({
     lastName: "",
     staffId: "",
     email: "",
-    faculty: "",
-    department: "",
-    role: "", // new field
+    faculty: undefined as unknown as string, // instead of ""
+    department: undefined as unknown as string,
+    role: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
+
+  // API lists + loading/errors
+  const [faculties, setFaculties] = useState<Fac[]>([]);
+  const [facLoading, setFacLoading] = useState(false);
+  const [facError, setFacError] = useState<string | null>(null);
+
+  const [departments, setDepartments] = useState<Dept[]>([]);
+  const [deptLoading, setDeptLoading] = useState(false);
+  const [deptError, setDeptError] = useState<string | null>(null);
+
+  // Helper to normalize API items into {id, name}
+  const normalize = (item: ApiItem): { id: string; name: string } => {
+    const id = String(
+      item.id ??
+        item._id ??
+        item.facultyId ??
+        item.departmentId ??
+        item.idStr ??
+        ""
+    );
+    const name = String(
+      item.name ??
+        item.title ??
+        item.facultyName ??
+        item.departmentName ??
+        item.label ??
+        id
+    );
+    return { id, name };
+  };
 
   const handleChange = (field: keyof NewHodData, value: string) => {
     setFormData((f) => ({ ...f, [field]: value }));
   };
+
+  // Fetch faculties when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let mounted = true;
+    const controller = new AbortController();
+    setFacLoading(true);
+    setFacError(null);
+
+    (async () => {
+      try {
+        const res = await fetch(`${baseUrl}/faculty/`, {
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) {
+          throw new Error(`Failed to load faculties (${res.status})`);
+        }
+        const data = await res.json();
+        if (!mounted) return;
+
+        // try to normalize array; if API returns an object with array prop, handle common shapes
+        let arr: any[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.data)
+          ? data.data
+          : typeof data === "object"
+          ? Object.values(data)
+          : [];
+
+        const normalized = arr.map(normalize);
+        setFaculties(normalized);
+      } catch (err: any) {
+        if (err.name === "AbortError") return;
+        console.error("Fetch faculties error", err);
+        setFacError(err.message || "Failed to load faculties");
+        setFaculties([]);
+      } finally {
+        if (mounted) setFacLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [isOpen]);
+
+  // Fetch departments whenever faculty selection changes
+  useEffect(() => {
+    const facultyId = formData.faculty;
+    // clear departments if no faculty selected
+    if (!facultyId) {
+      setDepartments([]);
+      setDeptError(null);
+      setDeptLoading(false);
+      setFormData((f) => ({ ...f, department: "" }));
+      return;
+    }
+
+    let mounted = true;
+    const controller = new AbortController();
+    setDeptLoading(true);
+    setDeptError(null);
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `${baseUrl}/department/${encodeURIComponent(facultyId)}`,
+          {
+            signal: controller.signal,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!res.ok) {
+          throw new Error(`Failed to load departments (${res.status})`);
+        }
+        const data = await res.json();
+
+        let arr: any[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.data)
+          ? data.data
+          : typeof data === "object"
+          ? Object.values(data)
+          : [];
+
+        const normalized = arr.map(normalize);
+        if (!mounted) return;
+        setDepartments(normalized);
+      } catch (err: any) {
+        if (err.name === "AbortError") return;
+        console.error("Fetch departments error", err);
+        setDeptError(err.message || "Failed to load departments");
+        setDepartments([]);
+      } finally {
+        if (mounted) setDeptLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [formData.faculty]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await onSubmit(formData);
+      // If role is provost, clear faculty/department to avoid sending stale ids
+      const payload = {
+        ...formData,
+        faculty: formData.role === "hod" ? formData.faculty : "",
+        department: formData.role === "hod" ? formData.department : "",
+      };
+      await onSubmit(payload);
 
-      // reset
+      // reset form
       setFormData({
         title: "",
         firstName: "",
@@ -72,7 +226,7 @@ export default function AddHodModal({
         email: "",
         faculty: "",
         department: "",
-        role: "hod", // reset role
+        role: "",
       });
       onClose();
     } catch (err: any) {
@@ -82,6 +236,14 @@ export default function AddHodModal({
       setLoading(false);
     }
   };
+
+  // Clear faculty/department when switching role away from hod
+  useEffect(() => {
+    if (formData.role !== "hod") {
+      setFormData((f) => ({ ...f, faculty: "", department: "" }));
+      setDepartments([]);
+    }
+  }, [formData.role]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -173,7 +335,7 @@ export default function AddHodModal({
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select Role" />
               </SelectTrigger>
-              <SelectContent>               
+              <SelectContent>
                 <SelectItem value="hod">HOD</SelectItem>
                 <SelectItem value="provost">Provost</SelectItem>
               </SelectContent>
@@ -186,7 +348,7 @@ export default function AddHodModal({
               <div>
                 <label className="block text-gray-700 mb-1">Faculty</label>
                 <Select
-                  value={formData.faculty}
+                  value={formData.faculty || undefined}
                   onValueChange={(val) => handleChange("faculty", val)}
                   required={formData.role === "hod"}
                 >
@@ -194,26 +356,23 @@ export default function AddHodModal({
                     <SelectValue placeholder="Select Faculty" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[
-                      "Engineering",
-                      "Science",
-                      "Arts",
-                      "Business",
-                      "Education",
-                      "Law",
-                      "Computing",
-                    ].map((fac) => (
-                      <SelectItem key={fac} value={fac}>
-                        {fac}
+                    {faculties.map((fac) => (
+                      <SelectItem key={fac.id} value={fac.id}>
+                        {fac.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
+                {facError && (
+                  <p className="text-sm text-red-500 mt-1">{facError}</p>
+                )}
               </div>
+
               <div>
                 <label className="block text-gray-700 mb-1">Department</label>
                 <Select
-                  value={formData.department}
+                  value={formData.department || undefined}
                   onValueChange={(val) => handleChange("department", val)}
                   required={formData.role === "hod"}
                 >
@@ -221,19 +380,17 @@ export default function AddHodModal({
                     <SelectValue placeholder="Select Department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[
-                      "Computer Science",
-                      "Electrical",
-                      "Mechanical",
-                      "Civil",
-                      "Statistics",
-                    ].map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
+                {deptError && (
+                  <p className="text-sm text-red-500 mt-1">{deptError}</p>
+                )}
               </div>
             </div>
           )}

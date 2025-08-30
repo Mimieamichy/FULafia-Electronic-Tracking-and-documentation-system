@@ -42,6 +42,8 @@ export enum Permission {
   ADD_STUDENTS = 'add_students',
   VIEW_ALL_STUDENTS = 'view_all_students',
 
+  
+
   // Dean
   VIEW_FACULTY_LECTURERS = 'view_faculty_lecturers',
   VIEW_PROJECT_BY_FACULTY = 'view_project_by_faculty',
@@ -115,7 +117,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DOWNLOAD_PROJECT,
     Permission.DELETE_LECTURER,
     Permission.ADD_STUDENTS,
-    Permission.VIEW_ALL_STUDENTS
+    Permission.VIEW_ALL_STUDENTS,
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
+    Permission.UPLOAD_PROJECT,
+    Permission.VIEW_COMMENTS,
+    Permission.COMMENT,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -124,7 +132,15 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GENERATE_DEPT_SCORE_SHEET,
     Permission.ADD_STUDENTS,
     Permission.VIEW_ALL_STUDENTS,
-    Permission.VIEW_SESSIONS
+    Permission.VIEW_SESSIONS,
+    Permission.ASSIGN_SUPERVISORS,
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
+    Permission.UPLOAD_PROJECT,
+    Permission.VIEW_COMMENTS,
+    Permission.COMMENT,
+    
   ],
   [Role.DEAN]: [
     Permission.VIEW_FACULTY_LECTURERS, 
@@ -161,7 +177,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   [Role.PROVOST]: [
     Permission.VIEW_ALL_LECTURERS,
+    Permission.VIEW_ALL_STUDENTS,
     Permission.VIEW_ALL_SESSIONS,
+    Permission.VIEW_SESSIONS,
     Permission.SCHEDULE_DEFENSE,
     Permission.GENERATE_GENERAL_SCORE_SHEET,
     Permission.ADD_EXTERNAL_EXAMINER,

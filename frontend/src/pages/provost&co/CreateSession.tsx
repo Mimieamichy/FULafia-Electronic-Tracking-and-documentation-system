@@ -63,7 +63,7 @@ const CreateSession = ({ isOpen, onClose, onCreated }: Props) => {
     toast({
       title: "Success",
       description: "Session created successfully.",
-      variant: "success",
+      variant: "default",
     });
 
     onClose();

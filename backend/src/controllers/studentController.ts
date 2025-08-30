@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import StudentService from "../services/students";
+import { Types } from "mongoose";
 
 
 export interface AuthenticatedRequest extends Request {
@@ -11,10 +12,10 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export default class StudentController {
+export default class StudentController { 
   static async addStudent(req: AuthenticatedRequest, res: Response) {
     try {
-      const { firstName, lastName, email, degree: level, matNo: matricNo, session } = req.body;
+      const { firstName, lastName, email, degree: level, matNo: matricNo, session, projectTopic } = req.body;
       const userId = req.user?.id || ''
 
       const newStudent = await StudentService.addStudent({
@@ -25,6 +26,7 @@ export default class StudentController {
         matricNo,
         userId,
         session,
+        projectTopic,
       });
 
       res.status(201).json({ success: true, data: newStudent });
@@ -39,34 +41,133 @@ export default class StudentController {
   }
 
 
-  static async getAllStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { department } = req.body
-      const userId = req.user?.id || ''
+  static async getAllMscStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { department, session} = req.params;
+    const userId = req.user?.id || '';
 
-      const students = await StudentService.getAllStudentsInDepartment(department, userId)
-      res.status(200).json({ success: true, data: students });
-    } catch (err: any) {
-      console.log(err)
-      res.status(400).json({
-        success: false,
-        error: 'Failed to get students',
-        message: err.message,
-      });
-    }
+    // Query params for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sessionId = new Types.ObjectId(session);
+    
 
+    const students = await StudentService.getAllMscStudentsInDepartment(
+      department,
+      userId,
+      sessionId,
+      page,
+      limit
+    );
+
+    res.status(200).json({ success: true, ...students });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get students',
+      message: err.message,
+    });
   }
+}
 
-  static async assignSupervisor(req: Request, res: Response) {
+
+static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { department, session} = req.params;
+    const userId = req.user?.id || '';
+
+    // Query params for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sessionId = new Types.ObjectId(session);
+    
+
+    const students = await StudentService.getAllPhdStudentsInDepartment(
+      department,
+      userId,
+      sessionId,
+      page,
+      limit
+    );
+
+    res.status(200).json({ success: true, ...students });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get students',
+      message: err.message,
+    });
+  }
+}
+
+
+static async assignSupervisor(req: Request, res: Response) {
     try {
-      const {staffId, type, matricNo} = req.body
-      const assignedStudent = await StudentService.assignSupervisor(staffId, type, matricNo)
+      const {staffId, staffName, type} = req.body
+      const { matricNo } = req.params;
+      const assignedStudent = await StudentService.assignSupervisor(staffId, staffName, type, matricNo)
       res.status(201).json({ success: true, data: assignedStudent });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({
         success: false,
         error: 'Failed to assign supervisors',
+        message: err.message,
+      });
+    }
+}
+
+static async getStudentsBySupervisorMsc(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id || '';
+      const students = await StudentService.getStudentsBySupervisorMsc(userId);
+      res.status(200).json({ success: true, data: students });
+    } catch (err: any) {
+      console.error(err);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to get students',
+        message: err.message,
+      });
+    }
+  }
+
+
+  
+static async getStudentsBySupervisorPhd(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id || '';
+      const students = await StudentService.getStudentsBySupervisorPhd(userId);
+      res.status(200).json({ success: true, data: students });
+    } catch (err: any) {
+      console.error(err);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to get students',
+        message: err.message,
+      });
+    }
+  }
+
+static async editStudent(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { studentId } = req.params;
+      const { matricNo, firstName, lastName, projectTopic } = req.body;
+      const updatedStudent = await StudentService.editStudent( studentId,{
+        matricNo,
+        firstName,
+        lastName,
+        projectTopic
+
+      });
+      res.status(200).json({ success: true, data: updatedStudent });
+    } catch (err: any) {
+      console.error(err);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to update student',
         message: err.message,
       });
     }

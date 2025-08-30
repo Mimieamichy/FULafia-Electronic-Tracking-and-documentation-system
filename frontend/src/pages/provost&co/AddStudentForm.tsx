@@ -28,9 +28,12 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
   const [session, setSession] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [sessionName, setSessionName] = useState("");
+  const [projectTopic, setProjectTopic] = useState("");
 
   const { token } = useAuth(); // 🔐 Get token from auth context
   const { toast } = useToast();
+
+
   useEffect(() => {
     const fetchLatestSession = async () => {
       try {
@@ -55,6 +58,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
           setSessionId(latest._id); // for backend
           setSessionName(latest.sessionName); // for display
         }
+        console.log("Latest session fetched:", latest);
+        
       } catch (error) {
         console.error("Error fetching latest session:", error);
       }
@@ -71,6 +76,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       matNo,
       degree: degree.toLowerCase(),
       session: sessionId, // 👈 ObjectId goes to backend
+      projectTopic,
     };
 
     try {
@@ -92,7 +98,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       toast({
         title: "Success",
         description: `Student ${firstName} ${lastName} added successfully!`,
-        variant: "success",
+        variant: "default",
       });
 
       // Optionally reset
@@ -102,6 +108,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
       setEmail("");
 
       setSession("");
+      setProjectTopic("");
 
       if (onClose) onClose();
     } catch (error) {
@@ -144,6 +151,15 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
           value={matNo}
           onChange={(e) => setMatNo(e.target.value)}
           placeholder="e.g. 220976762"
+        />
+      </div>
+      {/* Topic */}
+      <div className="mb-5">
+        <label className="block text-sm font-medium mb-1">Project Topic</label>
+        <Input
+          value={projectTopic}
+          onChange={(e) => setProjectTopic(e.target.value)}
+          placeholder="e.g. Machine Learning"
         />
       </div>
 
