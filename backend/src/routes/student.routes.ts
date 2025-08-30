@@ -33,7 +33,8 @@ router.post('/add', validateBody(addStudentSchema), authenticate, checkPermissio
 router.get('/msc/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllMscStudentsByDepartment);
 router.get('/phd/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsByDepartment);
 router.post('/assignSupervisor/:matricNo', validateBody(addSupervisorSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
-router.get('/getMyStudents', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisor)
+router.get('/getMyStudents/msc', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorMsc)
+router.get('/getMyStudents/phd', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorPhd)
 
 
 

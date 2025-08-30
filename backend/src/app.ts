@@ -5,11 +5,11 @@ import path from 'path';
 
 dotenv.config();
 
-import authRoutes from './routes/auth';
-import userRoutes from './routes/user';
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
 import lecturerRoutes from './routes/lecturer.routes';
-import notificationRoutes from './routes/notification';
-import sessionRoutes from './routes/session'
+import notificationRoutes from './routes/notification.routes';
+import sessionRoutes from './routes/session.routes'
 import projectRoutes from './routes/project.routes'
 import studentRoutes from './routes/student.routes'
 import departmentRoutes from './routes/department.routes';

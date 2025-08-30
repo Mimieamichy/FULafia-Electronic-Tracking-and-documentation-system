@@ -64,7 +64,7 @@ export default class ProjectController {
       const { studentId, versionNumber } = req.params;
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
       if (!project || !project.fileUrl) {
-      return res.status(404).json({ success: false, error: 'Project not found' });
+      res.status(404).json({ success: false, error: 'Project not found' });
     }
 
     const fileName = path.basename(project.fileUrl);

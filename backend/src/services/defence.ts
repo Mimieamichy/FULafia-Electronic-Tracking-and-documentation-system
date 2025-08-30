@@ -59,4 +59,18 @@ export default class DefenceService {
   static async startDefence() {
     
   }
+
+
+   static async endDefence() {
+    
+  }
+
+   static async createScoreSheetDept() {
+    
+  }
+
+
+  static async createScoreSheetAll() {
+    
+  }
 }
