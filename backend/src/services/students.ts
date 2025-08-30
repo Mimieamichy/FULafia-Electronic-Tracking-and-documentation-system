@@ -100,6 +100,7 @@ export default class StudentService {
     static async getAllMscStudentsInDepartment(
         department: string,
         userId: string,
+        session: string,
         page = 1,
         limit = 10
     ) {
@@ -117,7 +118,7 @@ export default class StudentService {
             limit,
             `students:dept=${department}`,
             120, // cache TTL in seconds
-            { department, level },
+            { department, level , session},
             "user"
         );
     }
@@ -125,6 +126,7 @@ export default class StudentService {
     static async getAllPhdStudentsInDepartment(
         department: string,
         userId: string,
+        session: string,
         page = 1,
         limit = 10
     ) {
@@ -143,7 +145,7 @@ export default class StudentService {
             limit,
             `students:dept=${department}`,
             120, // cache TTL in seconds
-            { department, level },
+            { department, level , session},
             "user"
         );
     }

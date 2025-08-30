@@ -14,7 +14,7 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      const fileUrl = req.file?.path || req.body.fileUrl;
+      const fileUrl = `/uploads/projects/${req.file?.filename}`;
       const studentId = req.user?.id || ''
 
       const project = await ProjectService.uploadProject(studentId, fileUrl);
@@ -69,6 +69,8 @@ export default class ProjectController {
       res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });
     }
   }
+
+  
 
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {

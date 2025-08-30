@@ -1,18 +1,19 @@
-import { Project, Student , Lecturer, User} from '../models/index';
+import { Project, Student, Lecturer, User } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 
 export default class ProjectService {
   static async uploadProject(userId: string, fileUrl: string) {
-  // Find student linked to this user
-  const student = await Student.findOne({ user: userId });
-  if (!student) throw new Error("Student not found");
+    // Find student linked to this user
+    const student = await Student.findOne({ user: userId });
+    if (!student) throw new Error("Student not found");
 
-  // Find or create project for student
-  let project = await Project.findOne({ student: student._id });
-  if (!project) {
-    project = new Project({ student: student._id, versions: [] });
-  }
+
+    // Find or create project for student
+    let project = await Project.findOne({ student: student._id });
+    if (!project) {
+      project = new Project({ student: student._id, versions: [] });
+    }
 
     const nextVersion = project.versions.length + 1;
 
@@ -21,53 +22,53 @@ export default class ProjectService {
       fileUrl,
       uploadedBy: (student._id),
       uploadedAt: new Date(),
-      comments: [], 
-      topic: student.projectTopic 
+      comments: [],
+      topic: student.projectTopic
     });
 
     await project.save();
 
     // 4. Notify major & minor supervisors (lookup by name if exists)
-  // Split supervisor full name into parts (assuming format: "Title FirstName LastName")
-function parseName(fullName: string) {
-  const parts = fullName.trim().split(" ");
-  if (parts.length < 2) return { firstName: fullName, lastName: "" }; 
+    // Split supervisor full name into parts (assuming format: "Title FirstName LastName")
+    function parseName(fullName: string) {
+      const parts = fullName.trim().split(" ");
+      if (parts.length < 2) return { firstName: fullName, lastName: "" };
 
-  // Last part = lastName, rest (except title) = firstName
-  const lastName = parts.pop()!;
-  const title = parts[0].endsWith(".") ? parts.shift() : null;
-  const firstName = parts.join(" ");
-  return { firstName, lastName, title };
-}
+      // Last part = lastName, rest (except title) = firstName
+      const lastName = parts.pop()!;
+      const title = parts[0].endsWith(".") ? parts.shift() : null;
+      const firstName = parts.join(" ");
+      return { firstName, lastName, title };
+    }
 
-const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
+    const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
 
-if (supervisorNames.length > 0) {
-  const lecturerIds: string[] = [];
+    if (supervisorNames.length > 0) {
+      const lecturerIds: string[] = [];
 
-  for (const supName of supervisorNames) {
-    if (!supName) continue; // Type guard to ensure supName is string
-    const { firstName, lastName } = parseName(supName);
+      for (const supName of supervisorNames) {
+        if (!supName) continue; // Type guard to ensure supName is string
+        const { firstName, lastName } = parseName(supName);
 
-    // Find User by name
-    const user = await User.findOne({ firstName, lastName });
-    if (!user) continue;
+        // Find User by name
+        const user = await User.findOne({ firstName, lastName });
+        if (!user) continue;
 
-    // Find Lecturer by user
-    const lecturer = await Lecturer.findOne({ user: user._id });
-    if (!lecturer) continue;
+        // Find Lecturer by user
+        const lecturer = await Lecturer.findOne({ user: user._id });
+        if (!lecturer) continue;
 
-    lecturerIds.push(String(lecturer._id));
-  }
+        lecturerIds.push(String(lecturer._id));
+      }
 
-  if (lecturerIds.length > 0) {
-    await NotificationService.createNotifications({
-      lecturerIds,
-      role: "lecturer",
-      message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
-    });
-  }
-}
+      if (lecturerIds.length > 0) {
+        await NotificationService.createNotifications({
+          lecturerIds,
+          role: "lecturer",
+          message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
+        });
+      }
+    }
 
     return project;
   }
@@ -170,5 +171,5 @@ if (supervisorNames.length > 0) {
     };
   }
 
- 
+
 }

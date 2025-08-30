@@ -43,7 +43,7 @@ export default class StudentController {
 
   static async getAllMscStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
   try {
-    const { department } = req.params;
+    const { department, session } = req.params;
     const userId = req.user?.id || '';
 
     // Query params for pagination
@@ -54,6 +54,7 @@ export default class StudentController {
     const students = await StudentService.getAllMscStudentsInDepartment(
       department,
       userId,
+      session,
       page,
       limit
     );
@@ -72,7 +73,7 @@ export default class StudentController {
 
 static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
   try {
-    const { department } = req.params;
+    const { department, session} = req.params;
     const userId = req.user?.id || '';
 
     // Query params for pagination
@@ -83,6 +84,7 @@ static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Respo
     const students = await StudentService.getAllPhdStudentsInDepartment(
       department,
       userId,
+      session,
       page,
       limit
     );
