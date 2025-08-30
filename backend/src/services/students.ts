@@ -3,6 +3,7 @@ import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateWithCache } from "../utils/paginatedCache"
 import NotificationService from "./notification";
+import { Types } from "mongoose";
 
 
 
@@ -100,7 +101,7 @@ export default class StudentService {
     static async getAllMscStudentsInDepartment(
         department: string,
         userId: string,
-        session: string,
+        session: Types.ObjectId,
         page = 1,
         limit = 10
     ) {
@@ -126,7 +127,7 @@ export default class StudentService {
     static async getAllPhdStudentsInDepartment(
         department: string,
         userId: string,
-        session: string,
+        session: Types.ObjectId,
         page = 1,
         limit = 10
     ) {
