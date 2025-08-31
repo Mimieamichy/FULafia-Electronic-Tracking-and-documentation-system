@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../AuthProvider";
 import { Download, Send } from "lucide-react";
+import { log } from "console";
 
 type Student = {
   id: string; // derived from student._id
@@ -21,6 +22,7 @@ type Student = {
     internal: number | null;
     external: number | null;
   };
+  approvalStatus?: string;
   // project-specific:
   projectId?: string;
   projectVersions?: Array<{
@@ -103,6 +105,8 @@ export default function MyStudentsPage() {
         ? raw.students
         : [];
 
+      console.log("Fetched students:", arr);
+
       // normalization (you had this already - copy-paste from your previous code)
       const normalized: Student[] = arr.map((item: any) => {
         const studentObj = item.student ?? item;
@@ -133,7 +137,7 @@ export default function MyStudentsPage() {
           uploadedAt?: string;
         }[] = Array.isArray(latest?.comments)
           ? latest.comments.map((c: any) => ({
-              by: c.by ?? c.author ?? c.uploadedBy ?? "Unknown",
+              by: c.by ?? c.authorName ?? c.uploadedBy ?? "Unknown",
               text: c.text ?? c.comment ?? c.body ?? "",
               uploadedAt: c.date ?? c.uploadedAt ?? c.createdAt,
             }))
@@ -153,7 +157,8 @@ export default function MyStudentsPage() {
             projectObj?.topic ??
             studentObj.topic ??
             "",
-          stage: studentObj.currentStage ?? "",
+          stage: (studentObj.currentStage ?? "").toLowerCase(),
+          approvalStatus: (studentObj.approvalStatus ?? "").toLowerCase(),
           scores: {
             proposal: typeof proposal === "number" ? proposal : null,
             internal: typeof internal === "number" ? internal : null,
@@ -300,35 +305,69 @@ export default function MyStudentsPage() {
     studentId: string,
     degree: "msc" | "phd"
   ) => {
+    // normalize degree (in case button passed "MSc" / "PhD")
+    const deg = (degree ?? "msc").toLowerCase() as "msc" | "phd";
+
     // mark as in-flight
-    setApprovingIds((prev) => new Set(prev).add(studentId));
+    setApprovingIds((prev) => {
+      const next = new Set(prev);
+      next.add(studentId);
+      return next;
+    });
+
+    const url = `${baseUrl}/project/approve/${encodeURIComponent(studentId)}`;
+    console.log("Approving student:", { studentId, degree: deg, url });
 
     try {
-      const res = await fetch(
-        `${baseUrl}/project/approve/${encodeURIComponent(studentId)}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          // no body assumed; if your backend needs a body, add here
-          // body: JSON.stringify({ ... })
-        }
-      );
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          // no body required by backend
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         throw new Error(`Approve failed: ${res.status} ${txt}`);
       }
 
-      // refresh the degree list so UI (stage/comments) reflects server truth
-      await fetchMyStudentsByDegree(degree);
+      // On success: prefer to re-fetch the degree list if that function exists
+      if (typeof fetchMyStudentsByDegree === "function") {
+        await fetchMyStudentsByDegree(deg);
+      } else {
+        // fallback: optimistic update of the proper list so UI reflects the change
+        if (deg === "msc") {
+          setStudentsMsc((prev) =>
+            prev.map((s) =>
+              s.id === studentId
+                ? {
+                    ...s,
+                    approvalStatus: "approved",
+                    stage: "proposal defense",
+                  }
+                : s
+            )
+          );
+        } else {
+          setStudentsPhd((prev) =>
+            prev.map((s) =>
+              s.id === studentId
+                ? {
+                    ...s,
+                    approvalStatus: "approved",
+                    stage: "proposal defense",
+                  }
+                : s
+            )
+          );
+        }
+      }
     } catch (err) {
       console.error("Error approving student:", err);
-      // optionally show toast / error UI here
     } finally {
-      // remove from in-flight set
+      // clear in-flight flag
       setApprovingIds((prev) => {
         const next = new Set(prev);
         next.delete(studentId);
@@ -411,9 +450,9 @@ export default function MyStudentsPage() {
                         )
                       }
                       disabled={
-                        // enabled only for students at "start" (case-insensitive) and not currently approving
-                        String(stu.stage).toLowerCase() !== "start" ||
-                        approvingIds.has(stu.id)
+                        approvingIds.has(stu.id) ||
+                        // enabled ONLY when stage is exactly "start"
+                        String(stu.stage).toLowerCase() !== "start"
                       }
                     >
                       {approvingIds.has(stu.id)
