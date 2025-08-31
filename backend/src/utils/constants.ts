@@ -1,12 +1,12 @@
 export const STAGES = {
   MSC: {
-    DEFAULT: 'default',
+    START: 'start',
     PROPOSAL: 'proposal',
     INTERNAL: 'internal',
     EXTERNAL: 'external'
   },
   PHD: {
-    DEFAULT: 'default',
+    START: 'start',
     PROPOSAL_DEFENSE: 'proposal_defense',
     SECOND_SEMINAR: 'second_seminar',
     INTERNAL_DEFENSE: 'internal_defense',

@@ -173,7 +173,18 @@ export default class StudentService {
         const results = await Promise.all(
             students.map(async (student) => {
                 const project = await Project.findOne({ student: student._id })
-                    .populate('versions.uploadedBy', 'firstName lastName email');
+                    .populate('versions.uploadedBy', 'firstName lastName email')
+                    .populate('versions.comments.author', 'firstName lastName email');
+
+                if (!project) throw new Error("Project not found");
+
+                project.versions.forEach(version => {
+                    version.comments.forEach((comment: any) => {
+                        const author = comment.author as any;
+                        comment.set('authorName', `${author.firstName} ${author.lastName}`, { strict: false });
+                    });
+                });
+
                 return { student, project };
             })
         );
