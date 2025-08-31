@@ -1,6 +1,7 @@
 import { Project, Student, Lecturer, User } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
+import {STAGES} from "../utils/constants";
 
 export default class ProjectService {
   static async uploadProject(userId: string, fileUrl: string) {
@@ -170,6 +171,41 @@ export default class ProjectService {
       uploadedBy: version.uploadedBy,
     };
   }
+
+
+  static async approveProject(studentId: string) {
+  const project = await Project.findOne({ student: studentId });
+  if (!project) throw new Error("Project not found");
+
+  const student = await Student.findById(studentId);
+  if (!student) throw new Error("Student not found");
+
+  // Determine program type
+  const programType = (student.level).toUpperCase() 
+  const stages = STAGES[programType as keyof typeof STAGES];
+  if (!stages) throw new Error(`Unknown program type: ${programType}`);
+
+  const stageKeys = Object.values(stages);
+  const currentIndex = stageKeys.indexOf(student.currentStage);
+
+  if (currentIndex === -1) {
+    throw new Error(`Invalid current stage: ${student.currentStage}`);
+  }
+
+  // Check if already at last stage
+  if (currentIndex === stageKeys.length - 1) {
+    return { message: "Student has completed their program", student, project };
+  }
+
+  const nextStage = stageKeys[currentIndex + 1];
+
+  // Update student stage
+  student.currentStage = nextStage;
+
+  await Promise.all([project.save(), student.save()]);
+
+  return { project, student };
+}
 
 
 }

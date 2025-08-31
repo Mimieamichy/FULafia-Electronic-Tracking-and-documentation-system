@@ -1,4 +1,4 @@
-const STAGES = {
+export const STAGES = {
   MSC: {
     DEFAULT: 'default',
     PROPOSAL: 'proposal',
@@ -14,13 +14,14 @@ const STAGES = {
   }
 };
 
-const PROVOST_STAGES = {
+export const PROVOST_STAGES = {
   MSC: ['external'],
   PHD: ['second_seminar', 'internal_defense', 'external_defense']
 };
 
 
-const EXTERNAL_EXAMINER_STAGES = {
+export const EXTERNAL_EXAMINER_STAGES = {
   MSC: ['external'],
   PHD: ['external_defense']
 };
+

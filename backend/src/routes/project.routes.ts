@@ -13,6 +13,7 @@ router.post('/uploadCorrected', authenticate, checkPermission(Permission.UPLOAD_
 router.get('/comments/:studentId/:versionNumber', authenticate, checkPermission(Permission.VIEW_COMMENTS), ProjectController.viewComments);
 router.get('/download/:studentId/:versionNumber', authenticate, checkPermission(Permission.DOWNLOAD_PROJECT), ProjectController.downloadProject);
 router.post('/comment/:studentId/:versionNumber', authenticate, checkPermission(Permission.COMMENT), ProjectController.commentOnProject);
+router.post('/approve/:studentId', authenticate, checkPermission(Permission.APPROVE_STUDENT_PROJECT), ProjectController.approveProject);
 
 
 

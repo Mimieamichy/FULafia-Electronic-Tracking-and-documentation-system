@@ -78,8 +78,6 @@ export default class ProjectController {
     }
   }
 
-  
-
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || ''
@@ -97,6 +95,17 @@ export default class ProjectController {
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
+    }
+  }
+
+  static async approveProject(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { studentId } = req.params;
+      const project = await ProjectService.approveProject(studentId);
+      res.status(200).json({ success: true, message: 'Project approved successfully', data: project });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to approve project', message: err.message });
     }
   }
 
