@@ -160,8 +160,6 @@ export default class StudentService {
         const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
         const level = 'msc'
 
-
-
         const students = await Student.find({
             $or: [
                 { majorSupervisor: supervisorName },
@@ -170,24 +168,34 @@ export default class StudentService {
             level: level,
         }).populate('user');
 
-        const results = await Promise.all(
-            students.map(async (student) => {
-                const project = await Project.findOne({ student: student._id })
-                    .populate('versions.uploadedBy', 'firstName lastName email')
-                    .populate('versions.comments.author', 'firstName lastName email');
+       const results = await Promise.all(
+  students.map(async (student) => {
+    const project = await Project.findOne({ student: student._id })
+      .populate('versions.uploadedBy', 'firstName lastName email')
+      .populate('versions.comments.author', 'firstName lastName email');
 
-                if (!project) throw new Error("Project not found");
+    if (!project) {
+      // Instead of throwing, return student with null project
+      return { student, project: null };
+    }
 
-                project.versions.forEach(version => {
-                    version.comments.forEach((comment: any) => {
-                        const author = comment.author as any;
-                        comment.set('authorName', `${author.firstName} ${author.lastName}`, { strict: false });
-                    });
-                });
+    project.versions.forEach((version) => {
+      version.comments.forEach((comment: any) => {
+        const author = comment.author as any;
+        if (author) {
+          comment.set(
+            'authorName',
+            `${author.firstName} ${author.lastName}`,
+            { strict: false }
+          );
+        }
+      });
+    });
 
-                return { student, project };
-            })
-        );
+    return { student, project };
+  })
+);
+
 
         return results;
     }
@@ -210,12 +218,32 @@ export default class StudentService {
         }).populate('user');
 
         const results = await Promise.all(
-            students.map(async (student) => {
-                const project = await Project.findOne({ student: student._id })
-                    .populate('versions.uploadedBy', 'firstName lastName email');
-                return { student, project };
-            })
-        );
+  students.map(async (student) => {
+    const project = await Project.findOne({ student: student._id })
+      .populate('versions.uploadedBy', 'firstName lastName email')
+      .populate('versions.comments.author', 'firstName lastName email');
+
+    if (!project) {
+      // Instead of throwing, return student with null project
+      return { student, project: null };
+    }
+
+    project.versions.forEach((version) => {
+      version.comments.forEach((comment: any) => {
+        const author = comment.author as any;
+        if (author) {
+          comment.set(
+            'authorName',
+            `${author.firstName} ${author.lastName}`,
+            { strict: false }
+          );
+        }
+      });
+    });
+
+    return { student, project };
+  })
+);
 
         return results;
     }
