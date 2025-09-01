@@ -58,13 +58,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       userName: `${user.firstName} ${user.lastName}`,
       role: user.roles[0], // assuming only one role
       email: user.email,
-      id: user._id,
+      id: user.id,
       department: user.department,
       faculty: user.faculty
 
 
 
     };
+
+    console.log("User profile created:", userProfile);
 
     setUser(userProfile);
     setToken(authToken);

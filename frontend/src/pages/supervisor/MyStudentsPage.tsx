@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../AuthProvider";
 import { Download, Send } from "lucide-react";
-import { log } from "console";
 
 type Student = {
   id: string; // derived from student._id
@@ -29,12 +28,12 @@ type Student = {
     versionNumber: number;
     fileUrl?: string;
     topic?: string;
-    comments?: { by?: string; text: string; uploadedAt?: string }[];
+    comments?: { by?: string; text: string; uploadedAt?: string; version?: number }[];
   }>;
   latestVersionIndex?: number; // index into projectVersions (latest)
   // UI-only:
   supervisorFileUrl?: string;
-  comments: { by: string; text: string; uploadedAt?: string }[]; // comments from latest version
+  comments: { by: string; text: string; uploadedAt?: string; version?: number }[]; // comments from latest version
 };
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
@@ -131,17 +130,28 @@ export default function MyStudentsPage() {
         const latestIdx = versions.length > 0 ? versions.length - 1 : -1;
         const latest = latestIdx >= 0 ? versions[latestIdx] : null;
 
-        const latestComments: {
+        // Collect comments across all versions
+        const allComments: {
           by: string;
           text: string;
           uploadedAt?: string;
-        }[] = Array.isArray(latest?.comments)
-          ? latest.comments.map((c: any) => ({
-              by: c.by ?? c.authorName ?? c.uploadedBy ?? "Unknown",
-              text: c.text ?? c.comment ?? c.body ?? "",
-              uploadedAt: c.date ?? c.uploadedAt ?? c.createdAt,
-            }))
-          : [];
+        }[] = versions.flatMap((v: any) =>
+          Array.isArray(v.comments)
+            ? v.comments.map((c: any) => ({
+                by: c.by ?? c.authorName ?? c.author ?? "Unknown",
+                text: c.text ?? c.comment ?? "",
+                uploadedAt: c.date ?? c.uploadedAt ?? c.createdAt,
+                version: v.versionNumber ?? v.versions ?? null,
+              }))
+            : []
+        );
+
+        // Sort oldest → newest
+        allComments.sort((a, b) => {
+          const ta = a.uploadedAt ? Date.parse(a.uploadedAt) : Infinity;
+          const tb = b.uploadedAt ? Date.parse(b.uploadedAt) : Infinity;
+          return ta - tb;
+        });
 
         return {
           id:
@@ -179,7 +189,7 @@ export default function MyStudentsPage() {
           })),
           latestVersionIndex: latestIdx,
           supervisorFileUrl: "",
-          comments: latestComments,
+          comments: allComments,
         };
       });
 
@@ -554,10 +564,13 @@ export default function MyStudentsPage() {
                         {/* timestamp bottom-right */}
                         <div className="text-[10px] text-gray-500 mt-1 text-right">
                           {c.uploadedAt
-                            ? new Date(c.uploadedAt).toLocaleTimeString([], {
+                            ? `v${c.version ?? "?"} • ${new Date(c.uploadedAt).toLocaleString([], {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              })
+                              })}`
                             : ""}
                         </div>
                       </div>
