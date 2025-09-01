@@ -208,8 +208,8 @@ export default class ProjectService {
   }
 
 
-  static async getStudentProjects(studentId: string) {
-    const student = await Student.findById(studentId);
+  static async getStudentProjects(userId: string) {
+    const student = await Student.findOne({user: userId});
     if (!student) throw new Error("Student not found");
 
     const project = await Project.findOne({ student: student._id })

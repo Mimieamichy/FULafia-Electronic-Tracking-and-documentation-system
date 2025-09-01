@@ -112,8 +112,8 @@ export default class ProjectController {
 
   static async getStudentProjects(req: AuthenticatedRequest, res: Response) {
     try {
-      const { studentId } = req.params;
-      const projects = await ProjectService.getStudentProjects(studentId);
+      const userId = req.user?.id || req.params.userId
+      const projects = await ProjectService.getStudentProjects(userId);
       res.status(200).json({ success: true, message: 'Projects retrieved', data: projects });
     } catch (err: any) {
       console.log(err)
