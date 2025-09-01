@@ -124,6 +124,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.UPLOAD_PROJECT,
     Permission.VIEW_COMMENTS,
     Permission.COMMENT,
+    Permission.APPROVE_STUDENT_PROJECT,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -139,6 +140,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_DEFENSE,
     Permission.UPLOAD_PROJECT,
     Permission.VIEW_COMMENTS,
+    Permission.APPROVE_STUDENT_PROJECT,
     Permission.COMMENT,
     
   ],
