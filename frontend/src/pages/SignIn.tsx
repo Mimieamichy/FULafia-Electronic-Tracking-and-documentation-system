@@ -15,7 +15,7 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -30,41 +30,40 @@ const SignIn = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(formData.email, formData.password);
+      const { user: loggedInUser } = await login(formData.email, formData.password);
 
-      // small delay so `user` is populated
-      setTimeout(() => {
-        switch (user?.role) {
-          case "hod":
-          case "pgcord":
-          case "provost":
-            navigate("/dashboard");
-            break;
-          case "dean":
-            navigate("/dean");
-            break;
-          case "admin":
-            navigate("/admin");
-            break;
-          case "supervisor":
-            navigate("/supervisor");
-            break;
-          case "student":
-            navigate("/student");
-            break;
-          default:
-            toast({
-              title: "Unknown Role",
-              description: "Cannot redirect—role not recognized.",
-              variant: "destructive",
-            });
-        }
-      }, 300);
-    } catch (err) {
-      console.error(err);
+      const role = (loggedInUser?.role ?? "unknown").toString().trim().toLowerCase();
+
+      switch (role) {
+        case "hod":
+        case "pgcord":
+        case "provost":
+          navigate("/dashboard");
+          break;
+        case "dean":
+          navigate("/dean");
+          break;
+        case "admin":
+          navigate("/admin");
+          break;
+        case "supervisor":
+          navigate("/supervisor");
+          break;
+        case "student":
+          navigate("/student");
+          break;
+        default:
+          toast({
+            title: "Unknown Role",
+            description: `Cannot redirect—role "${loggedInUser?.role}" not recognized.`,
+            variant: "destructive",
+          });
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
       toast({
         title: "Login Failed",
-        description: "Please check your email and password.",
+        description: err?.message ?? "Please check your email and password.",
         variant: "destructive",
       });
     } finally {
@@ -74,7 +73,6 @@ const SignIn = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side with background image */}
       <div
         className="hidden lg:flex lg:w-1/2"
         style={{
@@ -84,7 +82,6 @@ const SignIn = () => {
         }}
       />
 
-      {/* Right side with form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="max-w-md w-full">
           <div className="mb-8">
@@ -93,7 +90,6 @@ const SignIn = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
             <div>
               <label className="block text-gray-700 font-medium mb-3">Email:</label>
               <Input
@@ -105,7 +101,6 @@ const SignIn = () => {
               />
             </div>
 
-            {/* Password + Forgot link */}
             <div>
               <label className="block text-gray-700 font-medium mb-3">Password:</label>
               <div className="relative">
@@ -125,16 +120,12 @@ const SignIn = () => {
                 </button>
               </div>
               <div className="text-right mt-2">
-                <Link
-                  to="/forget-password"
-                  className="text-sm text-amber-700 hover:underline"
-                >
+                <Link to="/forget-password" className="text-sm text-amber-700 hover:underline">
                   Forgot password?
                 </Link>
               </div>
             </div>
 
-            {/* Submit */}
             <Button
               type="submit"
               className="w-full bg-amber-700 hover:bg-amber-800 text-white py-4 rounded-full text-xl font-medium flex items-center justify-center gap-3 mt-8"

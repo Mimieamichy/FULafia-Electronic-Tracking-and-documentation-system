@@ -563,7 +563,7 @@ export default function UploadWorkPage() {
                       setStudentComment("");
                       toast({
                         title: "Comment sent",
-                        description: "Your comment was posted.",
+                        description: "Your comment was sent.",
                         variant: "default",
                       });
                     } catch (err) {

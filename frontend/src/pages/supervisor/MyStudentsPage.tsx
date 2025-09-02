@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../AuthProvider";
 import { Download, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 type Student = {
   id: string; // derived from student._id
@@ -28,12 +29,22 @@ type Student = {
     versionNumber: number;
     fileUrl?: string;
     topic?: string;
-    comments?: { by?: string; text: string; uploadedAt?: string; version?: number }[];
+    comments?: {
+      by?: string;
+      text: string;
+      uploadedAt?: string;
+      version?: number;
+    }[];
   }>;
   latestVersionIndex?: number; // index into projectVersions (latest)
   // UI-only:
   supervisorFileUrl?: string;
-  comments: { by: string; text: string; uploadedAt?: string; version?: number }[]; // comments from latest version
+  comments: {
+    by: string;
+    text: string;
+    uploadedAt?: string;
+    version?: number;
+  }[]; // comments from latest version
 };
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
@@ -41,6 +52,7 @@ const baseUrl = import.meta.env.VITE_BACKEND_URL;
 export default function MyStudentsPage() {
   const { user, token } = useAuth();
   const userName = user?.userName || "Supervisor";
+  const { toast } = useToast();
   // students + loading / error
 
   // two separate lists
@@ -106,7 +118,7 @@ export default function MyStudentsPage() {
 
       console.log("Fetched students:", arr);
 
-      // normalization (you had this already - copy-paste from your previous code)
+      // normalization 
       const normalized: Student[] = arr.map((item: any) => {
         const studentObj = item.student ?? item;
         const projectObj = item.project ?? undefined;
@@ -219,11 +231,11 @@ export default function MyStudentsPage() {
       return;
     }
 
-    // initial load
+   
     fetchMyStudentsByDegree("msc");
     fetchMyStudentsByDegree("phd");
 
-    // optional: you could return nothing (no controller here)
+
   }, [token]);
 
   // handle comment submission
@@ -231,7 +243,7 @@ export default function MyStudentsPage() {
   const handleComment = async () => {
     if (!selected || !commentText.trim()) return;
 
-    // compute real versionNumber (not index)
+    // compute real versionNumber 
     const versions = selected.projectVersions ?? [];
     const latestIdx =
       selected.latestVersionIndex ??
@@ -263,12 +275,19 @@ export default function MyStudentsPage() {
       }
 
       setCommentText("");
+      if (postRes.ok) {
+        toast({
+          title: "Comment sent",
+          description: "Your comment was sent.",
+          variant: "default",
+        });
+      }
 
       // refresh the appropriate degree list so selected.comments is refreshed from server
       const degreeToRefresh = selectedDegree.toLowerCase() as "msc" | "phd";
       await fetchMyStudentsByDegree(degreeToRefresh);
 
-      // (optional) re-open the modal selection index is still valid because lists updated in place
+     
     } catch (err) {
       console.error("Error posting comment:", err);
     }
@@ -564,7 +583,9 @@ export default function MyStudentsPage() {
                         {/* timestamp bottom-right */}
                         <div className="text-[10px] text-gray-500 mt-1 text-right">
                           {c.uploadedAt
-                            ? `v${c.version ?? "?"} • ${new Date(c.uploadedAt).toLocaleString([], {
+                            ? `v${c.version ?? "?"} • ${new Date(
+                                c.uploadedAt
+                              ).toLocaleString([], {
                                 year: "numeric",
                                 month: "short",
                                 day: "numeric",
