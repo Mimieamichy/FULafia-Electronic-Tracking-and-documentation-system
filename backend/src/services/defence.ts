@@ -127,34 +127,79 @@ export default class DefenceService {
   /**
    * Panel member submits score for a student
    */
-  static async submitScore(defenceId: string, panelMemberId: string, studentId: string, scores: { criterion: string; score: number }[]) {
-    const scoreSheet = await ScoreSheet.findOne({ defence: defenceId });
-    if (!scoreSheet) throw new Error('ScoreSheet not found for this defence');
+ static async submitScore(
+  defenceId: string,
+  panelMemberId: string,
+  studentId: string,
+  scores: { criterion: string; score: number }[]
+) {
+  // Load the score sheet for this defence
+  const scoreSheet = await ScoreSheet.findOne({ defence: defenceId });
+  if (!scoreSheet) throw new Error('ScoreSheet not found for this defence');
 
-    // Ensure criteria are valid
-    const definedCriteria = scoreSheet.criteria.map((c) => c.name);
-    for (const s of scores) {
-      if (!definedCriteria.includes(s.criterion)) {
-        throw new Error(`Invalid criterion: ${s.criterion}`);
-      }
-    }
-
-    // Check if panelMember already scored this student
-    const already = scoreSheet.entries.find(
-      (e) => e.student.toString() === studentId && e.panelMember.toString() === panelMemberId
-    );
-    if (already) throw new Error('Panel member already submitted scores for this student');
-
-    // Add entry
-    scoreSheet.entries.push({
-      student: new Types.ObjectId(studentId),
-      panelMember: new Types.ObjectId(panelMemberId),
-      scores,
-    });
-
-    await scoreSheet.save();
-    return scoreSheet;
+  // Basic payload checks
+  if (!Array.isArray(scores) || scores.length === 0) {
+    throw new Error('Scores array is required and cannot be empty');
   }
+
+  // Defined criteria on the sheet
+  const definedCriteria = scoreSheet.criteria.map((c) => c.name);
+  const definedCriteriaSet = new Set(definedCriteria);
+
+  // Submitted criteria checks: duplicates, missing or extra criteria
+  const submittedCriteria = scores.map((s) => s.criterion);
+  const submittedSet = new Set(submittedCriteria);
+
+  if (submittedSet.size !== submittedCriteria.length) {
+    throw new Error('Duplicate criteria found in submission');
+  }
+  if (submittedCriteria.length !== definedCriteria.length) {
+    throw new Error(
+      `You must submit scores for exactly ${definedCriteria.length} criteria`
+    );
+  }
+  // Ensure exact match (no extras, no missing)
+  for (const crit of submittedCriteria) {
+    if (!definedCriteriaSet.has(crit)) {
+      throw new Error(`Invalid criterion submitted: ${crit}`);
+    }
+  }
+
+  // Validate numeric ranges for each score
+  for (const s of scores) {
+    if (typeof s.score !== 'number' || Number.isNaN(s.score)) {
+      throw new Error(`Score for criterion "${s.criterion}" must be a number`);
+    }
+    if (s.score < 0 || s.score > 100) {
+      throw new Error(
+        `Score for criterion "${s.criterion}" must be between 0 and 100`
+      );
+    }
+  }
+
+  // Ensure panel member hasn't already scored this student for this defence
+  const already = scoreSheet.entries.find(
+    (e) =>
+      e.student.toString() === studentId &&
+      e.panelMember.toString() === panelMemberId
+  );
+  if (already) {
+    throw new Error('You have already submitted scores for this student');
+  }
+
+  // Add the entry
+  scoreSheet.entries.push({
+    student: new Types.ObjectId(studentId),
+    panelMember: new Types.ObjectId(panelMemberId),
+    scores,
+  });
+
+  await scoreSheet.save();
+
+  // Return the updated sheet (lean or populated as you prefer)
+  return await ScoreSheet.findById(scoreSheet._id).lean();
+}
+
 
 
   /** Marks defence as ended

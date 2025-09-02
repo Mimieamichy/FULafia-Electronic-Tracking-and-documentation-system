@@ -14,6 +14,7 @@ import projectRoutes from './routes/project.routes'
 import studentRoutes from './routes/student.routes'
 import departmentRoutes from './routes/department.routes';
 import facultyRoutes from "./routes/faculty.routes";
+import defenceRoutes from './routes/defence.routes';
 
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/project', projectRoutes)
 app.use('/api/student', studentRoutes)
 app.use("/api/department", departmentRoutes);
 app.use("/api/faculty", facultyRoutes);
+app.use('/api/defence', defenceRoutes)
 
 
 export default app;
