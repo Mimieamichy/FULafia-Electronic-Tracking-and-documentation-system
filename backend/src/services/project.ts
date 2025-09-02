@@ -209,31 +209,48 @@ export default class ProjectService {
 
 
   static async getStudentProjects(userId: string) {
-    const student = await Student.findOne({user: userId});
-    if (!student) throw new Error("Student not found");
+  const student = await Student.findOne({ user: userId });
+  if (!student) throw new Error("Student not found");
 
-    //FORMAT Session YYYY/YYYY
-    const sessionId = student.session as any;
-    const session = await Session.findById(sessionId);
-    if (!session) throw new Error("Session not found");
-    student.session = session.sessionName as any;
+  // FORMAT Session YYYY/YYYY
+  const sessionId = student.session as any;
+  const session = await Session.findById(sessionId);
+  if (!session) throw new Error("Session not found");
+  student.session = session.sessionName as any;
 
 
-    const project = await Project.findOne({ student: student._id })
-      .populate('versions.uploadedBy', 'firstName lastName email')
-      .populate('versions.comments.author', 'firstName lastName email');
-
-    if (!project) throw new Error("Project not found");
-
-    project.versions.forEach(version => {
-      version.comments.forEach((comment: any) => {
-        const author = comment.author as any;
-        comment.set('authorName', `${author.firstName} ${author.lastName}`, { strict: false });
-      });
+  const project = await Project.findOne({ student: student._id })
+    .populate("versions.uploadedBy", "firstName lastName email")
+    .populate({
+      path: "versions.comments.author",
+      select: "firstName lastName email",
+      model: "User",
+      populate: {
+        path: "lecturer", // virtual we will define below
+        model: "Lecturer",
+        select: "title",
+      },
     });
 
-    return { student, project };
+  if (!project) throw new Error("Project not found");
 
-  }
+  project.versions.forEach((version) => {
+    version.comments.forEach((comment: any) => {
+      const author = comment.author as any;
+      const lecturer = (author as any)?.lecturer; // populated lecturer
+
+      comment.set(
+        "authorName",
+        `${lecturer?.title ? lecturer.title + " " : ""}${author.firstName} ${
+          author.lastName
+        }`,
+        { strict: false }
+      );
+    });
+  });
+
+  return { student, project };
+}
+
 
 }

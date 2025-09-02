@@ -1,50 +1,78 @@
-import { Defence, Student, User, Project } from '../models/index';
+import { Defence, Student, Project, ScoreSheet } from '../models/index';
 import { Types } from 'mongoose';
 import NotificationService from "../services/notification";
-
+import { STAGES } from "../utils/constants";
 
 export default class DefenceService {
+  /** Get all defences with student details
+   */
   static async getAllDefenses() {
     return Defence.find().populate('students');
   }
 
+  /**
+   * Schedule a new defence
+   * Creates empty score sheet with criteria
+   * Notifies panel members with student details & project links
+   */
   static async scheduleDefence(options: {
     stage: string;
+    program: "MSC" | "PHD";
     session: string;
     date: Date;
+    time: string;
     studentIds: (string | Types.ObjectId)[];
     panelMemberIds: (string | Types.ObjectId)[];
+    criteria: { name: string; weight: number }[];
   }) {
-    const { stage, session, date, studentIds, panelMemberIds } = options;
+    const { stage, session, date, time, studentIds, panelMemberIds, criteria, program } = options;
 
-    // Create new defence
+    // Create defence
     const defence = await Defence.create({
       stage,
+      program,
       session,
       date,
+      time,
       students: studentIds,
       panelMembers: panelMemberIds,
       started: false,
       ended: false,
     });
 
+
+    // Attach empty score sheet
+    await ScoreSheet.create({
+      defence: defence._id,
+      criteria,
+      entries: [], // no scores yet
+    });
+
+
     // Fetch students with projects
-    const students = await Student.find({ _id: { $in: studentIds } }).lean();
+    const students = await Student.find({ _id: { $in: studentIds } })
+      .populate("user", "firstName lastName")
+      .lean();
+
     const projects = await Project.find({ student: { $in: studentIds } }).lean();
 
-    // Build message with project latest version
+    // Build message
     const details = students.map((s) => {
       const proj = projects.find((p) => p.student.toString() === s._id.toString());
       const latest = proj?.versions?.[proj.versions.length - 1];
 
+      const fullName = `${(s.user as any)?.firstName ?? ""} ${(s.user as any)?.lastName ?? ""}`.trim();
+
       return `
-        Student: ${s.matricNo} (${s.level.toUpperCase()})
+        Matric No: ${s.matricNo}
+        Name: ${fullName}
         Topic: ${latest?.topic ?? "No project yet"}
         Latest File: ${latest?.fileUrl ?? "N/A"}
       `;
     });
 
-    const message = `You have been assigned to a ${stage} defence scheduled on ${date}.
+    const message = `You have been assigned to be part of the panel members for ${stage} defence scheduled on ${date}, 
+    Time: ${time}.
     Students & their latest projects:
     ${details.join("\n\n")}
     `;
@@ -58,6 +86,10 @@ export default class DefenceService {
     return defence;
   }
 
+  /**
+   * Marks defence as started
+   * Notifies panel members and supervisors
+   */
   static async startDefence(defenceId: string) {
     const defence = await Defence.findById(defenceId).populate("students");
     if (!defence) throw new Error("Defence not found");
@@ -66,22 +98,21 @@ export default class DefenceService {
     defence.started = true;
     await defence.save();
 
-    // Collect supervisors from student docs
+    // Supervisors
     const students = await Student.find({ _id: { $in: defence.students } }).lean();
     const supervisorIds = students
       .map((s) => s.majorSupervisor)
-      .filter((id) => !!id);
+      .filter((id): id is string => !!id)
+      .map((id) => new Types.ObjectId(id));
 
-    const message = `The ${defence.stage} defence has started. You may now score and comment on students.`;
+    const message = `The ${defence.stage} defence has started. You may now score and comment on students' project.`;
 
-    // Notify panel
     await NotificationService.createNotifications({
       userIds: defence.panelMembers,
       role: "panel",
       message,
     });
 
-    // Notify supervisors
     if (supervisorIds.length > 0) {
       await NotificationService.createNotifications({
         lecturerIds: supervisorIds,
@@ -93,57 +124,146 @@ export default class DefenceService {
     return defence;
   }
 
+  /**
+   * Panel member submits score for a student
+   */
+  static async submitScore(defenceId: string, panelMemberId: string, studentId: string, scores: { criterion: string; score: number }[]) {
+    const scoreSheet = await ScoreSheet.findOne({ defence: defenceId });
+    if (!scoreSheet) throw new Error('ScoreSheet not found for this defence');
 
-  static async endDefence(defenceId: string, scores: {
-    studentId: string;
-    score: number;
-  }[]) {
-    const defence = await Defence.findById(defenceId).populate("students");
+    // Ensure criteria are valid
+    const definedCriteria = scoreSheet.criteria.map((c) => c.name);
+    for (const s of scores) {
+      if (!definedCriteria.includes(s.criterion)) {
+        throw new Error(`Invalid criterion: ${s.criterion}`);
+      }
+    }
+
+    // Check if panelMember already scored this student
+    const already = scoreSheet.entries.find(
+      (e) => e.student.toString() === studentId && e.panelMember.toString() === panelMemberId
+    );
+    if (already) throw new Error('Panel member already submitted scores for this student');
+
+    // Add entry
+    scoreSheet.entries.push({
+      student: new Types.ObjectId(studentId),
+      panelMember: new Types.ObjectId(panelMemberId),
+      scores,
+    });
+
+    await scoreSheet.save();
+    return scoreSheet;
+  }
+
+
+  /** Marks defence as ended
+   * Computes average scores and updates Student.stageScores
+   * Notifies students that scores are available
+   */
+  static async endDefence(defenceId: string) {
+    const defence = await Defence.findById(defenceId);
     if (!defence) throw new Error("Defence not found");
     if (!defence.started) throw new Error("Defence has not started");
     if (defence.ended) throw new Error("Defence already ended");
 
-    // Update stageScores for each student
-    for (const entry of scores) {
-      const student = await Student.findById(entry.studentId);
+    const sheet = await ScoreSheet.findOne({ defence: defenceId });
+    if (!sheet) throw new Error("ScoreSheet not found");
+
+    // === Compute averages ===
+    const studentScores: Record<string, number[]> = {};
+
+    for (const entry of sheet.entries) {
+      const weightedTotal = entry.scores.reduce((sum, s) => {
+        const crit = sheet.criteria.find((c) => c.name === s.criterion);
+        if (!crit) return sum;
+        return sum + (s.score * crit.weight) / 100;
+      }, 0);
+
+      if (!studentScores[entry.student.toString()]) {
+        studentScores[entry.student.toString()] = [];
+      }
+      studentScores[entry.student.toString()].push(weightedTotal);
+    }
+
+    // === Update student.stageScores ===
+    for (const [studentId, arr] of Object.entries(studentScores)) {
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+
+      const student = await Student.findById(studentId);
       if (!student) continue;
 
       let key: keyof typeof student.stageScores;
-      switch (defence.stage) {
-        case "proposal":
-        case "firstSeminar":
-          key = "firstSeminar";
-          break;
-        case "secondSeminar":
-          key = "secondSeminar";
-          break;
-        case "thirdSeminar":
-          key = "thirdSeminar";
-          break;
-        case "external":
-          key = "externalDefense";
-          break;
-        default:
-          throw new Error(`Unknown defence stage: ${defence.stage}`);
+
+      if (defence.program === "MSC") {
+        switch (defence.stage) {
+          case STAGES.MSC.PROPOSAL:
+            key = "proposal";
+            break;
+          case STAGES.MSC.INTERNAL:
+            key = "internal";
+            break;
+          case STAGES.MSC.EXTERNAL:
+            key = "external";
+            break;
+          default:
+            throw new Error(`Unknown MSC defence stage: ${defence.stage}`);
+        }
+      } else if (defence.program === "PHD") {
+        switch (defence.stage) {
+          case STAGES.PHD.PROPOSAL_DEFENSE:
+            key = "proposalDefense";
+            break;
+          case STAGES.PHD.SECOND_SEMINAR:
+            key = "secondSeminar";
+            break;
+          case STAGES.PHD.INTERNAL_DEFENSE:
+            key = "internalDefense";
+            break;
+          case STAGES.PHD.EXTERNAL_SEMINAR:
+            key = "externalDefense";
+            break;
+          default:
+            throw new Error(`Unknown PHD defence stage: ${defence.stage}`);
+        }
+      } else {
+        throw new Error(`Unknown program: ${defence.program}`);
       }
 
-      // Average existing + new (if multiple panel scores are passed in)
-      if (!student.stageScores[key]) student.stageScores[key] = 0;
-      student.stageScores[key] = entry.score;
+      student.stageScores[key] = avg;
       await student.save();
     }
 
+    // === Mark defence as ended ===
     defence.ended = true;
     await defence.save();
 
-    // Notify students
-    await NotificationService.createNotifications({
-      studentIds: defence.students,
-      role: "student",
-      message: `Your ${defence.stage} defence has ended. Scores are now available.`,
-    });
-
     return defence;
   }
-}
 
+
+  static async createDeptScoreSheet(
+    criteria: { name: string; weight: number }[]
+  ) {
+    // Ensure weights add up to 100
+    const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
+    if (totalWeight !== 100) {
+      throw new Error("Criteria weights must add up to 100");
+    }
+
+    // Create a template ScoreSheet
+    const scoreSheet = await ScoreSheet.create({
+      criteria: criteria.map((c) => ({
+        name: c.name,
+        weight: c.weight,
+      })),
+      entries: [], // stays empty until a defence starts
+    });
+
+    return scoreSheet;
+  }
+
+
+
+
+}
