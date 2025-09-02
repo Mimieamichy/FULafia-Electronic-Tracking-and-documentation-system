@@ -1,4 +1,4 @@
-import { Project, Student, Lecturer, User } from '../models/index';
+import { Project, Student, Lecturer, User, Session } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
@@ -211,6 +211,13 @@ export default class ProjectService {
   static async getStudentProjects(userId: string) {
     const student = await Student.findOne({user: userId});
     if (!student) throw new Error("Student not found");
+
+    //FORMAT Session YYYY/YYYY
+    const sessionId = student.session as any;
+    const session = await Session.findById(sessionId);
+    if (!session) throw new Error("Session not found");
+    student.session = session.sessionName as any;
+
 
     const project = await Project.findOne({ student: student._id })
       .populate('versions.uploadedBy', 'firstName lastName email')
