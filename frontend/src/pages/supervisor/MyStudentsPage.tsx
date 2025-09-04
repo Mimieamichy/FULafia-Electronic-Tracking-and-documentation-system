@@ -11,12 +11,46 @@ import { useAuth } from "../AuthProvider";
 import { Download, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// ---------- add after imports ----------
+/** Convert a stage key like "proposal_defense" to "Proposal Defense" */
+const stageDisplayMap: Record<string, string> = {
+  start: "Start",
+  proposal: "Proposal",
+  "internal defense": "Internal Defense",
+  "external defense": "External Defense",
+  "proposal defense": "Proposal Defense",
+  "2nd seminar": "2nd Seminar",
+  "3rd seminar": "3rd Seminar",
+};
+
+function formatStage(raw: string | undefined | null): string {
+  if (!raw) return "Unknown";
+
+  const key = String(raw).trim().toLowerCase();
+
+  if (stageDisplayMap[key]) return stageDisplayMap[key];
+
+  // fallback: replace underscore/dash with space, split camelCase, then title-case each word
+  const withSpaces = key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+
+  return withSpaces
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+// ---------------------------------------
+
 type Student = {
   id: string; // derived from student._id
   matNo: string;
   name: string;
   topic: string; // project topic (fallback to project.latest.topic)
   stage: string;
+  stageKey?: string; // raw key from backend, e.g. "proposal_defense"
+  stageLabel?: string; // human-friendly label, e.g. "Proposal Defense"
+
   scores: {
     proposal: number | null;
     internal: number | null;
@@ -118,7 +152,7 @@ export default function MyStudentsPage() {
 
       console.log("Fetched students:", arr);
 
-      // normalization 
+      // normalization
       const normalized: Student[] = arr.map((item: any) => {
         const studentObj = item.student ?? item;
         const projectObj = item.project ?? undefined;
@@ -179,7 +213,12 @@ export default function MyStudentsPage() {
             projectObj?.topic ??
             studentObj.topic ??
             "",
+
+
           stage: (studentObj.currentStage ?? "").toLowerCase(),
+          stageKey: (studentObj.currentStage ?? "").toLowerCase(),
+          stageLabel: formatStage(studentObj.currentStage),
+
           approvalStatus: (studentObj.approvalStatus ?? "").toLowerCase(),
           scores: {
             proposal: typeof proposal === "number" ? proposal : null,
@@ -231,11 +270,8 @@ export default function MyStudentsPage() {
       return;
     }
 
-   
     fetchMyStudentsByDegree("msc");
     fetchMyStudentsByDegree("phd");
-
-
   }, [token]);
 
   // handle comment submission
@@ -243,7 +279,7 @@ export default function MyStudentsPage() {
   const handleComment = async () => {
     if (!selected || !commentText.trim()) return;
 
-    // compute real versionNumber 
+    // compute real versionNumber
     const versions = selected.projectVersions ?? [];
     const latestIdx =
       selected.latestVersionIndex ??
@@ -286,8 +322,6 @@ export default function MyStudentsPage() {
       // refresh the appropriate degree list so selected.comments is refreshed from server
       const degreeToRefresh = selectedDegree.toLowerCase() as "msc" | "phd";
       await fetchMyStudentsByDegree(degreeToRefresh);
-
-     
     } catch (err) {
       console.error("Error posting comment:", err);
     }
@@ -334,10 +368,9 @@ export default function MyStudentsPage() {
     studentId: string,
     degree: "msc" | "phd"
   ) => {
-    // normalize degree (in case button passed "MSc" / "PhD")
+    // normalize degree
     const deg = (degree ?? "msc").toLowerCase() as "msc" | "phd";
 
-    // mark as in-flight
     setApprovingIds((prev) => {
       const next = new Set(prev);
       next.add(studentId);
@@ -458,7 +491,7 @@ export default function MyStudentsPage() {
                   >
                     {stu.topic}
                   </td>
-                  <td className="p-3 border text-sm">{stu.stage}</td>
+                  <td className="p-3 border text-sm">{stu.stageLabel}</td>
                   <td className="p-3 border text-sm">
                     {stu.scores.proposal ?? "—"}
                   </td>

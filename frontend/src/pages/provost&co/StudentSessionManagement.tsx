@@ -15,13 +15,7 @@ import AssignSupervisorModal from "./AssignSupervisorModal";
 import SetDefenseModal from "./SetDefenseModal";
 import { mockSaveDefense } from "@/lib/mockDefenseService";
 import { useAuth } from "../AuthProvider";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 
 interface StudentFromAPI {
   _id: string;
@@ -49,6 +43,38 @@ interface Department {
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
+// normalize and map helpers (paste near top)
+const normalizeStage = (s?: string) =>
+  (s ?? "")
+    .toString()
+    .toLowerCase()
+    .replace(/[_\/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+// map human label -> backend key (adjust RHS if your backend uses different strings)
+const stageLabelToApiKeyMap: Record<string, string> = {
+  start: "start",
+  "proposal": "proposal",
+  "internal defense": "internal_defense",
+  "external defense": "external_defense",
+  "proposal defense": "proposal_defense",
+  "2nd seminar": "second_seminar",
+  "3rd seminar": "third_seminar",
+};
+
+const getStageKey = (label: string) => {
+  const norm = normalizeStage(label);
+  if (!norm) return "";
+  if (stageLabelToApiKeyMap[norm]) return stageLabelToApiKeyMap[norm];
+  return norm.replace(/\s+/g, "_"); // fallback
+};
+
+const getLabelFromKey = (key: string, labels: string[]) => {
+  const found = labels.find((l) => getStageKey(l) === key);
+  return found ?? key;
+};
+
 const StudentSessionManagement = () => {
   const { token, user } = useAuth(); // 'HOD' or 'PGC'
 
@@ -64,18 +90,18 @@ const StudentSessionManagement = () => {
 
   const defenseOptions = useMemo<string[]>(() => {
     return degreeTab === "MSc"
-      ? ["Start", "Proposal Defense", "Internal Defense", "External Defense"]
+      ? ["Start", "Proposal", "Internal Defense", "External Defense"]
       : [
           "Start",
-          "Proposal Defense / 1st Seminar",
+          "Proposal Defense",
           "2nd Seminar",
-          "3rd Seminar / Internal Defense",
+          "3rd Seminar",
           "External Defense",
         ];
   }, [degreeTab]);
 
-  // If you use stageFlow for advancing stages, you can just mirror defenseOptions:
-  const stageFlow = defenseOptions;
+  
+
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
@@ -107,12 +133,29 @@ const StudentSessionManagement = () => {
   const [totalStudents, setTotalStudents] = useState<number>(0);
 
   // Selected defense stage
+  // replace the old selectedDefense initialization block with this:
   const [selectedDefense, setSelectedDefense] = useState<string>(
-    isProvost ? defenseOptions[3] : defenseOptions[0]
+    isProvost
+      ? getStageKey(defenseOptions[Math.min(3, defenseOptions.length - 1)])
+      : getStageKey(defenseOptions[0])
   );
-  // track which student we’re acting on
-  const [actionModalOpen, setActionModalOpen] = useState(false);
-  const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+
+  const selectedDefenseLabel = getLabelFromKey(selectedDefense, defenseOptions);
+
+  // keep selectedDefense valid when defenseOptions (degreeTab) changes
+  useEffect(() => {
+    const apiOptions = defenseOptions.map((d) => getStageKey(d));
+    if (!apiOptions.includes(selectedDefense)) {
+      setSelectedDefense(
+        isProvost
+          ? getStageKey(defenseOptions[Math.min(3, defenseOptions.length - 1)])
+          : getStageKey(defenseOptions[0])
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defenseOptions, isProvost]);
+
+  
 
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [facultiesLoading, setFacultiesLoading] = useState(false);
@@ -180,8 +223,6 @@ const StudentSessionManagement = () => {
       setDepartmentsLoading(true);
       setDepartmentsError(null);
       try {
-        // If your API expects a query param, change to:
-        // const url = `${baseUrl}/department?facultyId=${selectedFacultyId}`;
         const url = `${baseUrl}/department/${selectedFacultyId}`;
         const res = await fetch(url, {
           headers: {
@@ -202,8 +243,7 @@ const StudentSessionManagement = () => {
             name: d.name ?? d.departmentName ?? "",
           }));
           setDepartments(mapped);
-          // optionally auto-select first department:
-          // setSelectedDepartmentForDefense(mapped[0]?._id ?? "");
+
           console.log("Fetched departments:", json);
         }
       } catch (err: any) {
@@ -307,6 +347,8 @@ const StudentSessionManagement = () => {
         return;
       }
 
+      const stageSeg = getStageKey(selectedDefense);
+
       // level segment (msc | phd)
       const levelSeg = degreeTab === "MSc" ? "msc" : "phd";
       // include page and limit as query params for server pagination
@@ -316,7 +358,9 @@ const StudentSessionManagement = () => {
         departmentName
       )}/${encodeURIComponent(
         selectedSession
-      )}?page=${page}&limit=${itemsPerPage}`;
+      )}?page=${page}&limit=${itemsPerPage}${
+        stageSeg ? `&stage=${encodeURIComponent(stageSeg)}` : ""
+      }`;
 
       console.log("Fetching students from:", url);
 
@@ -380,20 +424,11 @@ const StudentSessionManagement = () => {
     selectedSession, // only fetch when a session is selected
     page, // <-- re-run when page changes
     itemsPerPage,
+    selectedDefense, // re-run when defense stage changes
     toast, // re-run when limit changes (or when user changes page size)
   ]);
 
-  // open the modal for a given student
-  const openActionModal = (studentId: string) => {
-    setActionStudentId(studentId);
-    setActionModalOpen(true);
-  };
-
-  // close and clear selection
-  const closeActionModal = () => {
-    setActionModalOpen(false);
-    setActionStudentId(null);
-  };
+  
 
   // Panel candidates (stub)
   const panelCandidates = [
@@ -401,6 +436,7 @@ const StudentSessionManagement = () => {
     "Prof. Musa Ibrahim",
     "Engr. Christabel Henry",
   ];
+
   const handleDefenseSubmit = async (data: {
     stage: string;
     date: string;
@@ -465,28 +501,9 @@ const StudentSessionManagement = () => {
     }
   };
 
-  // Advance student stage handler
-  const advanceStudentStage = (studentId: string) => {
-    setStudents((prev) =>
-      prev.map((s) => {
-        if (s.id !== studentId) return s;
-        const currentIndex = stageFlow.findIndex(
-          (st) => st === selectedDefense
-        );
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= stageFlow.length) return s; // already final
-        return s;
-      })
-    );
-  };
+  
 
-  // when HOD clicks “Approve”
-  const handleApprove = () => {
-    if (actionStudentId) {
-      advanceStudentStage(actionStudentId);
-    }
-    closeActionModal();
-  };
+
 
   // Filter + paginate
   const filtered = useMemo(() => {
@@ -494,7 +511,9 @@ const StudentSessionManagement = () => {
     return (
       students
         // only those whose currentStage matches the dropdown
-        .filter((s) => s.currentStage === selectedDefense.toLowerCase())
+        // replace old filter .filter((s) => s.currentStage === selectedDefense.toLowerCase())
+        .filter((s) => (s.currentStage ?? "").toString() === selectedDefense)
+
         // then apply the existing search filter
         .filter((s) => {
           const fullName = s.user
@@ -547,32 +566,31 @@ const StudentSessionManagement = () => {
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-wrap">
         <h2 className="text-lg font-semibold text-gray-800">
-          {degreeTab} Ready for {selectedDefense}
+          {degreeTab} Ready for {selectedDefenseLabel}
         </h2>
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center w-full sm:w-auto">
           {/* Defense Stage */}
 
-          <div className="flex items-center gap-2">
-            <span className="text-gray-700 text-sm">Defense:</span>
-            <Select
-              value={selectedDefense}
-              onValueChange={(v) => {
-                setSelectedDefense(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={selectedDefense} />
-              </SelectTrigger>
-              <SelectContent>
-                {defenseOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={selectedDefense}
+            onValueChange={(v) => {
+              setSelectedDefense(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-48">
+              {/* show the human label */}
+              <SelectValue placeholder={selectedDefenseLabel} />
+            </SelectTrigger>
+            <SelectContent>
+              {defenseOptions.map((opt) => (
+                // value is the API key, label is the readable text
+                <SelectItem key={opt} value={getStageKey(opt)}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {/* Search */}
           <Input
             placeholder="Search Mat. No, Name or Topic"
@@ -616,7 +634,7 @@ const StudentSessionManagement = () => {
                 setDefenseModalOpen(true);
               }}
             >
-              Schedule {selectedDefense}
+              Schedule {selectedDefenseLabel}
             </Button>
           </div>
         )}
@@ -703,7 +721,7 @@ const StudentSessionManagement = () => {
               }}
               disabled={!selectedDepartmentForDefense}
             >
-              Schedule {selectedDefense}
+              Schedule {selectedDefenseLabel}
             </Button>
           </div>
         )}
@@ -728,10 +746,10 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">MAT NO.</th>
                   <th className="p-3 border">Full Name</th>
                   <th className="p-3 border">Topic</th>
-                  <th className="p-3 border">Score for {selectedDefense}</th>
+                  <th className="p-3 border">Score for {selectedDefenseLabel}</th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
-                  
+
                   <th className="p-3 border">Assign</th>
                 </>
               )}
@@ -760,8 +778,6 @@ const StudentSessionManagement = () => {
                 );
               }
 
-              
-
               return (
                 <tr
                   key={s._id}
@@ -782,7 +798,6 @@ const StudentSessionManagement = () => {
                     {s.minorSupervisor || "Not Assigned"}
                   </td>
 
-                  
                   <td className="p-3 border">
                     <Button
                       size="sm"
@@ -856,24 +871,7 @@ const StudentSessionManagement = () => {
         }
       />
 
-      <Dialog open={actionModalOpen} onOpenChange={closeActionModal}>
-        <DialogContent className="max-w-sm mx-auto">
-          <DialogHeader>
-            <DialogTitle>Approve Next Stage?</DialogTitle>
-          </DialogHeader>
-          <p className="px-6 text-gray-700">
-            Do you want to approve this student for the next stage or decline?
-          </p>
-          <DialogFooter className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={closeActionModal}>
-              Decline
-            </Button>
-            <Button className="bg-amber-700 text-white" onClick={handleApprove}>
-              Approve
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+     
     </div>
   );
 };
