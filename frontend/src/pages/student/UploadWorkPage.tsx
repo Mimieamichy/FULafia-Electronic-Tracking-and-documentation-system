@@ -81,6 +81,9 @@ export default function UploadWorkPage() {
         },
       });
 
+const payload = await res.json().catch(() => null);
+console.log("payload:", payload);
+      
       if (!res.ok) {
         console.warn("fetchProject non-OK", res.status);
         setProjectId(null);
@@ -90,7 +93,7 @@ export default function UploadWorkPage() {
         return;
       }
 
-      const payload = await res.json().catch(() => null);
+      
       const projectObj =
         payload?.project ?? payload?.data?.project ?? payload?.data ?? null;
       if (!projectObj) {
@@ -102,7 +105,7 @@ export default function UploadWorkPage() {
       }
 
       console.log("projectObj:", projectObj);
-      console.log("payload:", payload);
+      
 
       const versions: any[] = Array.isArray(projectObj.versions)
         ? projectObj.versions
@@ -383,11 +386,14 @@ export default function UploadWorkPage() {
       setPreviewFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
-      toast({
-        title: "Upload successful",
-        description: "Project uploaded.",
-        variant: "default",
-      });
+      if (res.ok) {
+        toast({
+          title: "Upload successful",
+          description: "Project uploaded.",
+          variant: "default",
+        });
+      }
+
       await fetchProject();
     } catch (err) {
       console.error("Upload error:", err);
@@ -477,8 +483,6 @@ export default function UploadWorkPage() {
                         Latest Version #{verNum}
                       </div>
                     </div>
-
-                    
                   </>
                 );
               })()
@@ -491,9 +495,7 @@ export default function UploadWorkPage() {
 
           {/* Comments (ALL versions aggregated) */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">
-              All Comments 
-            </p>
+            <p className="text-sm font-medium text-gray-700">All Comments</p>
 
             <div className="h-64 overflow-y-auto border rounded p-3 bg-gray-50 flex flex-col gap-2">
               {loadingProject ? (
