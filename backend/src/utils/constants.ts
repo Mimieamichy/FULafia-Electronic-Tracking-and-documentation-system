@@ -25,3 +25,6 @@ export const EXTERNAL_EXAMINER_STAGES = {
   PHD: ['external_defense']
 };
 
+//provost adds pg rep (internal and external) for msc 
+//then phd (all stages pgrep is added by provost)
+

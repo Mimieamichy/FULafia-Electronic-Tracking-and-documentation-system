@@ -2,6 +2,7 @@ import { Project, Student, Lecturer, User, Session } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
+import mongoose from 'mongoose';
 
 export default class ProjectService {
   static async uploadProject(userId: string, fileUrl: string) {
@@ -220,34 +221,30 @@ export default class ProjectService {
 
 
   const project = await Project.findOne({ student: student._id })
-    .populate("versions.uploadedBy", "firstName lastName email")
-    .populate({
-      path: "versions.comments.author",
-      select: "firstName lastName email",
-      model: "User",
-      populate: {
-        path: "lecturer", // virtual we will define below
-        model: "Lecturer",
-        select: "title",
-      },
-    });
+  .populate("versions.uploadedBy", "firstName lastName email")
+  .populate("versions.comments.author", "firstName lastName email");
 
-  if (!project) throw new Error("Project not found");
+if (!project) throw new Error("Project not found");
 
-  project.versions.forEach((version) => {
-    version.comments.forEach((comment: any) => {
-      const author = comment.author as any;
-      const lecturer = (author as any)?.lecturer; // populated lecturer
+// format comments with lecturer info
+for (const version of project.versions) {
+  for (const comment of version.comments as any[]) {
+    const author = comment.author as any;
 
-      comment.set(
-        "authorName",
-        `${lecturer?.title ? lecturer.title + " " : ""}${author.firstName} ${
-          author.lastName
-        }`,
-        { strict: false }
-      );
-    });
-  });
+    // lookup lecturer for this user
+    const lecturer = await mongoose.model("Lecturer").findOne(
+      { user: author._id },
+      "title"
+    );
+
+    comment.set(
+      "authorName",
+      `${lecturer?.title ? lecturer.title + " " : ""}${author.firstName} ${author.lastName}`,
+      { strict: false }
+    );
+  }
+}
+
 
   return { student, project };
 }
