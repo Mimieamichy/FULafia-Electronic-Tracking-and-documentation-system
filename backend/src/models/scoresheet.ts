@@ -22,7 +22,8 @@ export interface IScoreEntry {
  * Holds criteria definitions and panel scoring entries.
  */
 export interface IScoreSheet extends Document {
-  defence: mongoose.Types.ObjectId;
+  defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: true, unique: true }
+
   criteria: {
     name: string;
     weight: number; // percentage weight, sum = 100

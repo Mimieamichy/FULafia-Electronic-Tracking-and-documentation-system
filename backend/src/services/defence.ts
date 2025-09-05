@@ -1,5 +1,5 @@
 import { Defence, Student, Project, ScoreSheet } from '../models/index';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import NotificationService from "../services/notification";
 import { STAGES } from "../utils/constants";
 
@@ -43,11 +43,16 @@ export default class DefenceService {
 
     // Attach empty score sheet
     await ScoreSheet.create({
-      defence: defence._id,
+      defence: defence._id as Types.ObjectId,
       criteria,
       entries: [], // no scores yet
     });
 
+    const defenceId = defence._id as Types.ObjectId
+    
+
+  // Attach defence to global score sheet
+  await this.createDeptScoreSheet(criteria, defenceId);
 
     // Fetch students with projects
     const students = await Student.find({ _id: { $in: studentIds } })
@@ -287,26 +292,19 @@ export default class DefenceService {
   }
 
 
-  static async createDeptScoreSheet(
-    criteria: { name: string; weight: number }[]
-  ) {
-    // Ensure weights add up to 100
-    const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
-    if (totalWeight !== 100) {
-      throw new Error("Criteria weights must add up to 100");
-    }
+static async createDeptScoreSheet(criteria: { name: string; weight: number }[], defenceId: Types.ObjectId) {
+  const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
+  if (totalWeight !== 100) throw new Error("Criteria weights must add up to 100");
 
-    // Create a template ScoreSheet
-    const scoreSheet = await ScoreSheet.create({
-      criteria: criteria.map((c) => ({
-        name: c.name,
-        weight: c.weight,
-      })),
-      entries: [], // stays empty until a defence starts
-    });
+  const scoreSheet = await ScoreSheet.create({
+    criteria,
+    entries: [],
+    defence: defenceId,
+  });
 
-    return scoreSheet;
-  }
+  return scoreSheet;
+}
+
 
 
 
