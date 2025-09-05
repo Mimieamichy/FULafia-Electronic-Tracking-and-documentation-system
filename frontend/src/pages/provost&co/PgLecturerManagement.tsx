@@ -3,7 +3,6 @@ import { useState } from "react";
 import PgCoordinatorTab from "./PgCoordinatorTab";
 import LecturerTab from "./LecturerTab";
 import AddStudentForm from "./AddStudentForm";
-import ScoreSheetGenerator from "./ScoreSheetGenerator";
 import ExternalExaminerTab from "./ExternalExaminerTab";
 import ProvostCollegeRepManager from "./ProvostCollegeRepManager";
 import { useAuth } from "../AuthProvider";
@@ -12,6 +11,7 @@ const PgLecturerManagement = () => {
   const { user } = useAuth(); // 'HOD', 'PGC', or 'PROVOST'
   const isHod = user?.role?.toUpperCase() === "HOD";
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
+
   const isPgc = user?.role?.toUpperCase() === "PGCORD";
 
   // Default tab choice
@@ -25,8 +25,8 @@ const PgLecturerManagement = () => {
           {isHod
             ? "PG Coordinator & Lecturer Management"
             : isProvost
-            ? "External Examiners, Lecturers, College Reps & Score Sheets"
-            : "Student, Lecturer & Score Sheet Management"}
+            ? "External Examiners, Lecturers & College Reps "
+            : "Student & Lecturer"}
         </h1>
 
         {/* Tabs */}
@@ -78,16 +78,7 @@ const PgLecturerManagement = () => {
               >
                 Lecturers
               </button>
-              <button
-                onClick={() => setActiveTab("scoreSheet")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "scoreSheet"
-                    ? "border-amber-700 text-amber-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Score Sheet
-              </button>
+             
             </>
           )}
 
@@ -115,17 +106,7 @@ const PgLecturerManagement = () => {
                 Lecturers
               </button>
 
-              <button
-                onClick={() => setActiveTab("scoreSheet")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "scoreSheet"
-                    ? "border-amber-700 text-amber-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Score Sheet
-              </button>
-
+              
               {/* 🔽 Add this new tab button */}
               <button
                 onClick={() => setActiveTab("collegeReps")}
@@ -147,9 +128,7 @@ const PgLecturerManagement = () => {
         {isHod && activeTab === "pg" && <PgCoordinatorTab />}
         {activeTab === "lecturers" && <LecturerTab />}
         {!isHod && !isProvost && activeTab === "students" && <AddStudentForm />}
-        {(!isHod || isProvost) && activeTab === "scoreSheet" && (
-          <ScoreSheetGenerator />
-        )}
+       
         {isProvost && activeTab === "external" && <ExternalExaminerTab />}
         {isProvost && activeTab === "collegeReps" && (
           <ProvostCollegeRepManager />
