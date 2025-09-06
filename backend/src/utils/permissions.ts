@@ -82,6 +82,8 @@ export enum Permission {
   GET_HODS = 'get_hods',
   GET_PROVOST = 'get_provost',
   ADD_PROVOST = 'add_provost',
+  ADD_DEAN = 'add_dean',
+  GET_DEAN = 'get_dean',
   
 
   // General
@@ -201,7 +203,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GET_HODS,
     Permission.ADD_HOD,
     Permission.ADD_PROVOST,
-    Permission.GET_PROVOST
+    Permission.GET_PROVOST,
+    Permission.GET_DEAN,
+    Permission.ADD_DEAN,
   ],
   [Role.GENERAL]: [
     Permission.LOGIN,

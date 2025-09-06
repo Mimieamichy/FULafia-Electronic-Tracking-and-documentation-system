@@ -22,6 +22,16 @@ const addHodSchema = Joi.object({
 }); 
 
 
+const addDeanSchema = Joi.object({
+  email: Joi.string().email().required(),
+  title: Joi.string().required(),
+  firstName: Joi.string().required(),
+  lastName: Joi.string().required(),
+  role: Joi.string().required(),
+  staffId: Joi.string().required(),
+  faculty: Joi.string().required(),
+}); 
+
 const addLectuerSchema = Joi.object({
   email: Joi.string().email().required(),
   title: Joi.string().required(),
@@ -36,8 +46,10 @@ router.get('/', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), Le
 router.delete('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.deleteLecturer);
 router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addLectuerSchema), LecturerController.addLecturer);
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
+router.get('/get-dean', authenticate, checkPermission(Permission.GET_DEAN), LecturerController.getDeans);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
 router.post('/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addHOD);
+router.post('/add-dean', authenticate, checkPermission(Permission.ADD_DEAN), validateBody(addDeanSchema), LecturerController.addDean);
 router.post('/add-provost', authenticate, checkPermission(Permission.ADD_PROVOST), validateBody(addLectuerSchema), LecturerController.addProvost);
 router.get('/department', authenticate, checkPermission(Permission.VIEW_LECTURERS_BY_DEPARTMENT), LecturerController.getLecturerByDepartment);
 

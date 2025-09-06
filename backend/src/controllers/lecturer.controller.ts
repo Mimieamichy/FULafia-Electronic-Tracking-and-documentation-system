@@ -58,6 +58,17 @@ export default class LecturerController {
     }
   }
 
+    static async addDean(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { email, title, firstName, lastName, staffId, role, faculty } = req.body;
+      const userId = req.user?.id || ''
+      const dean = await LecturerService.addDean({ email, title, firstName, lastName, userId, staffId, role, faculty });
+      res.json({ success: true, data: dean });
+    } catch (err: any) {
+      console.log('Error adding Dean:', err);
+      res.status(400).json({ success: false, error: 'Failed to add Dean', message: err.message });
+    }
+  }
 
 
   static async addProvost(req: AuthenticatedRequest, res: Response) {
@@ -77,7 +88,18 @@ export default class LecturerController {
       res.json({ success: true, data: hods });
     } catch (err: any) {
       console.log(err);
-      res.status(400).json({ success: false, error: 'Failed to add HOD', message: err.message });
+      res.status(400).json({ success: false, error: 'Failed to get HOD', message: err.message });
+    }
+  }
+
+
+  static async getDeans(req: Request, res: Response) {
+    try {
+      const deans = await LecturerService.getDeans();
+      res.json({ success: true, data: deans });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to get Dean', message: err.message });
     }
   }
 
@@ -87,7 +109,7 @@ export default class LecturerController {
       res.json({ success: true, data: provost });
     } catch (err: any) {
       console.log(err);
-      res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
+      res.status(400).json({ success: false, error: 'Failed to get Provost', message: err.message });
     }
   }
 

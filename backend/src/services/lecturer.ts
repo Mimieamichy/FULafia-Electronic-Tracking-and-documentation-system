@@ -122,6 +122,51 @@ export default class LecturerService {
         });
     }
 
+
+    static async addDean(data: {
+        email: string;
+        title: string;
+        firstName: string;
+        lastName: string;
+        userId: string;
+        staffId: string;
+        role: string;
+        faculty: string;
+    }) {
+
+        //check if HOD has been added
+        const existingDean = await Lecturer.findOne({
+            department: data.faculty,
+        }).populate({
+            path: 'user',
+            match: { roles: Role.DEAN },
+        });
+
+        if (existingDean && existingDean.user) {
+            throw new Error(`A HOD has already been added for the ${data.faculty} Faculty.`);
+        }
+
+        const roles = [Role.DEAN, Role.GENERAL, Role.LECTURER];
+
+
+        // Create User with dynamic roles
+        const user = await User.create({
+            email: data.email,
+            password: data.email, 
+            roles,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        return await Lecturer.create({
+            user: user._id,
+            title: data.title,
+            faculty: data.faculty,
+            staffId: data.staffId,
+        });
+    }
+
+
     static async addProvost(data: {
         email: string;
         title: string;
@@ -157,6 +202,16 @@ export default class LecturerService {
             .populate({
                 path: 'user',
                 match: { roles: 'hod' }, // filters users whose roles include 'hod'
+            })
+            .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
+    }
+
+
+    static async getDeans() {
+        return Lecturer.find()
+            .populate({
+                path: 'user',
+                match: { roles: 'dean' }, // filters users whose roles include 'hod'
             })
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
