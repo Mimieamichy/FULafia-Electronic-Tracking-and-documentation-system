@@ -43,12 +43,15 @@ const addLectuerSchema = Joi.object({
 
 // ✅ Routes with authentication and permissions
 router.get('/', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), LecturerController.getAllLecturers);
+router.put('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.editLecturer);
 router.delete('/:id', authenticate, checkPermission(Permission.DELETE_LECTURER), LecturerController.deleteLecturer);
 router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addLectuerSchema), LecturerController.addLecturer);
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
 router.get('/get-dean', authenticate, checkPermission(Permission.GET_DEAN), LecturerController.getDeans);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
 router.post('/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addHOD);
+router.post('/add-external-examiner', authenticate, checkPermission(Permission.ADD_EXTERNAL_EXAMINER), LecturerController.addExternalExaminer);
+router.get('/get-external-examiner', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), LecturerController.getExternlExaminer);
 router.post('/add-dean', authenticate, checkPermission(Permission.ADD_DEAN), validateBody(addDeanSchema), LecturerController.addDean);
 router.post('/add-provost', authenticate, checkPermission(Permission.ADD_PROVOST), validateBody(addLectuerSchema), LecturerController.addProvost);
 router.get('/department', authenticate, checkPermission(Permission.VIEW_LECTURERS_BY_DEPARTMENT), LecturerController.getLecturerByDepartment);

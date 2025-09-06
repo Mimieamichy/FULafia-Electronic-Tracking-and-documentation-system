@@ -33,6 +33,16 @@ export default class LecturerController {
     }
   }
 
+   static async editLecturer(req: Request, res: Response) {
+    try {
+      const lecturerId = req.params.id;
+      const updateData = await LecturerService.editLecturer(lecturerId, req.body);
+      res.json({ success: true, data: updateData})
+    } catch (err: any) {
+      console.log("Error deleting lecturer:", err);
+      res.status(400).json({ success: false, error: 'Failed to edit lecturer', message: err.message });
+    }
+  }
   static async addLecturer(req: AuthenticatedRequest, res: Response) {
     try {
       const { email, title, firstName, lastName, staffId, role } = req.body;
@@ -82,6 +92,18 @@ export default class LecturerController {
     }
   }
 
+
+  static async addExternalExaminer(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { email, title, firstName, lastName, role } = req.body;
+      const external_examiner = await LecturerService.addExternalExaminer({ email, title, firstName, lastName, role });
+      res.json({ success: true, data: external_examiner });
+    } catch (err: any) {
+      console.log('Error adding external_examiner:', err);
+      res.status(400).json({ success: false, error: 'Failed to add external_examiner', message: err.message });
+    }
+  }
+
   static async getHODs(req: Request, res: Response) {
     try {
       const hods = await LecturerService.getHODs();
@@ -110,6 +132,18 @@ export default class LecturerController {
     } catch (err: any) {
       console.log(err);
       res.status(400).json({ success: false, error: 'Failed to get Provost', message: err.message });
+    }
+  }
+
+
+  
+  static async getExternlExaminer(req: Request, res: Response) {
+    try {
+      const external_examiner = await LecturerService.getExternalExaminer();
+      res.json({ success: true, data: external_examiner });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to get External Examiner', message: err.message });
     }
   }
 

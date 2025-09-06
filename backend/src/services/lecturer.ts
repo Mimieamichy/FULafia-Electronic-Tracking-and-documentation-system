@@ -7,6 +7,17 @@ export default class LecturerService {
         return Lecturer.find().populate("user");
     }
 
+    static async editLecturer(lecturerId: string, updateData: object) {
+    const updatedLecturer = await Lecturer.findByIdAndUpdate(
+        lecturerId, 
+        updateData, 
+        { new: true, runValidators: true }
+    );
+    if (!updatedLecturer) {
+        throw new Error("Lecturer not found");
+    }
+    return updatedLecturer;
+}
     static async deleteLecturer(lecturerId: string) {
         const lecturer = await Lecturer.findByIdAndDelete(lecturerId);
         if (!lecturer) {
@@ -197,6 +208,37 @@ export default class LecturerService {
         });
     }
 
+
+    
+    static async addExternalExaminer(data: {
+        email: string;
+        title: string;
+        firstName: string;
+        lastName: string;
+        role: string;
+    }) {
+
+
+        const roles = [Role.EXTERNAL_EXAMINER, Role.GENERAL, Role.LECTURER];
+
+        // Create User with dynamic roles
+        const user = await User.create({
+            email: data.email,
+            password: data.email, // for development; hash in pre-save
+            roles,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        return await Lecturer.create({
+            user: user._id,
+            title: data.title,
+            department: 'none',
+            faculty: 'none',
+            staffId: 'none',
+        });
+    }
+
     static async getHODs() {
         return Lecturer.find()
             .populate({
@@ -222,6 +264,15 @@ export default class LecturerService {
             .populate({
                 path: 'user',
                 match: { roles: 'provost' }, // filters users whose roles include 'provost'
+            })
+            .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
+    }
+
+     static async getExternalExaminer() {
+        return Lecturer.find()
+            .populate({
+                path: 'user',
+                match: { roles: 'external_examiner' }, // filters users whose roles include 'provost'
             })
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
