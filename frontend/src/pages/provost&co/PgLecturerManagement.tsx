@@ -3,8 +3,6 @@ import { useState } from "react";
 import PgCoordinatorTab from "./PgCoordinatorTab";
 import LecturerTab from "./LecturerTab";
 import AddStudentForm from "./AddStudentForm";
-import ExternalExaminerTab from "./ExternalExaminerTab";
-import ProvostCollegeRepManager from "./ProvostCollegeRepManager";
 import { useAuth } from "../AuthProvider";
 
 const PgLecturerManagement = () => {
@@ -15,7 +13,7 @@ const PgLecturerManagement = () => {
   const isPgc = user?.role?.toUpperCase() === "PGCORD";
 
   // Default tab choice
-  const defaultTab = isHod ? "pg" : isProvost ? "external" : "students";
+  const defaultTab = isHod ? "pg" : isProvost ? "lecturers" : "students";
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   return (
@@ -25,7 +23,7 @@ const PgLecturerManagement = () => {
           {isHod
             ? "PG Coordinator & Lecturer Management"
             : isProvost
-            ? "External Examiners, Lecturers & College Reps "
+            ? "External Examiners"
             : "Student & Lecturer"}
         </h1>
 
@@ -78,47 +76,20 @@ const PgLecturerManagement = () => {
               >
                 Lecturers
               </button>
-             
             </>
           )}
 
           {isProvost && (
-            <>
-              <button
-                onClick={() => setActiveTab("external")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "external"
-                    ? "border-amber-700 text-amber-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                External Examiners
-              </button>
-
-              <button
-                onClick={() => setActiveTab("lecturers")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "lecturers"
-                    ? "border-amber-700 text-amber-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Lecturers
-              </button>
-
-              
-              {/* 🔽 Add this new tab button */}
-              <button
-                onClick={() => setActiveTab("collegeReps")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "collegeReps"
-                    ? "border-amber-700 text-amber-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                College Reps
-              </button>
-            </>
+            <button
+              onClick={() => setActiveTab("lecturers")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "lecturers"
+                  ? "border-amber-700 text-amber-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              External Examiners
+            </button>
           )}
         </div>
       </div>
@@ -128,11 +99,6 @@ const PgLecturerManagement = () => {
         {isHod && activeTab === "pg" && <PgCoordinatorTab />}
         {activeTab === "lecturers" && <LecturerTab />}
         {!isHod && !isProvost && activeTab === "students" && <AddStudentForm />}
-       
-        {isProvost && activeTab === "external" && <ExternalExaminerTab />}
-        {isProvost && activeTab === "collegeReps" && (
-          <ProvostCollegeRepManager />
-        )}
       </div>
     </div>
   );

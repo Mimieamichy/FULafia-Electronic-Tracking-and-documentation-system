@@ -123,7 +123,7 @@ export default function DashboardShell() {
                 className="cursor-pointer hover:text-amber-700"
               >
                 {isProvost
-                  ? "External Examiners & Lecturers"
+                  ? "External Examiners"
                   : isHod
                   ? "PG Coordinators & Lecturers"
                   : "Students & Lecturers"}

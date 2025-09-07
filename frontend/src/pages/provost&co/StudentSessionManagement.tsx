@@ -16,7 +16,6 @@ import SetDefenseModal from "./SetDefenseModal";
 import { mockSaveDefense } from "@/lib/mockDefenseService";
 import { useAuth } from "../AuthProvider";
 
-
 interface StudentFromAPI {
   _id: string;
   matricNo: string;
@@ -41,6 +40,11 @@ interface Department {
   name: string;
 }
 
+// add a local Lecturer type (adjust fields if your API returns others)
+
+
+
+
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 // normalize and map helpers (paste near top)
@@ -55,7 +59,7 @@ const normalizeStage = (s?: string) =>
 // map human label -> backend key (adjust RHS if your backend uses different strings)
 const stageLabelToApiKeyMap: Record<string, string> = {
   start: "start",
-  "proposal": "proposal",
+  proposal: "proposal",
   "internal defense": "internal_defense",
   "external defense": "external_defense",
   "proposal defense": "proposal_defense",
@@ -70,6 +74,10 @@ const getStageKey = (label: string) => {
   return norm.replace(/\s+/g, "_"); // fallback
 };
 
+// after getStageKey(...) helper
+const EXTERNAL_DEFENSE_KEY = getStageKey("External Defense");
+
+
 const getLabelFromKey = (key: string, labels: string[]) => {
   const found = labels.find((l) => getStageKey(l) === key);
   return found ?? key;
@@ -81,6 +89,7 @@ const StudentSessionManagement = () => {
   const isHod = user?.role?.toUpperCase() === "HOD";
 
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
+  console.log("provost", isProvost)
 
   const { toast } = useToast();
   const noSessionWarnedRef = useRef(false);
@@ -100,7 +109,8 @@ const StudentSessionManagement = () => {
         ];
   }, [degreeTab]);
 
-  
+  const [panelCandidates, setPanelCandidates] = useState<Lecturer[]>([]);
+  const [loadingPanelCandidates, setLoadingPanelCandidates] = useState(false);
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
@@ -112,7 +122,6 @@ const StudentSessionManagement = () => {
   const [selectedDepartmentForDefense, setSelectedDepartmentForDefense] =
     useState<string>("");
 
-  const [sessionNames, setSessionNames] = useState<string[]>([]);
   const [selectedSession, setSelectedSession] = useState<string>("");
   // replace/alongside sessionNames state
   const [sessionsList, setSessionsList] = useState<
@@ -154,8 +163,6 @@ const StudentSessionManagement = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defenseOptions, isProvost]);
-
-  
 
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [facultiesLoading, setFacultiesLoading] = useState(false);
@@ -286,7 +293,6 @@ const StudentSessionManagement = () => {
         }));
 
         setSessionsList(mapped);
-        setSessionNames(mapped.map((m) => m.sessionName)); // optional, if you use sessionNames elsewhere
 
         // auto-select first session if none selected yet (optional)
         if (!selectedSession && mapped.length) {
@@ -428,14 +434,101 @@ const StudentSessionManagement = () => {
     toast, // re-run when limit changes (or when user changes page size)
   ]);
 
-  
+  // Fetch real panel candidates when the defense modal opens or department selection changes
+  useEffect(() => {
+    if (!defenseModalOpen) return;
 
-  // Panel candidates (stub)
-  const panelCandidates = [
-    "Dr. Florence Okeke",
-    "Prof. Musa Ibrahim",
-    "Engr. Christabel Henry",
-  ];
+    // choose department id: provost uses selectedDepartmentForDefense, others use user.department._id (if available)
+    const departmentId = isProvost
+      ? selectedDepartmentForDefense
+      : user?.department && typeof user.department === "string"
+      ? user.department
+      : user?.department?._id ?? "";
+
+    if (!departmentId) {
+      setPanelCandidates([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const fetchPanelCandidates = async () => {
+      try {
+        setLoadingPanelCandidates(true);
+        const url = `${baseUrl}/lecturer/department?departmentId=${encodeURIComponent(
+          departmentId
+        )}`;
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Failed to fetch lecturers (${res.status}): ${txt}`);
+        }
+
+        const json = await res.json();
+        // normalize the payload (adjust if your API shape differs)
+        console.log("Panel candidates raw response:", json);
+
+        const arr: any[] = Array.isArray(json.data)
+          ? json.data
+          : Array.isArray(json)
+          ? json
+          : [];
+        const mapped = arr.map((f) => {
+          // Prefer API top-level 'fullName' if present
+          const topFullName = f.fullName ?? f.name ?? "";
+
+          // Otherwise pull name from nested `user` object
+          const userFirst = f.user?.firstName ?? f.user?.fname ?? "";
+          const userLast = f.user?.lastName ?? f.user?.lname ?? "";
+          const userFull = `${userFirst} ${userLast}`.trim();
+
+          // Fallbacks: staffId or _id
+          const fallback = f.staffId ?? f._id ?? "";
+
+          return {
+            _id: f._id ?? f.id ?? fallback,
+            fullName: topFullName || userFull || fallback,
+            email: f.email ?? f.user?.email ?? "",
+            raw: f, // optionally keep original object for debugging / future use
+          } as Lecturer;
+        });
+        setPanelCandidates(mapped);
+        console.log("Fetched panel candidates:", mapped);
+        setPanelCandidates(mapped);
+      } catch (err: any) {
+        if (err.name === "AbortError") return;
+        console.error("fetchPanelCandidates error:", err);
+        toast({
+          title: "Could not load panel members",
+          description:
+            err?.message ??
+            "An error occurred while fetching panel candidates.",
+          variant: "destructive",
+        });
+        setPanelCandidates([]);
+      } finally {
+        setLoadingPanelCandidates(false);
+      }
+    };
+
+    fetchPanelCandidates();
+
+    return () => controller.abort();
+  }, [
+    defenseModalOpen,
+    selectedDepartmentForDefense,
+    isProvost,
+    user,
+    token,
+    toast,
+  ]);
 
   const handleDefenseSubmit = async (data: {
     stage: string;
@@ -500,10 +593,6 @@ const StudentSessionManagement = () => {
       console.error("Error assigning supervisor:", err);
     }
   };
-
-  
-
-
 
   // Filter + paginate
   const filtered = useMemo(() => {
@@ -625,7 +714,7 @@ const StudentSessionManagement = () => {
         </div>
 
         {/* Non‑Provost: schedule all stages except External Defense */}
-        {!isProvost && selectedDefense !== "External Defense" && (
+        {!isProvost && selectedDefense !== EXTERNAL_DEFENSE_KEY && (
           <div className="mt-2 sm:mt-0">
             <Button
               className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
@@ -639,7 +728,7 @@ const StudentSessionManagement = () => {
           </div>
         )}
 
-        {isProvost && selectedDefense === "External Defense" && (
+        {isProvost && selectedDefense === EXTERNAL_DEFENSE_KEY && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
             {/* Faculty Selector */}
             <Select
@@ -655,9 +744,9 @@ const StudentSessionManagement = () => {
               </SelectTrigger>
               <SelectContent>
                 {facultiesLoading ? (
-                  <SelectItem disabled>Loading faculties...</SelectItem>
+                  <SelectItem  disabled>Loading faculties...</SelectItem>
                 ) : facultiesError ? (
-                  <SelectItem disabled>{facultiesError}</SelectItem>
+                  <SelectItem  disabled>{facultiesError}</SelectItem>
                 ) : faculties.length ? (
                   faculties.map((f) => (
                     <SelectItem key={f._id} value={f._id}>
@@ -665,7 +754,7 @@ const StudentSessionManagement = () => {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem disabled>No faculties</SelectItem>
+                  <SelectItem  disabled>No faculties</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -746,7 +835,9 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">MAT NO.</th>
                   <th className="p-3 border">Full Name</th>
                   <th className="p-3 border">Topic</th>
-                  <th className="p-3 border">Score for {selectedDefenseLabel}</th>
+                  <th className="p-3 border">
+                    Score for {selectedDefenseLabel}
+                  </th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
 
@@ -870,8 +961,6 @@ const StudentSessionManagement = () => {
           })
         }
       />
-
-     
     </div>
   );
 };

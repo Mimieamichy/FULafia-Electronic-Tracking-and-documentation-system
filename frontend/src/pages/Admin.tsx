@@ -26,7 +26,7 @@ export default function Admin() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
- 
+  
 
   // 1️⃣ Inject / remove axios Authorization header when token changes
   useEffect(() => {
@@ -75,12 +75,12 @@ export default function Admin() {
             onClick={() => setIsAddModalOpen(true)}
             className="bg-amber-700 text-white"
           >
-            Add HOD / Provost
+            Add HOD, Dean or Provost
           </Button>
         </div>
       </main>
 
-      {/* Add HOD/Provost Modal */}
+      {/* Add HOD/Provost/Dean Modal */}
       <AddHodModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -90,7 +90,7 @@ export default function Admin() {
             return;
           }
 
-          // Build payload: drop faculty/department if adding a provost
+          // Build payload: include faculty for dean and hod; include department only for hod
           const body: Partial<NewHodData> = {
             title: payload.title,
             firstName: payload.firstName,
@@ -102,13 +102,19 @@ export default function Admin() {
               faculty: payload.faculty,
               department: payload.department,
             }),
+            ...(payload.role === "dean" && {
+              faculty: payload.faculty,
+            }),
           };
 
           // Choose endpoint based on role
           const endpoint =
             payload.role === "provost"
               ? "/lecturer/add-provost"
+              : payload.role === "dean"
+              ? "/lecturer/add-dean"
               : "/lecturer/add-hod";
+
           try {
             const res = await axios.post<{ data: any }>(
               `${baseUrl}${endpoint}`,
@@ -116,7 +122,7 @@ export default function Admin() {
             );
             toast({ title: "Success", description: "Staff added." });
             setIsAddModalOpen(false);
-            // Ideally trigger a reload in AdminStaffManagement via context or a callback
+            // TODO: trigger a reload of AdminStaffManagement (via context or callback) so the new Dean shows up immediately
           } catch (err) {
             console.error("Add staff failed", err);
             toast({

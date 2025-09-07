@@ -7,20 +7,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
 import { useToast } from "@/hooks/use-toast";
 
+// add a local Lecturer type (adjust fields if your API returns others)
+interface Lecturer {
+  _id: string;
+  fullName?: string;
+  staffId?: string;
+  user?: { firstName?: string; lastName?: string; email?: string };
+  email?: string;
+}
+
+// update props to accept Lecturer[] instead of string[]
 interface SetDefenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   defenseStage: string;
-  lecturers: string[];
-  /**
-   * onSubmit receives the schedule data including the rubric:
-   * { stage, date, time, panel, rubric: { criteria: Criterion[] } }
-   */
+  lecturers: Lecturer[]; // <-- changed from string[]
   onSubmit: (data: {
     stage: string;
     date: string;
     time: string;
-    panel: string[];
+    panel: string[]; // array of lecturer _id strings
     rubric: { criteria: Criterion[] };
   }) => Promise<void>;
 }
@@ -48,7 +54,8 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     if (!rubric) {
       toast({
         title: "Score sheet missing",
-        description: "You must publish and attach a score sheet before saving the defense.",
+        description:
+          "You must publish and attach a score sheet before saving the defense.",
         variant: "destructive",
       });
       // throw an error so upstream handlers / error boundaries can react
@@ -58,7 +65,8 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     if (!date || !time || panel.length === 0) {
       toast({
         title: "Missing fields",
-        description: "Please provide date, time and select at least one panel member.",
+        description:
+          "Please provide date, time and select at least one panel member.",
         variant: "destructive",
       });
       return;
@@ -99,7 +107,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">
           Schedule {defenseStage}
         </h2>
-
         <div className="mb-4">
           <Label htmlFor="date">Date</Label>
           <Input
@@ -110,7 +117,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
             className="mt-1 w-full"
           />
         </div>
-
         <div className="mb-4">
           <Label htmlFor="time">Time</Label>
           <Input
@@ -122,33 +128,55 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
           />
         </div>
 
+        {/* Panel Members */}
         <div className="mb-4">
           <Label>Panel Members</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-            {lecturers.map((lec) => (
-              <label
-                key={lec}
-                className="flex items-center gap-2 text-sm text-gray-700"
-              >
-                <Checkbox
-                  checked={panel.includes(lec)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setPanel((p) => [...p, lec]);
-                    } else {
-                      setPanel((p) => p.filter((x) => x !== lec));
-                    }
-                  }}
-                />
-                <span>{lec}</span>
-              </label>
-            ))}
-          </div>
+
+          {Array.isArray(lecturers) && lecturers.length === 0 ? (
+            <p className="text-sm text-gray-500 mt-2">
+              No lecturers found for this department
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              {lecturers.map((lec) => {
+                // compute display name safely (API nests name under user)
+                const displayName =
+                  lec.fullName ||
+                  `${lec.user?.firstName ?? ""} ${
+                    lec.user?.lastName ?? ""
+                  }`.trim() ||
+                  lec.staffId ||
+                  lec._id;
+
+                return (
+                  <label
+                    key={lec._id}
+                    className="flex items-center gap-2 text-sm text-gray-700"
+                  >
+                    <Checkbox
+                      checked={panel.includes(lec._id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setPanel((p) => Array.from(new Set([...p, lec._id])));
+                        } else {
+                          setPanel((p) => p.filter((id) => id !== lec._id));
+                        }
+                      }}
+                    />
+                    <span>{displayName}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Always show the score sheet builder (score sheet is required) */}
         <div className="mb-4 border rounded-md p-3 bg-gray-50">
-          <p className="text-sm mb-2">Create and publish the score sheet below. Publishing will attach it to this schedule (required).</p>
+          <p className="text-sm mb-2">
+            Create and publish the score sheet below. Publishing will attach it
+            to this schedule (required).
+          </p>
 
           <ScoreSheetGenerator
             initialCriteria={undefined}
@@ -159,11 +187,12 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
 
           {rubric && (
             <div className="mt-3 text-sm">
-              <strong>Attached score sheet:</strong> {rubric.criteria.length} criteria • Total: {rubric.criteria.reduce((s, c) => s + c.percentage, 0)}%
+              <strong>Attached score sheet:</strong> {rubric.criteria.length}{" "}
+              criteria • Total:{" "}
+              {rubric.criteria.reduce((s, c) => s + c.percentage, 0)}%
             </div>
           )}
         </div>
-
         <div className="flex justify-end gap-3 mt-6">
           <Button
             variant="outline"

@@ -1,8 +1,8 @@
 // src/hod&pgc/LecturerTab.tsx
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit2 } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -18,7 +18,7 @@ interface Lecturer {
   title: string;
   firstName: string;
   lastName: string;
-  staffId: string;
+  staffId?: string;
   email: string;
   role: string;
 }
@@ -27,6 +27,27 @@ interface Option {
   label: string;
   value: string;
 }
+
+
+// human-readable labels for role values
+const ROLE_LABELS: Record<string, string> = {
+  lecturer: "Lecturer",
+  pgcord: "PG Coordinator",
+  external_examiner: "External Examiner",
+  hod: "HOD"
+  // add other known roles here
+};
+
+function roleLabel(role?: string) {
+  if (!role) return "";
+  if (ROLE_LABELS[role]) return ROLE_LABELS[role];
+  // fallback: turn snake_case or kebab-case into Title Case
+  return role
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -52,6 +73,8 @@ export default function LecturerTab() {
 
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // form supports both add and edit. staffId is optional for external examiners
   const [form, setForm] = useState<Omit<Lecturer, "id">>({
     title: "",
     firstName: "",
@@ -60,17 +83,20 @@ export default function LecturerTab() {
     email: "",
     role: "",
   });
+
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
 
+  // edit flow: if editId is set, modal is in "edit" mode
+  const [editId, setEditId] = useState<string | null>(null);
+
   // Build role options based on HOD/Provost
   const roleOptions: Option[] = [
-    ...baseRoleOptions,
-    ...(isHod
+    ...(!isProvost ? baseRoleOptions : []),
+    ...(isHod && !isProvost
       ? [
           { label: "PG Coordinator", value: "pgcord" },
-          { label: "Dean", value: "dean" },
         ]
       : []),
     ...(isProvost
@@ -78,7 +104,6 @@ export default function LecturerTab() {
       : []),
   ];
 
-  // Load lecturers list
   useEffect(() => {
     if (!token) {
       toast({ title: "Not authorized", variant: "destructive" });
@@ -86,58 +111,95 @@ export default function LecturerTab() {
     }
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     loadLecturers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   async function loadLecturers() {
     try {
-      const res = await axios.get<{ data: any[] }>(
-        `${baseUrl}/lecturer/department`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      console.log("Loaded lecturers:", res.data.data);
-      setLecturers(
-        res.data.data.map((r) => ({
-          id: r._id,
-          title: r.title,
-          firstName: r.user.firstName,
-          lastName: r.user.lastName,
-          staffId: r.staffId,
-          email: r.user.email,
-          role: r.user.roles[0].toUpperCase(),
-        }))
-      );
+      if (!token) return;
+      // Provost: load external examiners
+      if (isProvost) {
+        // NOTE: backend path assumed: /lecturer/get-external-examiner (adjust if different)
+        const res = await axios.get<{ data: any[] }>(
+          `${baseUrl}/lecturer/get-external-examiner`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // defensive mapping
+        const arr = res.data?.data ?? [];
+        setLecturers(
+          arr.map((r: any) => ({
+            id: r._id ?? r.id,
+            title: r.title ?? r.user?.title ?? "",
+            firstName: r.user?.firstName ?? r.firstName ?? "",
+            lastName: r.user?.lastName ?? r.lastName ?? "",
+            staffId: r.staffId ?? "",
+            email: r.user?.email ?? r.email ?? "",
+            role: r.role ?? "external_examiner",
+          }))
+        );
+      } else {
+        // Non-provost: load departmental lecturers (existing behaviour)
+        const res = await axios.get<{ data: any[] }>(
+          `${baseUrl}/lecturer/department`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const arr = res.data?.data ?? [];
+        setLecturers(
+          arr.map((r: any) => ({
+            id: r._id ?? r.id,
+            title: r.title ?? r.user?.title ?? "",
+            firstName: r.user?.firstName ?? r.firstName ?? "",
+            lastName: r.user?.lastName ?? r.lastName ?? "",
+            staffId: r.staffId ?? "",
+            email: r.user?.email ?? r.email ?? "",
+            // try to read role from user.roles or r.role
+            role:
+              (Array.isArray(r.user?.roles) && r.user.roles[0]) ??
+              r.role ??
+              "lecturer",
+          }))
+        );
+      }
     } catch (err) {
       console.error("Load lecturers failed", err);
       toast({
         title: "Error",
-        description: "Failed to load lecturers.",
+        description: "Failed to load lecturers/external examiners.",
         variant: "destructive",
       });
     }
   }
 
   function openAdd() {
+    // For provost, open add external examiner only
     setForm({
       title: "",
       firstName: "",
       lastName: "",
       staffId: "",
       email: "",
-      role: "",
+      role: isProvost ? "external_examiner" : "",
     });
+    setEditId(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(l: Lecturer) {
+    setForm({
+      title: l.title ?? "",
+      firstName: l.firstName ?? "",
+      lastName: l.lastName ?? "",
+      staffId: l.staffId ?? "",
+      email: l.email ?? "",
+      role: l.role ?? "",
+    });
+    setEditId(l.id);
     setModalOpen(true);
   }
 
   async function handleSubmit() {
-    // Validate
-    for (const key of [
-      "title",
-      "firstName",
-      "lastName",
-      "staffId",
-      "email",
-      "role",
-    ] as const) {
+    // Validate common fields
+    for (const key of ["title", "firstName", "lastName", "email", "role"] as const) {
       if (!form[key]) {
         toast({
           title: "Validation Error",
@@ -150,30 +212,88 @@ export default function LecturerTab() {
 
     setLoading(true);
     try {
-      const res = await axios.post<{ data: any }>(
-        `${baseUrl}/lecturer/add-lecturer`,
-        form,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const raw = res.data.data;
-      setLecturers((prev) => [
-        ...prev,
-        {
-          id: raw._id,
-          title: raw.title,
-          firstName: raw.user.firstName,
-          lastName: raw.user.lastName,
-          staffId: raw.staffId,
-          email: raw.user.email,
-          role: raw.role,
-        },
-      ]);
-      setModalOpen(false);
+      // Edit flow
+      if (editId) {
+        // Use PUT /api/lecturer/:lecturerId
+        // Build payload - backend may accept partial updates
+        const payload: any = {
+          title: form.title,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          email: form.email,
+          role: form.role,
+        };
+        // only include staffId if present / applicable
+        if (form.staffId) payload.staffId = form.staffId;
+
+        await axios.put(`${baseUrl}/lecturer/${editId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // optimistic update locally
+        setLecturers((prev) =>
+          prev.map((p) => (p.id === editId ? { ...p, ...form } as Lecturer : p))
+        );
+        toast({ title: "Updated", description: "Lecturer updated." });
+        setModalOpen(false);
+        setEditId(null);
+        return;
+      }
+
+      // Add flow
+      if (isProvost) {
+        // Provost adds external examiner
+        // Payload must have email, title, firstName, lastName and role
+        const payload = {
+          email: form.email,
+          title: form.title,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          role: form.role || "external_examiner",
+        };
+        const res = await axios.post(`${baseUrl}/lecturer/add-external-examiner`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const raw = res.data?.data ?? res.data;
+        // Map created object defensively
+        const created: Lecturer = {
+          id: raw._id ?? raw.id,
+          title: raw.title ?? payload.title,
+          firstName: raw.user?.firstName ?? raw.firstName ?? payload.firstName,
+          lastName: raw.user?.lastName ?? raw.lastName ?? payload.lastName,
+          staffId: raw.staffId ?? "",
+          email: raw.user?.email ?? raw.email ?? payload.email,
+          role: raw.role ?? payload.role,
+        };
+        setLecturers((prev) => [...prev, created]);
+        toast({ title: "Added", description: "External Examiner added." });
+        setModalOpen(false);
+        return;
+      } else {
+        // Regular lecturer add (existing behaviour)
+        const res = await axios.post(`${baseUrl}/lecturer/add-lecturer`, form, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const raw = res.data?.data ?? res.data;
+        const created: Lecturer = {
+          id: raw._id ?? raw.id,
+          title: raw.title ?? form.title,
+          firstName: raw.user?.firstName ?? raw.firstName ?? form.firstName,
+          lastName: raw.user?.lastName ?? raw.lastName ?? form.lastName,
+          staffId: raw.staffId ?? form.staffId ?? "",
+          email: raw.user?.email ?? raw.email ?? form.email,
+          role: raw.role ?? form.role,
+        };
+        setLecturers((prev) => [...prev, created]);
+        toast({ title: "Added", description: "Lecturer added." });
+        setModalOpen(false);
+        return;
+      }
     } catch (err) {
-      console.error("Add lecturer failed", err);
+      console.error("Submit failed", err);
       toast({
         title: "Error",
-        description: "Failed to add lecturer.",
+        description: editId ? "Failed to update lecturer." : "Failed to add lecturer.",
         variant: "destructive",
       });
     } finally {
@@ -188,6 +308,7 @@ export default function LecturerTab() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLecturers((prev) => prev.filter((l) => l.id !== id));
+      toast({ title: "Deleted", description: "Lecturer removed." });
     } catch (err) {
       console.error("Delete failed", err);
       toast({
@@ -204,9 +325,11 @@ export default function LecturerTab() {
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Lecturers</h2>
+        <h2 className="text-xl font-semibold">
+          {isProvost ? "External Examiners" : "Lecturers"}
+        </h2>
         <Button onClick={openAdd} className="bg-amber-700 text-white">
-          Add Lecturer
+          {isProvost ? "Add External Examiner" : "Add Lecturer"}
         </Button>
       </div>
 
@@ -227,15 +350,26 @@ export default function LecturerTab() {
                 <td className="p-3 capitalize">
                   {l.title} {l.firstName} {l.lastName}
                 </td>
-                <td className="p-3">{l.staffId}</td>
+                <td className="p-3">{l.staffId ?? "-"}</td>
                 <td className="p-3">{l.email}</td>
-                <td className="p-3">{l.role}</td>
-                <td className="p-3 text-right">
+                <td className="p-3">{roleLabel(l.role)}</td>
+                <td className="p-3 text-right flex justify-end gap-2">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => openEdit(l)}
+                    disabled={loading}
+                    title="Edit"
+                  >
+                    <Edit2 size={16} />
+                  </Button>
+
                   <Button
                     variant="destructive"
                     size="icon"
                     onClick={() => setDeleteModalId(l.id)}
                     disabled={deletingId === l.id}
+                    title="Delete"
                   >
                     <Trash2 size={18} />
                   </Button>
@@ -245,12 +379,13 @@ export default function LecturerTab() {
             {!lecturers.length && (
               <tr>
                 <td colSpan={5} className="p-4 text-center text-gray-500">
-                  No lecturers found.
+                  No {isProvost ? "external examiners" : "lecturers"} found.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
         {deleteModalId && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-sm w-full">
@@ -267,7 +402,7 @@ export default function LecturerTab() {
                 </Button>
                 <Button
                   className="bg-red-600 text-white"
-                  onClick={() => confirmDelete(deleteModalId)}
+                  onClick={() => confirmDelete(deleteModalId!)}
                   disabled={deletingId === deleteModalId}
                 >
                   {deletingId === deleteModalId ? "Deleting…" : "Delete"}
@@ -278,11 +413,13 @@ export default function LecturerTab() {
         )}
       </div>
 
-      {/* Add Lecturer Modal */}
+      {/* Add / Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <h3 className="text-lg font-medium mb-4">Add Lecturer</h3>
+            <h3 className="text-lg font-medium mb-4">
+              {editId ? "Edit Lecturer" : isProvost ? "Add External Examiner" : "Add Lecturer"}
+            </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Title */}
@@ -331,7 +468,7 @@ export default function LecturerTab() {
                 />
               </div>
 
-              {/* Staff ID */}
+              {/* Staff ID - optional for external examiner */}
               <div>
                 <label className="block text-gray-700 mb-1">Staff ID</label>
                 <input
@@ -341,6 +478,7 @@ export default function LecturerTab() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, staffId: e.target.value }))
                   }
+                  placeholder={isProvost ? "(optional for external examiners)" : ""}
                 />
               </div>
 
@@ -381,7 +519,10 @@ export default function LecturerTab() {
             <div className="mt-6 flex justify-end space-x-3">
               <Button
                 variant="outline"
-                onClick={() => setModalOpen(false)}
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditId(null);
+                }}
                 disabled={loading}
               >
                 Cancel
@@ -391,12 +532,13 @@ export default function LecturerTab() {
                 className="bg-amber-700 text-white"
                 disabled={loading}
               >
-                Add
+                {loading ? "Saving…" : editId ? "Save" : "Add"}
               </Button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
