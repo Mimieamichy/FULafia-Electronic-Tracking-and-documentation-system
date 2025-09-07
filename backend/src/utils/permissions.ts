@@ -108,7 +108,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.EDIT_LECTURER,
     Permission.VIEW_LECTURERS,
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
-    Permission.CREATE_SESSION,
     Permission.VIEW_SESSIONS,
     Permission.VIEW_PROJECT_BY_DEPARTMENT,
     Permission.SCHEDULE_DEFENSE,
@@ -192,6 +191,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.SCHEDULE_DEFENSE,
     Permission.GENERATE_GENERAL_SCORE_SHEET,
     Permission.ADD_EXTERNAL_EXAMINER,
+    Permission.CREATE_SESSION,
   ],
   [Role.EXTERNAL_EXAMINER]: [
     Permission.APPROVE_LAST_DEFENSE,

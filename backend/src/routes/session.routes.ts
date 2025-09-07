@@ -17,8 +17,8 @@ const SessionSchema = Joi.object({
 
 
 router.post('/', authenticate, checkPermission(Permission.CREATE_SESSION), validateBody(SessionSchema), SessionController.createSession);
-router.get('/department', authenticate, checkPermission(Permission.VIEW_SESSIONS), SessionController.getSessionsByDept);
-router.get('/faculty', authenticate, checkPermission(Permission.VIEW_SESSIONS), SessionController.getSessionByFaculty);
+// router.get('/department', authenticate, checkPermission(Permission.VIEW_SESSIONS), SessionController.getSessionsByDept);
+// router.get('/faculty', authenticate, checkPermission(Permission.VIEW_SESSIONS), SessionController.getSessionByFaculty);
 router.get('/sessions', authenticate, checkPermission(Permission.VIEW_ALL_SESSIONS), SessionController.getAllSessions);
 
 
