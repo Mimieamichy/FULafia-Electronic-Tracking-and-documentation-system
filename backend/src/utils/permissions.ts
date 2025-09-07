@@ -73,6 +73,7 @@ export enum Permission {
 
   // Admin
   VIEW_ALL_LECTURERS = 'view_all_lecturers',
+  EDIT_LECTURER = 'edit_lecturer',
   DELETE_LECTURER = 'delete-lecturer',
   ADD_HOD = 'add_hod',
   VIEW_ALL_PROJECTS = 'view_all_projects',
@@ -104,6 +105,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [Role.LECTURER]: [],
   [Role.HOD]: [
     Permission.ADD_LECTURER,
+    Permission.EDIT_LECTURER,
     Permission.VIEW_LECTURERS,
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
     Permission.CREATE_SESSION,
@@ -131,6 +133,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
     Permission.ADD_LECTURER,
+    Permission.EDIT_LECTURER,
     Permission.DELETE_LECTURER,
     Permission.GENERATE_DEPT_SCORE_SHEET,
     Permission.ADD_STUDENTS,
@@ -181,6 +184,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   [Role.PROVOST]: [
     Permission.VIEW_ALL_LECTURERS,
+    Permission.EDIT_LECTURER,
+    Permission.DELETE_LECTURER,
     Permission.VIEW_ALL_STUDENTS,
     Permission.VIEW_ALL_SESSIONS,
     Permission.VIEW_SESSIONS,
@@ -195,6 +200,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_ALL_LECTURERS,
     Permission.DELETE_LECTURER,
     Permission.ADD_LECTURER,
+    Permission.EDIT_LECTURER,
     Permission.VIEW_ALL_SESSIONS,
     Permission.VIEW_ALL_STUDENTS,
     Permission.VIEW_ALL_PROJECTS,
