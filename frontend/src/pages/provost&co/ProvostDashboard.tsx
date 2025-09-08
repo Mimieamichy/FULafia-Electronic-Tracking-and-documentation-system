@@ -1,6 +1,7 @@
 // src/provost/ProvostDashboardOverview.tsx
 import React from "react";
 import { UserPlus, Calendar, Users, FileText, ActivityIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -42,7 +43,13 @@ const stats: StatCard[] = [
   },
 ];
 
-export default function ProvostDashboardOverview() {
+interface HodDashboardOverviewProps {
+  onCreateSessionClick: () => void;
+}
+
+export default function ProvostDashboardOverview({
+  onCreateSessionClick,
+}: HodDashboardOverviewProps) {
   return (
     <div className="space-y-6 px-4 sm:px-6">
       <div>
@@ -73,6 +80,24 @@ export default function ProvostDashboardOverview() {
           </div>
         ))}
       </div>
+
+      <div className="flex justify-end">
+          <Button
+            className="
+              bg-amber-700 text-white
+              w-full sm:w-auto
+              py-2 px-4
+              text-sm sm:text-base
+              rounded-md
+              transition
+              hover:bg-amber-800
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2
+            "
+            onClick={onCreateSessionClick}
+          >
+            + New Session
+          </Button>
+        </div>
     </div>
   );
 }

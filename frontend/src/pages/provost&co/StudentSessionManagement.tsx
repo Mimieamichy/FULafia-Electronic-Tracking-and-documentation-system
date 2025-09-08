@@ -15,6 +15,7 @@ import AssignSupervisorModal from "./AssignSupervisorModal";
 import SetDefenseModal from "./SetDefenseModal";
 import { mockSaveDefense } from "@/lib/mockDefenseService";
 import { useAuth } from "../AuthProvider";
+import AssignCollegeRepModal from "./AssignCollegeRepModal";
 
 interface StudentFromAPI {
   _id: string;
@@ -41,9 +42,6 @@ interface Department {
 }
 
 // add a local Lecturer type (adjust fields if your API returns others)
-
-
-
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -77,7 +75,6 @@ const getStageKey = (label: string) => {
 // after getStageKey(...) helper
 const EXTERNAL_DEFENSE_KEY = getStageKey("External Defense");
 
-
 const getLabelFromKey = (key: string, labels: string[]) => {
   const found = labels.find((l) => getStageKey(l) === key);
   return found ?? key;
@@ -89,7 +86,7 @@ const StudentSessionManagement = () => {
   const isHod = user?.role?.toUpperCase() === "HOD";
 
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
-  console.log("provost", isProvost)
+  console.log("provost", isProvost);
 
   const { toast } = useToast();
   const noSessionWarnedRef = useRef(false);
@@ -112,8 +109,11 @@ const StudentSessionManagement = () => {
   const [panelCandidates, setPanelCandidates] = useState<Lecturer[]>([]);
   const [loadingPanelCandidates, setLoadingPanelCandidates] = useState(false);
 
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false); // for HOD / PGC assign supervisor
+  const [assignCollegeRepOpen, setAssignCollegeRepOpen] = useState(false); // for Provost
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
+  const [assignCollegeRepLoading, setAssignCollegeRepLoading] = useState(false);
+
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
   const [defenseStage, setDefenseStage] = useState<string>(
     isProvost ? defenseOptions[3] : defenseOptions[0]
@@ -272,7 +272,7 @@ const StudentSessionManagement = () => {
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const response = await fetch(`${baseUrl}/session/department`, {
+        const response = await fetch(`${baseUrl}/session/sessions`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -286,6 +286,7 @@ const StudentSessionManagement = () => {
           : Array.isArray(json.data)
           ? json.data
           : [];
+        console.log("first sessions", arr);
 
         const mapped = arr.map((s) => ({
           _id: s._id ?? s.id ?? s.sessionId ?? "",
@@ -594,6 +595,68 @@ const StudentSessionManagement = () => {
     }
   };
 
+  // Assign college rep handler (for Provost)
+  const handleAssignCollegeRep = async (lecturerId: string) => {
+    if (!currentStudentId) {
+      // fallback: try to use selected student from context/row if available
+      console.warn("No currentStudentId set for assignCollegeRep");
+      return;
+    }
+
+    setAssignCollegeRepLoading(true);
+    try {
+      // Build payload expected by your backend
+      const payload = {
+        lecturerId, // lecturer unique id
+      };
+
+      const res = await fetch(`${baseUrl}/lecturer/assign-college-rep`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Assign failed (${res.status})`);
+      }
+
+      // success — update local UI if needed (optimistic update)
+      setStudents((prev) =>
+        prev.map((s) =>
+          s._id === currentStudentId
+            ? {
+                ...s,
+                collegeRep: {
+                  staffId: payload.lecturerId,
+                  
+                },
+              }
+            : s
+        )
+      );
+
+      toast({
+        title: "Assigned",
+        description: `user already assigned as college rep`,
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error("Assign college rep failed:", err);
+      toast({
+        title: "Assign failed",
+        description: err?.message ?? "Could not assign college rep",
+        variant: "destructive",
+      });
+    } finally {
+      setAssignCollegeRepLoading(false);
+      setAssignCollegeRepOpen(false); // close modal
+    }
+  };
+
   // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
@@ -744,9 +807,9 @@ const StudentSessionManagement = () => {
               </SelectTrigger>
               <SelectContent>
                 {facultiesLoading ? (
-                  <SelectItem  disabled>Loading faculties...</SelectItem>
+                  <SelectItem disabled>Loading faculties...</SelectItem>
                 ) : facultiesError ? (
-                  <SelectItem  disabled>{facultiesError}</SelectItem>
+                  <SelectItem disabled>{facultiesError}</SelectItem>
                 ) : faculties.length ? (
                   faculties.map((f) => (
                     <SelectItem key={f._id} value={f._id}>
@@ -754,7 +817,7 @@ const StudentSessionManagement = () => {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem  disabled>No faculties</SelectItem>
+                  <SelectItem disabled>No faculties</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -829,6 +892,7 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">Current Stage</th>
                   <th className="p-3 border">Department</th>
                   <th className="p-3 border">Faculty</th>
+                  <th className="p-3 border">Assign</th> {/* <-- added */}
                 </>
               ) : (
                 <>
@@ -865,6 +929,19 @@ const StudentSessionManagement = () => {
                     <td className="p-3 border">{currentStage}</td>
                     <td className="p-3 border">{s.department}</td>
                     <td className="p-3 border">{s.faculty}</td>
+                    {/* NEW: Assign column for Provost */}
+                    <td className="p-3 border">
+                      <Button
+                        size="sm"
+                        className="bg-amber-700 text-white"
+                        onClick={() => {
+                          setCurrentStudentId(s._id);
+                          setAssignCollegeRepOpen(true); // open the provost modal
+                        }}
+                      >
+                        Assign
+                      </Button>
+                    </td>
                   </tr>
                 );
               }
@@ -947,6 +1024,13 @@ const StudentSessionManagement = () => {
         onClose={() => setAssignModalOpen(false)}
         studentId={currentStudentId}
         onSubmit={handleAssign}
+      />
+
+      <AssignCollegeRepModal
+        isOpen={assignCollegeRepOpen}
+        onClose={() => setAssignCollegeRepOpen(false)}
+        studentId={currentStudentId} // optional: modal may use it or ignore
+        onAssigned={handleAssignCollegeRep} // <<< parent will do the POST
       />
 
       <SetDefenseModal
