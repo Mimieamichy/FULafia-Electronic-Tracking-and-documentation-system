@@ -8,6 +8,7 @@ export enum Role {
   MAJOR_SUPERVISOR = 'major_supervisor',
   PANEL_MEMBER = 'panel_member',
   FACULTY_PG_REP = 'faculty_pg_rep',
+  COLLEGE_REP = 'college_rep',
   INTERNAL_EXAMINER = 'internal_examiner',
   PROVOST = 'provost',
   EXTERNAL_EXAMINER = 'external_examiner',
@@ -40,9 +41,11 @@ export enum Permission {
   // PG Coord
   GENERATE_DEPT_SCORE_SHEET = 'generate_dept_score_sheet',
   ADD_STUDENTS = 'add_students',
+  EDIT_STUDENT = 'edit_student',
+  DELETE_STUDENT = 'delete_student',
   VIEW_ALL_STUDENTS = 'view_all_students',
 
-  
+
 
   // Dean
   VIEW_FACULTY_LECTURERS = 'view_faculty_lecturers',
@@ -67,6 +70,8 @@ export enum Permission {
   // Provost
   GENERATE_GENERAL_SCORE_SHEET = 'generate_general_score_sheet',
   ADD_EXTERNAL_EXAMINER = 'add_external_examiner',
+  ASSIGN_COLLEGE_REP = 'assign_college_rep',
+  GET_COLLEGE_REP = 'get_college_rep',
 
   // External Examiner
   APPROVE_LAST_DEFENSE = 'approve_last_defense',
@@ -85,7 +90,7 @@ export enum Permission {
   ADD_PROVOST = 'add_provost',
   ADD_DEAN = 'add_dean',
   GET_DEAN = 'get_dean',
-  
+
 
   // General
   LOGIN = 'login',
@@ -128,6 +133,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_COMMENTS,
     Permission.COMMENT,
     Permission.APPROVE_STUDENT_PROJECT,
+    Permission.EDIT_STUDENT,
+    Permission.DELETE_STUDENT,
+    Permission.GET_COLLEGE_REP,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -146,12 +154,16 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_COMMENTS,
     Permission.APPROVE_STUDENT_PROJECT,
     Permission.COMMENT,
-    
+    Permission.EDIT_STUDENT,
+    Permission.DELETE_STUDENT,
+    Permission.GET_COLLEGE_REP,
+
   ],
   [Role.DEAN]: [
-    Permission.VIEW_FACULTY_LECTURERS, 
+    Permission.VIEW_FACULTY_LECTURERS,
     Permission.VIEW_SESSIONS,
-    Permission.VIEW_PROJECT_BY_FACULTY
+    Permission.VIEW_PROJECT_BY_FACULTY,
+    Permission.GET_COLLEGE_REP,
   ],
   [Role.SUPERVISOR]: [
     Permission.VIEW_PROJECT_BY_STUDENT,
@@ -163,6 +175,14 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   [Role.MAJOR_SUPERVISOR]: [
     Permission.APPROVE_STUDENT_PROJECT
+  ],
+  [Role.COLLEGE_REP]: [
+    Permission.VIEW_PROJECT_BY_STUDENT,
+    Permission.DOWNLOAD_PROJECT,
+    Permission.VIEW_DEFENSE,
+    Permission.UPLOAD_PROJECT,
+    Permission.VIEW_COMMENTS,
+    Permission.COMMENT,
   ],
   [Role.PANEL_MEMBER]: [
     Permission.COMMENT,
@@ -192,6 +212,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GENERATE_GENERAL_SCORE_SHEET,
     Permission.ADD_EXTERNAL_EXAMINER,
     Permission.CREATE_SESSION,
+    Permission.ASSIGN_COLLEGE_REP,
+    Permission.GET_COLLEGE_REP,
   ],
   [Role.EXTERNAL_EXAMINER]: [
     Permission.APPROVE_LAST_DEFENSE,

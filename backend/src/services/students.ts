@@ -1,4 +1,4 @@
-import { Student, User, Lecturer, Project } from "../models/index";
+import { Student, User, Lecturer, Project, IUser } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateWithCache } from "../utils/paginatedCache"
@@ -80,22 +80,66 @@ export default class StudentService {
         return await student.save();
     }
 
-    static async editStudent(studentId: string, updateData: Partial<{
-        matricNo: string;
-        firstName: string;
-        lastName: string;
-        projectTopic: string
-    }>) {
-        const student = await Student.findById(studentId);
-        if (!student) {
-            throw new Error('Student not found');
-        }
-        const updatedStudent = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
-        return updatedStudent;
+
+static async editStudent(studentId: string, updateData: Partial<{
+    matricNo: string;
+    firstName: string;
+    lastName: string;
+    projectTopic: string;
+}>) {
+    // 1. Find the student to get the associated user's ID
+    const student = await Student.findById(studentId);
+    if (!student) {
+        throw new Error('Student not found');
     }
 
+    if (!student.user) {
+        throw new Error('Associated user ID is missing for this student');
+    }
+
+    const { firstName, lastName, matricNo, projectTopic } = updateData;
+
+    const studentUpdates: Partial<{ matricNo?: string; projectTopic?: string }> = {};
+    if (matricNo !== undefined) studentUpdates.matricNo = matricNo;
+    if (projectTopic !== undefined) studentUpdates.projectTopic = projectTopic;
+
+    const userUpdates: Partial<{ firstName?: string; lastName?: string }> = {};
+    if (firstName !== undefined) userUpdates.firstName = firstName;
+    if (lastName !== undefined) userUpdates.lastName = lastName;
+    const updatePromises = [];
+
+    // Add update promise only if there's data for it
+    if (Object.keys(studentUpdates).length > 0) {
+        updatePromises.push(
+            Student.findByIdAndUpdate(studentId, studentUpdates)
+        );
+    }
+
+    if (Object.keys(userUpdates).length > 0) {
+        updatePromises.push(
+            User.findByIdAndUpdate(student.user, userUpdates)
+        );
+    }
+
+    //Execute all updates
+    await Promise.all(updatePromises);
+    const updatedStudent = await Student.findById(studentId).populate('user');
+    return updatedStudent;
+}
+
     static async deleteStudent(studentId: string) {
-        return await Student.findByIdAndDelete(studentId);
+       const student = await Student.findById(studentId);
+
+    if (!student) {
+        throw new Error('Student not found');
+    }
+
+    const [deletedUser, deletedStudent] = await Promise.all([
+        User.findByIdAndDelete(student.user),
+        Student.findByIdAndDelete(studentId)
+    ]);
+
+    return { deletedUser, deletedStudent };
     }
 
     static async getAllMscStudentsInDepartment(
@@ -323,6 +367,36 @@ export default class StudentService {
         return student;
     }
 
+    static async assignCollegeRep(staffId: string, studentId: string) {
+        // Find the lecturer by staffId
+        const lecturer = await Lecturer.findOne({ staffId }).populate('user');
+        if (!lecturer) {
+            throw new Error('Lecturer not found');
+        }
 
+        // Find associated user (populated)
+        const user = lecturer.user as any
+        // Check if the lecturer is already a college rep
+        if (user?.roles?.includes('college_rep')) {
+            throw new Error('This lecturer is already a college representative');
+        }
+        // Update the user roles to include 'college_rep'
+        const updatedLecturer = await User.findByIdAndUpdate(
+            user._id,
+            { $addToSet: { roles: 'college_rep' } }, // Use $addToSet to avoid duplicates
+            { new: true }
+        );
+
+        //update the student collection to set the collegeRep field
+        const updatedStudent = await Student.findOneAndUpdate(
+            { _id: studentId },
+            { $set: { collegeRep: `${lecturer.title ?? ''} ${user.firstName} ${user.lastName}`.trim() } },
+            { new: true }
+        );
+
+        return {updatedStudent, updatedLecturer};
+    }
+
+    
 
 }

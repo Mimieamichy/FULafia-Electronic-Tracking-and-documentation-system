@@ -18,6 +18,7 @@ export interface IStudent extends Document {
   majorSupervisor?: string;
   minorSupervisor?: string;
   internalExaminer?: string;
+  collegeRep?: string;
   projectTopic?: string;
   stageScores: IStageScores;
   approvalStatus: 'pending' | 'approved' | 'rejected';
@@ -42,6 +43,7 @@ const studentSchema = new Schema<IStudent>(
     majorSupervisor: { type: String, default: '' },
     minorSupervisor: { type: String, default:  ''},
     internalExaminer: { type: String, default: '' },
+    collegeRep: { type: String, default: '' },
     projectTopic: { type: String, default: '' },
     stageScores: { type: stageScoresSchema, default: () => ({}) },
     approvalStatus: {
