@@ -64,10 +64,12 @@ export default function DashboardShell() {
     switch (currentView) {
       case "overview":
         return isProvost ? (
-          <ProvostDashboardOverview />
+          <ProvostDashboardOverview
+            onCreateSessionClick={() => setSessionModalOpen(true)}
+          />
         ) : (
           <HodDashboardOverview
-            onCreateSessionClick={() => setSessionModalOpen(true)}
+           
           />
         );
       case "pgLecturer":
@@ -200,7 +202,7 @@ export default function DashboardShell() {
       <main className="container mx-auto px-4 py-8">{renderView()}</main>
 
       {/* Create Session Modal (HOD only) */}
-      {isHod && (
+      {isHod || isProvost && (
         <CreateSession
           isOpen={sessionModalOpen}
           onClose={() => setSessionModalOpen(false)}
@@ -211,7 +213,7 @@ export default function DashboardShell() {
       )}
 
       {/* Reset Password Modal */}
-       <UpdatePasswordModal
+      <UpdatePasswordModal
         isOpen={resetModalOpen}
         onClose={() => setResetModalOpen(false)}
       />
@@ -227,10 +229,7 @@ export default function DashboardShell() {
             <Button variant="outline" onClick={() => setLogoutModalOpen(false)}>
               Cancel
             </Button>
-            <Button
-              className="bg-red-600 text-white"
-               onClick={handleLogout}
-            >
+            <Button className="bg-red-600 text-white" onClick={handleLogout}>
               Logout
             </Button>
           </DialogFooter>

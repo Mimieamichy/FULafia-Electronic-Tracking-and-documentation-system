@@ -38,7 +38,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose }) => {
     const fetchLatestSession = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`${baseUrl}/session/department`, {
+        const response = await fetch(`${baseUrl}/session/sessions`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

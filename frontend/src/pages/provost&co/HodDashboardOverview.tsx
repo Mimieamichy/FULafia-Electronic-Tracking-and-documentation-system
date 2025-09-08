@@ -32,18 +32,13 @@ const statData: StatItem[] = [
   },
 ];
 
-interface HodDashboardOverviewProps {
-  onCreateSessionClick: () => void;
-}
 
-export default function HodDashboardOverview({
-  onCreateSessionClick,
-}: HodDashboardOverviewProps) {
+
+export default function HodDashboardOverview() {
   const { user } = useAuth();
-  const isHod = user?.role?.toUpperCase() === "HOD";
-
+ 
   // Fallback if name isn't available
-  const displayName = user?.userName  || "HOD";
+  const displayName = user?.userName  || "User";
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 max-w-screen-lg mx-auto">
@@ -82,26 +77,7 @@ export default function HodDashboardOverview({
         ))}
       </div>
 
-      {/* + New Session Button */}
-      {isHod && (
-        <div className="flex justify-end">
-          <Button
-            className="
-              bg-amber-700 text-white
-              w-full sm:w-auto
-              py-2 px-4
-              text-sm sm:text-base
-              rounded-md
-              transition
-              hover:bg-amber-800
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2
-            "
-            onClick={onCreateSessionClick}
-          >
-            + New Session
-          </Button>
-        </div>
-      )}
+     
     </div>
   );
 }
