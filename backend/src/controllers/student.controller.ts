@@ -190,7 +190,7 @@ static async editStudent(req: AuthenticatedRequest, res: Response) {
 
   static async assignCollegeRep(req: AuthenticatedRequest, res: Response) {
     try {
-      const { studentId, staffId } = req.body;
+      const { studentId, staffId } = req.params;
       const {updatedLecturer, updatedStudent} = await StudentService.assignCollegeRep(staffId, studentId)
       res.status(200).json({ success: true, data: updatedStudent, updatedLecturer });
     } catch (err: any) {
