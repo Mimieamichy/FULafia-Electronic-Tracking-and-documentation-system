@@ -369,7 +369,7 @@ static async editStudent(studentId: string, updateData: Partial<{
 
     static async assignCollegeRep(staffId: string, studentId: string) {
         // Find the lecturer by staffId
-        const lecturer = await Lecturer.findOne({ staffId }).populate('user');
+        const lecturer = await Lecturer.findOne({ _id: staffId }).populate('user');
         if (!lecturer) {
             throw new Error('Lecturer not found');
         }
