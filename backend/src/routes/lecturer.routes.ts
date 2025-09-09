@@ -55,5 +55,6 @@ router.get('/get-external-examiner', authenticate, checkPermission(Permission.VI
 router.post('/add-dean', authenticate, checkPermission(Permission.ADD_DEAN), validateBody(addDeanSchema), LecturerController.addDean);
 router.post('/add-provost', authenticate, checkPermission(Permission.ADD_PROVOST), validateBody(addLectuerSchema), LecturerController.addProvost);
 router.get('/department', authenticate, checkPermission(Permission.VIEW_LECTURERS_BY_DEPARTMENT), LecturerController.getLecturerByDepartment);
+router.get('/faculty', authenticate, checkPermission(Permission.VIEW_FACULTY_LECTURERS), LecturerController.getLecturerByFaculty);
 
 export default router;

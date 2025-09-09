@@ -168,6 +168,33 @@ static async editStudent(studentId: string, updateData: Partial<{
         );
     }
 
+
+    static async getAllMscStudentsInFaculty(
+        faculty: string,
+        userId: string,
+        session: Types.ObjectId,
+        page = 1,
+        limit = 10
+    ) {
+        if (!faculty || faculty.trim() === '') {
+            const lecturer = await LecturerService.getLecturerById(userId);
+            // If lecturer not found, default to "none"
+            faculty = lecturer?.faculty ?? 'none';
+        }
+        const level = "msc"
+
+        // Use pagination + cache utility
+        return paginateWithCache(
+            Student,
+            page,
+            limit,
+            `students:faculty=${faculty}`,
+            120, // cache TTL in seconds
+            { faculty, level, session },
+            "user"
+        );
+    }
+
     static async getAllPhdStudentsInDepartment(
         department: string,
         userId: string,
@@ -191,6 +218,33 @@ static async editStudent(studentId: string, updateData: Partial<{
             `students:dept=${department}`,
             120, // cache TTL in seconds
             { department, level, session },
+            "user"
+        );
+    }
+
+
+    static async getAllPhdStudentsInFaculty(
+        faculty: string,
+        userId: string,
+        session: Types.ObjectId,
+        page = 1,
+        limit = 10
+    ) {
+        if (!faculty || faculty.trim() === '') {
+            const lecturer = await LecturerService.getLecturerById(userId);
+            // If lecturer not found, default to "none"
+            faculty = lecturer?.faculty ?? 'none';
+        }
+        const level = "phd"
+
+        // Use pagination + cache utility
+        return paginateWithCache(
+            Student,
+            page,
+            limit,
+            `students:faculty=${faculty}`,
+            120, // cache TTL in seconds
+            { faculty, level, session },
             "user"
         );
     }

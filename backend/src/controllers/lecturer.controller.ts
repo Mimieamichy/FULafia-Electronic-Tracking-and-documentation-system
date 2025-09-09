@@ -155,7 +155,19 @@ export default class LecturerController {
       res.json({ success: true, data: provost });
     } catch (err: any) {
       console.log(err);
-      res.status(400).json({ success: false, error: 'Failed to add Provost', message: err.message });
+      res.status(400).json({ success: false, error: 'Failed to get departmental lecturers', message: err.message });
+    }
+  }
+
+
+  static async getLecturerByFaculty(req: AuthenticatedRequest, res: Response){
+    try {
+      const userId = req.user?.id || '';
+      const provost = await LecturerService.getLecturerByFaculty(userId);
+      res.json({ success: true, data: provost });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to get faculty lecturers', message: err.message });
     }
   }
 }

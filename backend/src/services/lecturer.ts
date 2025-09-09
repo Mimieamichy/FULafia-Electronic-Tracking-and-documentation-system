@@ -209,7 +209,6 @@ export default class LecturerService {
     }
 
 
-    
     static async addExternalExaminer(data: {
         email: string;
         title: string;
@@ -284,6 +283,16 @@ export default class LecturerService {
         }
 
         return Lecturer.find({ department: currentLecturer.department }).populate('user');
+    }
+
+
+     static async getLecturerByFaculty(userId: string) {
+        const currentLecturer = await Lecturer.findOne({ user: userId });
+        if (!currentLecturer || !currentLecturer.faculty) {
+            throw new Error("Lecturer not found or faculty not set");
+        }
+
+        return Lecturer.find({ department: currentLecturer.faculty }).populate('user');
     }
 
     static async getLecturerById(userId: string) {

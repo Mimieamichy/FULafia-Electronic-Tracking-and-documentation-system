@@ -65,7 +65,39 @@ export default class StudentController {
     console.error(err);
     res.status(400).json({
       success: false,
-      error: 'Failed to get students',
+      error: 'Failed to get MSC students in department',
+      message: err.message,
+    });
+  }
+}
+
+
+
+static async getAllMscStudentsInFaculty(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { faculty, session} = req.params;
+    const userId = req.user?.id || '';
+
+    // Query params for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sessionId = new Types.ObjectId(session);
+    
+
+    const students = await StudentService.getAllMscStudentsInFaculty(
+      faculty,
+      userId,
+      sessionId,
+      page,
+      limit
+    );
+
+    res.status(200).json({ success: true, ...students });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get MSC students in faculty',
       message: err.message,
     });
   }
@@ -96,7 +128,38 @@ static async getAllPhdStudentsByDepartment(req: AuthenticatedRequest, res: Respo
     console.error(err);
     res.status(400).json({
       success: false,
-      error: 'Failed to get students',
+      error: 'Failed to PHD get students in department',
+      message: err.message,
+    });
+  }
+}
+
+
+static async getAllPhdStudentsInFaculty(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { faculty, session} = req.params;
+    const userId = req.user?.id || '';
+
+    // Query params for pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sessionId = new Types.ObjectId(session);
+    
+
+    const students = await StudentService.getAllPhdStudentsInFaculty(
+      faculty,
+      userId,
+      sessionId,
+      page,
+      limit
+    );
+
+    res.status(200).json({ success: true, ...students });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get PHD students in faculty',
       message: err.message,
     });
   }
@@ -134,6 +197,7 @@ static async getStudentsBySupervisorMsc(req: AuthenticatedRequest, res: Response
     }
   }
 
+  
 
   
 static async getStudentsBySupervisorPhd(req: AuthenticatedRequest, res: Response) {
@@ -202,4 +266,6 @@ static async editStudent(req: AuthenticatedRequest, res: Response) {
       });
     }
   }
+
+
 }
