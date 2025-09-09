@@ -596,27 +596,33 @@ const StudentSessionManagement = () => {
   };
 
   // Assign college rep handler (for Provost)
+
   const handleAssignCollegeRep = async (lecturerId: string) => {
+    if (!lecturerId) return;
     if (!currentStudentId) {
-      // fallback: try to use selected student from context/row if available
-      console.warn("No currentStudentId set for assignCollegeRep");
+      toast({
+        title: "No student selected",
+        description: "Please select a student before assigning.",
+        variant: "destructive",
+      });
       return;
     }
 
     setAssignCollegeRepLoading(true);
     try {
-      // Build payload expected by your backend
-      const payload = {
-        lecturerId, // lecturer unique id
-      };
+      const url = `${baseUrl}/student/assign-college-rep/${encodeURIComponent(
+        lecturerId
+      )}/${encodeURIComponent(currentStudentId)}`;
+      // debug log (optional)
+      // console.log("AssignCollegeRep POST ->", url);
 
-      const res = await fetch(`${baseUrl}/lecturer/assign-college-rep`, {
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(payload),
+        // body: JSON.stringify({}) // add if backend expects a body
       });
 
       if (!res.ok) {
@@ -624,15 +630,15 @@ const StudentSessionManagement = () => {
         throw new Error(text || `Assign failed (${res.status})`);
       }
 
-      // success — update local UI if needed (optimistic update)
+      // success: update local student list UI if needed (optimistic update)
       setStudents((prev) =>
         prev.map((s) =>
           s._id === currentStudentId
             ? {
                 ...s,
                 collegeRep: {
-                  staffId: payload.lecturerId,
-                  
+                  staffId: lecturerId,
+                  // you may also store staffName if you have it; here we keep id only
                 },
               }
             : s
@@ -641,14 +647,14 @@ const StudentSessionManagement = () => {
 
       toast({
         title: "Assigned",
-        description: `user already assigned as college rep`,
+        description: "College representative assigned successfully.",
         variant: "default",
       });
     } catch (err: any) {
-      console.error("Assign college rep failed:", err);
+      console.error("handleAssignCollegeRep error:", err);
       toast({
         title: "Assign failed",
-        description: err?.message ?? "Could not assign college rep",
+        description: err?.message ?? "Could not assign college representative.",
         variant: "destructive",
       });
     } finally {

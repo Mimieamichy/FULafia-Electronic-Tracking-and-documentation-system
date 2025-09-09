@@ -192,6 +192,7 @@ export default function AssignCollegeRepModal({
           raw: l,
         } as SimpleLecturer;
       });
+      console.log("[AssignCollegeRep] fetched lecturers:", mapped);
 
       setAllLecturers(mapped);
       setLecturers(mapped); // show all by default
@@ -328,7 +329,9 @@ export default function AssignCollegeRepModal({
         </div>
 
         <div className="flex gap-2 mb-4">
-         <Button onClick={applyFilters} className="bg-amber-700 text-white">Search</Button>
+          <Button onClick={applyFilters} className="bg-amber-700 text-white">
+            Search
+          </Button>
 
           <Button
             variant="outline"
