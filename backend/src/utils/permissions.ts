@@ -50,6 +50,7 @@ export enum Permission {
   // Dean
   VIEW_FACULTY_LECTURERS = 'view_faculty_lecturers',
   VIEW_PROJECT_BY_FACULTY = 'view_project_by_faculty',
+  ASSIGN_FACULTY_REP = 'assign_faculty_rep',
 
   // Supervisor
   VIEW_PROJECT_BY_STUDENT = 'view_project_by_student',
@@ -164,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_SESSIONS,
     Permission.VIEW_PROJECT_BY_FACULTY,
     Permission.GET_COLLEGE_REP,
+    Permission.ASSIGN_FACULTY_REP,
   ],
   [Role.SUPERVISOR]: [
     Permission.VIEW_PROJECT_BY_STUDENT,

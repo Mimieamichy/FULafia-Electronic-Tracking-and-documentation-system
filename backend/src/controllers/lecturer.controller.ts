@@ -170,5 +170,17 @@ export default class LecturerController {
       res.status(400).json({ success: false, error: 'Failed to get faculty lecturers', message: err.message });
     }
   }
+
+
+  static async assignFacultyRep(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {staffId} = req.params
+      const faculty_pg_rep = await LecturerService.assignFacultyRep(staffId);
+      res.json({ success: true, data: faculty_pg_rep });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to assign faculty rep', message: err.message });
+    }
+  }
 }
 

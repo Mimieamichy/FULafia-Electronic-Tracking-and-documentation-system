@@ -6,18 +6,17 @@ export default class LecturerService {
     static async getAllLecturers() {
         return Lecturer.find().populate("user");
     }
-
     static async editLecturer(lecturerId: string, updateData: object) {
-    const updatedLecturer = await Lecturer.findByIdAndUpdate(
-        lecturerId, 
-        updateData, 
-        { new: true, runValidators: true }
-    );
-    if (!updatedLecturer) {
-        throw new Error("Lecturer not found");
+        const updatedLecturer = await Lecturer.findByIdAndUpdate(
+            lecturerId,
+            updateData,
+            { new: true, runValidators: true }
+        );
+        if (!updatedLecturer) {
+            throw new Error("Lecturer not found");
+        }
+        return updatedLecturer;
     }
-    return updatedLecturer;
-}
     static async deleteLecturer(lecturerId: string) {
         const lecturer = await Lecturer.findByIdAndDelete(lecturerId);
         if (!lecturer) {
@@ -29,7 +28,6 @@ export default class LecturerService {
 
         return lecturer;
     }
-
 
     static async addLecturer(data: {
         email: string;
@@ -87,7 +85,6 @@ export default class LecturerService {
         });
     }
 
-
     static async addHOD(data: {
         email: string;
         title: string;
@@ -133,7 +130,6 @@ export default class LecturerService {
         });
     }
 
-
     static async addDean(data: {
         email: string;
         title: string;
@@ -163,7 +159,7 @@ export default class LecturerService {
         // Create User with dynamic roles
         const user = await User.create({
             email: data.email,
-            password: data.email, 
+            password: data.email,
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
@@ -176,7 +172,6 @@ export default class LecturerService {
             staffId: data.staffId,
         });
     }
-
 
     static async addProvost(data: {
         email: string;
@@ -207,7 +202,6 @@ export default class LecturerService {
             staffId: data.staffId,
         });
     }
-
 
     static async addExternalExaminer(data: {
         email: string;
@@ -247,7 +241,6 @@ export default class LecturerService {
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
 
-
     static async getDeans() {
         return Lecturer.find()
             .populate({
@@ -256,7 +249,6 @@ export default class LecturerService {
             })
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
-
 
     static async getProvost() {
         return Lecturer.find()
@@ -267,7 +259,7 @@ export default class LecturerService {
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
 
-     static async getExternalExaminer() {
+    static async getExternalExaminer() {
         return Lecturer.find()
             .populate({
                 path: 'user',
@@ -285,8 +277,7 @@ export default class LecturerService {
         return Lecturer.find({ department: currentLecturer.department }).populate('user');
     }
 
-
-     static async getLecturerByFaculty(userId: string) {
+    static async getLecturerByFaculty(userId: string) {
         const currentLecturer = await Lecturer.findOne({ user: userId });
         if (!currentLecturer || !currentLecturer.faculty) {
             throw new Error("Lecturer not found or faculty not set");
@@ -301,6 +292,24 @@ export default class LecturerService {
             throw new Error("Lecturer not found");
         }
         return lecturer;
+    }
+
+    static async assignFacultyRep(staffId: string) {
+        const lecturer = await Lecturer.findOne({ staffId }).populate('user');
+        if (!lecturer) {
+            throw new Error('Lecturer not found');
+        }
+
+        // Get associated user
+        const user = await User.findById(lecturer.user);
+        if (!user) {
+            throw new Error('User not found for this lecturer');
+        }
+        if (!user.roles.includes(Role.FACULTY_PG_REP)) {
+            user.roles.push(Role.FACULTY_PG_REP);
+            await user.save();
+        }
+        return user;
     }
 
 

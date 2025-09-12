@@ -56,5 +56,6 @@ router.post('/add-dean', authenticate, checkPermission(Permission.ADD_DEAN), val
 router.post('/add-provost', authenticate, checkPermission(Permission.ADD_PROVOST), validateBody(addLectuerSchema), LecturerController.addProvost);
 router.get('/department', authenticate, checkPermission(Permission.VIEW_LECTURERS_BY_DEPARTMENT), LecturerController.getLecturerByDepartment);
 router.get('/faculty', authenticate, checkPermission(Permission.VIEW_FACULTY_LECTURERS), LecturerController.getLecturerByFaculty);
+router.post('/assign-faculty-rep/:staffId', authenticate, checkPermission(Permission.ASSIGN_FACULTY_REP), LecturerController.assignFacultyRep)
 
 export default router;
