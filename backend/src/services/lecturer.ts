@@ -283,7 +283,7 @@ export default class LecturerService {
             throw new Error("Lecturer not found or faculty not set");
         }
 
-        return Lecturer.find({ department: currentLecturer.faculty }).populate('user');
+        return Lecturer.find({ faculty: currentLecturer.faculty }).populate('user');
     }
 
     static async getLecturerById(userId: string) {
@@ -295,7 +295,7 @@ export default class LecturerService {
     }
 
     static async assignFacultyRep(staffId: string) {
-        const lecturer = await Lecturer.findOne({ staffId }).populate('user');
+        const lecturer = await Lecturer.findById({ _id: staffId }).populate('user');
         if (!lecturer) {
             throw new Error('Lecturer not found');
         }
