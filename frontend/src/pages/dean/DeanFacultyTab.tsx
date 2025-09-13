@@ -26,23 +26,13 @@ interface FacultyStaff {
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-/**
- * DeanFacultyTab
- *
- * - Loads data from GET `${baseUrl}/lecturer/faculty`
- * - Allows a Dean to make/unmake a faculty PG rep via POST `${baseUrl}/lecturer/faculty_pg_rep`
- *
- * Notes:
- * - This component is defensive about API shapes (maps many possible fields).
- * - If your assign endpoint expects a different payload (eg. facultyId), edit make/unmake payload accordingly.
- */
 export default function DeanFacultyTab() {
   const { token, user } = useAuth();
   const { toast } = useToast();
 
   // role checks - adjust checks to match your app's role strings
-  const roleStr = (user?.role ?? "").toString().toLowerCase();
-  const isDean = roleStr === "dean" || roleStr.includes("dean");
+
+  const isDean = user?.role?.toUpperCase() === "DEAN";
 
   const [staff, setStaff] = useState<FacultyStaff[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,70 +65,112 @@ export default function DeanFacultyTab() {
   async function loadFacultyStaff() {
     try {
       setLoading(true);
-      const res = await axios.get(`${baseUrl}/lecturer/faculty`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
 
-      // try to find array in common places
-      const arr: any[] = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-        ? res.data.data
-        : [];
-console.log("Raw faculty staff data", res.data);
+      const url = `${baseUrl}/lecturer/faculty`;
+      console.log("=== debug: loadFacultyStaff starting ===");
+      console.log("Requesting:", url);
+      console.log("Token present:", !!token, token?.slice?.(0, 10));
 
-      const mapped: FacultyStaff[] = (arr || []).map((r: any) => {
-        // try many shapes
-        const id = r._id ?? r.id ?? r.staffId ?? r.user?.id ?? "";
-        const staffId =
-          r.staffId ??
-          r.staffID ??
-          r.staff_id ??
-          r.user?.staffId ??
-          r.user?.staffID ??
-          r.user?.staff_id ??
-          "";
-        const firstName =
-          r.user?.firstName ?? r.firstName ?? r.fname ?? r.first_name ?? "";
-        const lastName =
-          r.user?.lastName ?? r.lastName ?? r.lname ?? r.last_name ?? "";
-        const email = r.user?.email ?? r.email ?? "";
-        const faculty = r.faculty ?? r.facultyName ?? r.faculty?.name ?? "";
-        const department =
-          r.department ??
-          r.departmentName ??
-          r.department?.name ??
-          r.dept ??
-          r.user?.department ??
-          "";
+      // 1) decode token payload (if it's a JWT) so we can inspect claims
+      try {
+        if (token) {
+          const parts = token.split(".");
+          if (parts.length >= 2) {
+            const payload = parts[1];
+            const json = JSON.parse(
+              atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+            );
+            console.log("Decoded token payload:", json);
+          } else {
+            console.log("Token does not look like JWT:", token);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to decode token:", err);
+      }
 
-        const isFacultyRep =
-          !!r.isFacultyRep ||
-          !!r.facultyRep ||
-          !!r.is_faculty_rep ||
-          !!r.is_fac_rep ||
-          false;
+      // 2) AXIOS request (your usual path) - log config & response
+      const axiosConfig = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      };
+      console.log("Axios request config:", axiosConfig);
 
-        return {
-          id,
-          _id: r._id,
-          title: r.title ?? r.user?.title ?? "",
-          firstName,
-          lastName,
-          staffId,
-          email,
-          role: r.role ?? r.user?.role ?? "lecturer",
-          faculty,
-          department,
-          isFacultyRep,
-          facultyRep: r.facultyRep ?? r.faculty_rep ?? null,
-          raw: r,
-        };
-      });
-      console.log("Loaded faculty staff", mapped);
-      setStaff(mapped);
+      let axiosRes;
+      try {
+        axiosRes = await axios.get(url, axiosConfig);
+        console.log("AXIOS: status:", axiosRes.status);
+        console.log("AXIOS: config.headers sent:", axiosRes.config?.headers);
+        console.log("AXIOS: full response.data:", axiosRes.data);
+        // If you want to inspect raw XHR:
+        // console.log("AXIOS: xhr (response.request):", axiosRes.request);
+      } catch (axErr: any) {
+        console.error(
+          "AXIOS request error:",
+          axErr,
+          axErr?.response?.status,
+          axErr?.response?.data
+        );
+      }
+
+      // 3) FETCH request (raw) to compare what the server returns without axios
+      try {
+        const fetchRes = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+        console.log("FETCH: status:", fetchRes.status);
+        // log response headers (some browsers don't allow reading all headers due to CORS — but log what you can)
+        try {
+          const headersObj: Record<string, string> = {};
+          fetchRes.headers.forEach((v, k) => (headersObj[k] = v));
+          console.log("FETCH: response.headers:", headersObj);
+        } catch (hErr) {
+          console.warn("FETCH: could not read response headers:", hErr);
+        }
+
+        const txt = await fetchRes.text();
+        console.log("FETCH: raw text:", txt);
+
+        // try to parse JSON
+        try {
+          const json = JSON.parse(txt);
+          console.log("FETCH: parsed json:", json);
+        } catch (jErr) {
+          console.warn("FETCH: could not parse JSON:", jErr);
+        }
+      } catch (fErr) {
+        console.error("FETCH request error:", fErr);
+      }
+
+      // 4) For now keep UI stable — if axiosRes exists and has data, set staff
+      if (axiosRes && axiosRes.data) {
+        const arr = Array.isArray(axiosRes.data)
+          ? axiosRes.data
+          : Array.isArray(axiosRes.data?.data)
+          ? axiosRes.data.data
+          : null;
+
+        console.log("AXIOS: resolved array (arr):", arr);
+        if (Array.isArray(arr) && arr.length) {
+          console.log("AXIOS: setting staff from arr length:", arr.length);
+          // If you want to show the real items in the table, uncomment the next line:
+          // setStaff(arr);
+        } else {
+          console.warn("AXIOS: returned array is empty or not present");
+        }
+      } else {
+        console.warn("AXIOS: no response data to map");
+      }
+
+      console.log("=== debug: loadFacultyStaff finished ===");
     } catch (err) {
-      console.error("Failed to load faculty staff", err);
+      console.error("Failed to load faculty staff (outer catch)", err);
       toast({
         title: "Error",
         description: "Failed to load faculty staff.",
@@ -149,7 +181,7 @@ console.log("Raw faculty staff data", res.data);
     }
   }
 
-  // Derived filtered list
+  // Derived filtered list (will be empty while we're debugging)
   const filtered = useMemo(() => {
     const nameTerm = filterName.trim().toLowerCase();
     const facultyTerm = filterFaculty.trim().toLowerCase();
@@ -171,14 +203,13 @@ console.log("Raw faculty staff data", res.data);
     });
   }, [staff, filterName, filterFaculty, filterDept, filterStaffId]);
 
-  // Confirmation modal handlers
+  // Confirmation modal handlers (unchanged)
   function openConfirm(id: string, action: "make" | "unmake") {
     setConfirmId(id);
     setConfirmAction(action);
   }
 
   async function performMakeUnmake(id: string, action: "make" | "unmake") {
-    // only Dean may perform this
     if (!isDean) {
       toast({
         title: "Not allowed",
@@ -197,11 +228,8 @@ console.log("Raw faculty staff data", res.data);
     }
 
     setActionLoadingId(id);
-
-    // Snapshot to rollback on error
     const prev = [...staff];
 
-    // Optimistic update
     setStaff((cur) =>
       cur.map((s) =>
         s.id === id || s._id === id
@@ -211,14 +239,12 @@ console.log("Raw faculty staff data", res.data);
     );
 
     try {
-      // payload: be defensive. include staffId and id, and explicit action flag `make`
       const payload: any = {
         staffId: item.staffId ?? item.id ?? item._id,
         id: item.id ?? item._id,
         make: action === "make",
       };
 
-      // call the assign/remove endpoint
       const res = await axios.post(
         `${baseUrl}/lecturer/faculty_pg_rep`,
         payload,
@@ -230,10 +256,8 @@ console.log("Raw faculty staff data", res.data);
         }
       );
 
-      // if API returns updated object, patch into list
       const returned = res.data?.data ?? res.data ?? null;
       if (returned) {
-        // try to map updated row
         setStaff((cur) =>
           cur.map((s) =>
             s.id === id || s._id === id
@@ -256,7 +280,6 @@ console.log("Raw faculty staff data", res.data);
       });
     } catch (err: any) {
       console.error("Make/unmake faculty rep failed", err);
-      // rollback
       setStaff(prev);
       toast({
         title: "Error",
