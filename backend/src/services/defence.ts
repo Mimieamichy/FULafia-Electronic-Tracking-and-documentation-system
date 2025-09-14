@@ -303,7 +303,6 @@ export default class DefenceService {
     
 
     const scoreSheet = await ScoreSheet.create({
-      defence: null as any, // No specific defence
       department: lecturer.department,
       criteria,
       entries: [],
