@@ -10,12 +10,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Pen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pen, X } from "lucide-react";
 import AssignSupervisorModal from "./AssignSupervisorModal";
 import SetDefenseModal from "./SetDefenseModal";
 import { mockSaveDefense } from "@/lib/mockDefenseService";
 import { useAuth } from "../AuthProvider";
 import AssignCollegeRepModal from "./AssignCollegeRepModal";
+import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
+
+interface Lecturer {
+  _id: string;
+  fullName: string;
+  email?: string;
+  raw?: any;
+}
 
 interface StudentFromAPI {
   _id: string;
@@ -87,9 +95,13 @@ const StudentSessionManagement = () => {
 
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
   const isDean = user?.role?.toUpperCase() === "DEAN";
+  const isPgc = user?.role?.toUpperCase() === "PGCORD";
 
   const { toast } = useToast();
   const noSessionWarnedRef = useRef(false);
+
+  const [scoreSheetOpen, setScoreSheetOpen] = useState(false);
+  const [scoreSheetSaving, setScoreSheetSaving] = useState(false);
 
   // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
@@ -312,7 +324,7 @@ const StudentSessionManagement = () => {
   useEffect(() => {
     if (!isDean) return;
     let cancelled = false;
-   
+
     const fetchDepartmentsForDean = async () => {
       setDepartmentsLoading(true);
       setDepartmentsError(null);
@@ -327,7 +339,7 @@ const StudentSessionManagement = () => {
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const json = await res.json();
         console.log("Dean departments raw response:", json);
-        
+
         const arr: any[] = Array.isArray(json)
           ? json
           : Array.isArray(json.data)
@@ -408,7 +420,7 @@ const StudentSessionManagement = () => {
 
       // level segment (msc | phd)
       const levelSeg = degreeTab === "MSc" ? "msc" : "phd";
-      
+
       const url = `${baseUrl}/student/${levelSeg}/${encodeURIComponent(
         departmentName
       )}/${encodeURIComponent(
@@ -708,6 +720,84 @@ const StudentSessionManagement = () => {
     }
   };
 
+  // Score sheet publish handler
+  const handleScoreSheetPublish = async (payload: {
+    criteria: Criterion[];
+  }) => {
+    // Defensive: ensure payload
+    if (
+      !payload?.criteria ||
+      !Array.isArray(payload.criteria) ||
+      payload.criteria.length === 0
+    ) {
+      toast({
+        title: "No criteria",
+        description: "Create at least one criterion before publishing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare body to send to backend: map title -> name
+    const body = {
+      criteria: payload.criteria.map((c) => ({
+        name: c.title ?? String(c.title || ""),
+        weight: Number(c.percentage || 0),
+      })),
+      // optional extra context — include if your API can accept it
+      departmentId: selectedDepartmentForDefense || undefined,
+      stage: selectedDefense || undefined,
+    };
+
+    setScoreSheetSaving(true);
+    try {
+      const res = await fetch(`${baseUrl}/defence/dept-score-sheet`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        // try to read server error message
+        let errText = `Server responded ${res.status}`;
+        try {
+          const j = await res.json();
+          // prefer obvious error message fields
+          errText = j?.message || j?.error || JSON.stringify(j);
+        } catch {
+          try {
+            errText = await res.text();
+          } catch {}
+        }
+        throw new Error(errText);
+      }
+
+      // success
+      toast({
+        title: "Rubric published",
+        description: "Score sheet published and attached to the schedule.",
+        variant: "default",
+      });
+
+      // Optionally: refresh rubrics/list or update UI here
+
+      // close modal
+      setScoreSheetOpen(false);
+    } catch (err: any) {
+      console.error("Failed publishing score sheet:", err);
+      toast({
+        title: "Publish failed",
+        description: err?.message ?? String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setScoreSheetSaving(false);
+    }
+  };
+
   // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
@@ -838,6 +928,17 @@ const StudentSessionManagement = () => {
               }}
             >
               Schedule {selectedDefenseLabel}
+            </Button>
+          </div>
+        )}
+
+         {isPgc && (
+          <div className="mt-2 sm:mt-0">
+            <Button
+              className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
+              onClick={() => setScoreSheetOpen(true)}
+            >
+              Create ScoreSheet
             </Button>
           </div>
         )}
@@ -1142,6 +1243,44 @@ const StudentSessionManagement = () => {
           })
         }
       />
+
+      {/* PGC ScoreSheet generator modal */}
+      {isPgc && scoreSheetOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setScoreSheetOpen(false)}
+          />
+          {/* Modal panel */}
+          <div
+            className="relative z-10 max-w-3xl w-full mx-4 md:mx-0 bg-white rounded-lg shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="text-lg font-medium">Score Sheet Generator</h3>
+              <button
+                onClick={() => setScoreSheetOpen(false)}
+                aria-label="Close score sheet modal"
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                <X />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <ScoreSheetGenerator
+                onPublish={handleScoreSheetPublish}
+                saving={scoreSheetSaving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

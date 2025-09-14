@@ -11,12 +11,14 @@ export interface Criterion {
 
 interface ScoreSheetGeneratorProps {
   initialCriteria?: Criterion[];
-  onPublish?: (payload: { criteria: Criterion[] }) => void;
+  onPublish?: (payload: { criteria: Criterion[] }) => void | Promise<void>;
+  saving?: boolean;
 }
 
 export default function ScoreSheetGenerator({
   initialCriteria,
   onPublish,
+  saving = false,
 }: ScoreSheetGeneratorProps) {
   const { toast } = useToast();
   const [criteria, setCriteria] = useState<Criterion[]>(
@@ -31,22 +33,37 @@ export default function ScoreSheetGenerator({
   const [newCriterion, setNewCriterion] = useState("");
   const [newPercentage, setNewPercentage] = useState("");
 
-  const totalPercentage = criteria.reduce((s, c) => s + Number(c.percentage || 0), 0);
+  const totalPercentage = criteria.reduce(
+    (s, c) => s + Number(c.percentage || 0),
+    0
+  );
   const isTotalValid = totalPercentage === 100;
 
   function handleAddCriterion() {
     const title = newCriterion.trim();
     const percentage = parseFloat(newPercentage);
     if (!title) {
-      toast({ title: "Missing name", description: "Enter a criterion name.", variant: "destructive" });
+      toast({
+        title: "Missing name",
+        description: "Enter a criterion name.",
+        variant: "destructive",
+      });
       return;
     }
     if (isNaN(percentage) || percentage <= 0) {
-      toast({ title: "Invalid percentage", description: "Enter a valid percentage (> 0).", variant: "destructive" });
+      toast({
+        title: "Invalid percentage",
+        description: "Enter a valid percentage (> 0).",
+        variant: "destructive",
+      });
       return;
     }
     if (criteria.some((c) => c.title.toLowerCase() === title.toLowerCase())) {
-      toast({ title: "Duplicate", description: "That criterion already exists.", variant: "destructive" });
+      toast({
+        title: "Duplicate",
+        description: "That criterion already exists.",
+        variant: "destructive",
+      });
       return;
     }
     setCriteria((s) => [...s, { title, percentage }]);
@@ -59,18 +76,24 @@ export default function ScoreSheetGenerator({
   }
 
   function updateCriterion(idx: number, patch: Partial<Criterion>) {
-    setCriteria((s) =>
-      s.map((c, i) => (i === idx ? { ...c, ...patch } : c))
-    );
+    setCriteria((s) => s.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
   }
 
   function handlePublish() {
     if (criteria.length === 0) {
-      toast({ title: "No criteria", description: "Create at least one criterion before publishing.", variant: "destructive" });
+      toast({
+        title: "No criteria",
+        description: "Create at least one criterion before publishing.",
+        variant: "destructive",
+      });
       return;
     }
     if (!isTotalValid) {
-      toast({ title: "Invalid total", description: "Criteria percentages must total 100%.", variant: "destructive" });
+      toast({
+        title: "Invalid total",
+        description: "Criteria percentages must total 100%.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -87,7 +110,9 @@ export default function ScoreSheetGenerator({
   return (
     <div className="space-y-6 p-4 border rounded-md bg-white">
       <div>
-        <label className="block text-sm font-medium mb-1">Scoring Criteria</label>
+        <label className="block text-sm font-medium mb-1">
+          Scoring Criteria
+        </label>
         <div className="space-y-2">
           {criteria.map((c, i) => (
             <div key={i} className="flex gap-2 items-center">
@@ -144,8 +169,13 @@ export default function ScoreSheetGenerator({
           <Button onClick={handleAddCriterion}>Add</Button>
         </div>
 
-        <div className={`text-sm mt-2 ${isTotalValid ? "text-green-600" : "text-red-600"}`}>
-          Total: {totalPercentage}% {isTotalValid ? "(Valid)" : "(Must equal 100%)"}
+        <div
+          className={`text-sm mt-2 ${
+            isTotalValid ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          Total: {totalPercentage}%{" "}
+          {isTotalValid ? "(Valid)" : "(Must equal 100%)"}
         </div>
       </div>
 
@@ -162,8 +192,11 @@ export default function ScoreSheetGenerator({
             </thead>
             <tbody>
               {criteria.map((c, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-amber-50"}>
-                  <td className="p-2 border">{c.title}</td>
+                <tr
+                  key={i}
+                  className={i % 2 === 0 ? "bg-white" : "bg-amber-50"}
+                >
+                  <td className="p-2 border capitalize">{c.title}</td>
                   <td className="p-2 border text-right">{c.percentage}%</td>
                 </tr>
               ))}
@@ -182,9 +215,9 @@ export default function ScoreSheetGenerator({
       <div className="flex justify-end">
         <Button
           onClick={handlePublish}
-          disabled={!isTotalValid || criteria.length === 0}
+          disabled={!isTotalValid || criteria.length === 0 || saving}
         >
-          Publish & Attach
+          {saving ? "Saving..." : "Publish Rubric"}
         </Button>
       </div>
     </div>

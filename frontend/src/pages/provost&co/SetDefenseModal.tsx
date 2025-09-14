@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
+
 import { useToast } from "@/hooks/use-toast";
 
 // add a local Lecturer type (adjust fields if your API returns others)
@@ -27,7 +27,7 @@ interface SetDefenseModalProps {
     date: string;
     time: string;
     panel: string[]; // array of lecturer _id strings
-    rubric: { criteria: Criterion[] };
+    
   }) => Promise<void>;
 }
 
@@ -44,8 +44,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const [panel, setPanel] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Rubric state (must be set by ScoreSheetGenerator publish)
-  const [rubric, setRubric] = useState<{ criteria: Criterion[] } | null>(null);
+ 
 
   if (!isOpen) return null;
 
@@ -171,28 +170,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
           )}
         </div>
 
-        {/* Always show the score sheet builder (score sheet is required) */}
-        <div className="mb-4 border rounded-md p-3 bg-gray-50">
-          <p className="text-sm mb-2">
-            Create and publish the score sheet below. Publishing will attach it
-            to this schedule (required).
-          </p>
-
-          <ScoreSheetGenerator
-            initialCriteria={undefined}
-            onPublish={(payload) => {
-              setRubric(payload); // payload = { criteria: Criterion[] }
-            }}
-          />
-
-          {rubric && (
-            <div className="mt-3 text-sm">
-              <strong>Attached score sheet:</strong> {rubric.criteria.length}{" "}
-              criteria • Total:{" "}
-              {rubric.criteria.reduce((s, c) => s + c.percentage, 0)}%
-            </div>
-          )}
-        </div>
+        
         <div className="flex justify-end gap-3 mt-6">
           <Button
             variant="outline"
