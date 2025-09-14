@@ -30,14 +30,15 @@ static async getAllUserDepartments(userId: string) {
   }
 
   // Find the Faculty document using the faculty name stored in Lecturer
-  const faculty = await Faculty.findOne({ name: lecturer.faculty });
+  const faculty = await Faculty.findOne({ name: `Faculty of ${lecturer.faculty}` });
   if (!faculty) {
-    throw new Error(`Faculty '${lecturer.faculty}' not found.`);
+    throw new Error(`Faculty of '${lecturer.faculty}' not found.`);
   }
 
+  console.log("Found faculty:", faculty);
   // Find all departments under this facultyId
   return Department.find({
-    facultyId: faculty._id,
+    faculty: faculty._id,
   }).populate("facultyId"); // populate full Faculty document if you need it
 }
 
