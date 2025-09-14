@@ -1,5 +1,5 @@
 import { Defence, Student, Project, ScoreSheet, Lecturer } from '../models/index';
-import { Types } from 'mongoose';
+import  mongoose, { Types } from 'mongoose';
 import NotificationService from "../services/notification";
 import { STAGES } from "../utils/constants";
 
@@ -300,9 +300,12 @@ export default class DefenceService {
             if (!lecturer || !lecturer.department) {
                 throw new Error("Lecturer not found or departeent not set");
             }
+
+    const tempId = new mongoose.Types.ObjectId();
     
 
     const scoreSheet = await ScoreSheet.create({
+      defence: tempId,
       department: lecturer.department,
       criteria,
       entries: [],
