@@ -51,7 +51,7 @@ const scheduleDefenceSchema = Joi.object({
 
 // Get all defences
 router.get('/', authenticate, DefenceController.getAllDefences);
-router.post('/schedule', authenticate, checkPermission(Permission.SCHEDULE_DEFENSE), validateBody(scheduleDefenceSchema), DefenceController.scheduleDefence);
+router.post('/schedule', authenticate, checkPermission(Permission.SCHEDULE_DEFENSE), DefenceController.scheduleDefence);
 router.post('/start/:defenceId', authenticate, checkPermission(Permission.START_DEFENSE), DefenceController.startDefence);
 router.post('/submit-score/:defenceId', authenticate, checkPermission(Permission.SCORE_STUDENT), DefenceController.submitScore);
 router.post('/end/:defenceId', authenticate, checkPermission(Permission.END_DEFENSE), DefenceController.endDefence);
