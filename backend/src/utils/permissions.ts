@@ -73,6 +73,8 @@ export enum Permission {
   ADD_EXTERNAL_EXAMINER = 'add_external_examiner',
   ASSIGN_COLLEGE_REP = 'assign_college_rep',
   GET_COLLEGE_REP = 'get_college_rep',
+  GET_ALL_FACULTY_DEPT = 'get_all_faculty_dept',
+  GET_ALL_DEPARTMENTS = 'get_all_departments',  
 
   // External Examiner
   APPROVE_LAST_DEFENSE = 'approve_last_defense',
@@ -166,7 +168,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_PROJECT_BY_FACULTY,
     Permission.GET_COLLEGE_REP,
     Permission.ASSIGN_FACULTY_REP,
-    Permission.VIEW_ALL_STUDENTS
+    Permission.VIEW_ALL_STUDENTS,
+    Permission.GET_ALL_FACULTY_DEPT,
 
   ],
   [Role.SUPERVISOR]: [
@@ -218,6 +221,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.CREATE_SESSION,
     Permission.ASSIGN_COLLEGE_REP,
     Permission.GET_COLLEGE_REP,
+    Permission.GET_ALL_FACULTY_DEPT,
+    Permission.GET_ALL_DEPARTMENTS
   ],
   [Role.EXTERNAL_EXAMINER]: [
     Permission.APPROVE_LAST_DEFENSE,

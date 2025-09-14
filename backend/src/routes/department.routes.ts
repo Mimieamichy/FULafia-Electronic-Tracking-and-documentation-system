@@ -10,7 +10,7 @@ const router = Router();
 
 
 // Get department by faculty
-router.get('/:facultyId', authenticate, checkPermission(Permission.VIEW_FACULTY_LECTURERS), DepartmentController.getAllDepartmentsForFaculty);
-router.get('/', authenticate, checkPermission(Permission.VIEW_FACULTY_LECTURERS), DepartmentController.getAllUserDepartments);
+router.get('/:facultyId', authenticate, checkPermission(Permission.GET_ALL_DEPARTMENTS), DepartmentController.getAllDepartmentsForFaculty);
+router.get('/', authenticate, checkPermission(Permission.GET_ALL_FACULTY_DEPT), DepartmentController.getAllUserDepartments);
 
 export default router;
