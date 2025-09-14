@@ -162,10 +162,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   [Role.DEAN]: [
     Permission.VIEW_FACULTY_LECTURERS,
-    Permission.VIEW_SESSIONS,
+    Permission.VIEW_ALL_SESSIONS,
     Permission.VIEW_PROJECT_BY_FACULTY,
     Permission.GET_COLLEGE_REP,
     Permission.ASSIGN_FACULTY_REP,
+
   ],
   [Role.SUPERVISOR]: [
     Permission.VIEW_PROJECT_BY_STUDENT,

@@ -1,4 +1,4 @@
-import { Department } from '../models/index';
+import { Department , Lecturer, Faculty} from '../models/index';
 import { Types } from 'mongoose';
 
 export default class DepartmentService {
@@ -13,4 +13,32 @@ export default class DepartmentService {
       faculty: new Types.ObjectId(facultyId),
     }).populate('faculty');
   }
+
+static async getAllUserDepartments(userId: string) {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid user ID.");
+  }
+
+  // Find the lecturer
+  const lecturer = await Lecturer.findOne({ user: userId });
+  if (!lecturer) {
+    throw new Error("Lecturer not found for this user.");
+  }
+
+  if (!lecturer.faculty) {
+    throw new Error("No faculty assigned to this lecturer.");
+  }
+
+  // Find the Faculty document using the faculty name stored in Lecturer
+  const faculty = await Faculty.findOne({ name: lecturer.faculty });
+  if (!faculty) {
+    throw new Error(`Faculty '${lecturer.faculty}' not found.`);
+  }
+
+  // Find all departments under this facultyId
+  return Department.find({
+    facultyId: faculty._id,
+  }).populate("facultyId"); // populate full Faculty document if you need it
+}
+
 }
