@@ -1,5 +1,5 @@
 // src/SupervisorDashboardShell.tsx
-import  { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Menu, Bell, Lock, Power } from "lucide-react";
 import { useAuth } from "../AuthProvider";
 import {
@@ -17,10 +17,12 @@ import DeanActivityLog from "./DeanActivityLog";
 import DefenseDayPage from "../DefenseDayPage";
 import UpdatePasswordModal from "../UpdatePasswordModal";
 import DeanFacultyTab from "./DeanFacultyTab";
+import StudentSessionManagement from "../provost&co/StudentSessionManagement";
 import { useNavigate } from "react-router-dom";
 
 export type DeanView =
   | "dashboard"
+  | "studentSessionManagement"
   | "myStudents"
   | "facultyTab"
   | "activityLog"
@@ -58,6 +60,8 @@ export default function DeanDashboardShell() {
     switch (currentView) {
       case "dashboard":
         return <DeanDashboard />;
+      case "studentSessionManagement":
+        return <StudentSessionManagement />;
       case "myStudents":
         return <MyStudentsPage />;
       case "facultyTab":
@@ -101,6 +105,16 @@ export default function DeanDashboardShell() {
               >
                 Dashboard
               </li>
+              <li
+                className="cursor-pointer hover:text-amber-700"
+                onClick={() => {
+                  setCurrentView("studentSessionManagement");
+                  setIsMenuOpen(false);
+                }}
+              >
+                Student Management
+              </li>
+
               <li
                 className="cursor-pointer hover:text-amber-700"
                 onClick={() => {

@@ -86,7 +86,7 @@ const StudentSessionManagement = () => {
   const isHod = user?.role?.toUpperCase() === "HOD";
 
   const isProvost = user?.role?.toUpperCase() === "PROVOST";
-  console.log("provost", isProvost);
+  const isDean = user?.role?.toUpperCase() === "DEAN";
 
   const { toast } = useToast();
   const noSessionWarnedRef = useRef(false);
@@ -112,7 +112,6 @@ const StudentSessionManagement = () => {
   const [assignModalOpen, setAssignModalOpen] = useState(false); // for HOD / PGC assign supervisor
   const [assignCollegeRepOpen, setAssignCollegeRepOpen] = useState(false); // for Provost
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
-  const [assignCollegeRepLoading, setAssignCollegeRepLoading] = useState(false);
 
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
   const [defenseStage, setDefenseStage] = useState<string>(
@@ -142,7 +141,7 @@ const StudentSessionManagement = () => {
   const [totalStudents, setTotalStudents] = useState<number>(0);
 
   // Selected defense stage
-  // replace the old selectedDefense initialization block with this:
+
   const [selectedDefense, setSelectedDefense] = useState<string>(
     isProvost
       ? getStageKey(defenseOptions[Math.min(3, defenseOptions.length - 1)])
@@ -309,17 +308,68 @@ const StudentSessionManagement = () => {
     fetchSessions();
   }, [token, selectedSession]);
 
-  // Fetch students on mount
+  // Fetch departments for Dean
+  useEffect(() => {
+    if (!isDean) return;
+    let cancelled = false;
+   
+    const fetchDepartmentsForDean = async () => {
+      setDepartmentsLoading(true);
+      setDepartmentsError(null);
+      try {
+        const url = `${baseUrl}/department/`;
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
+        console.log("Dean departments raw response:", json);
+        
+        const arr: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+        if (!cancelled) {
+          const mapped = arr.map((d) => ({
+            _id: d._id ?? d.id ?? "",
+            name: d.name ?? d.departmentName ?? "",
+          }));
+          setDepartments(mapped);
+          // optional: auto-select the first department so Dean sees students immediately
+          if (mapped.length) setSelectedDepartmentForDefense(mapped[0]._id);
+        }
+      } catch (err: any) {
+        if (!cancelled)
+          setDepartmentsError(err?.message ?? "Failed to load departments");
+        setDepartments([]);
+        setSelectedDepartmentForDefense("");
+      } finally {
+        if (!cancelled) setDepartmentsLoading(false);
+      }
+    };
 
+    fetchDepartmentsForDean();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDean, token, user]);
+
+  // Fetch students on mount
   useEffect(() => {
     const resolveDepartmentName = () => {
-      if (isProvost) {
+      if (isProvost || isDean) {
         if (!selectedDepartmentForDefense) return "";
         const found = departments.find(
           (d) => d._id === selectedDepartmentForDefense
         );
         return found?.name ?? "";
       }
+
       return user?.department || ""; // HOD/PGC: already a name string
     };
 
@@ -348,7 +398,7 @@ const StudentSessionManagement = () => {
       const departmentName = resolveDepartmentName();
 
       // Skip fetch until provost picks a department
-      if (isProvost && !departmentName) {
+      if ((isProvost || isDean) && !departmentName) {
         setStudents([]);
         setTotalStudents(0);
         return;
@@ -358,9 +408,7 @@ const StudentSessionManagement = () => {
 
       // level segment (msc | phd)
       const levelSeg = degreeTab === "MSc" ? "msc" : "phd";
-      // include page and limit as query params for server pagination
-      // selectedSession contains the session id (string)
-      // path-param style (replace previous URL building line)
+      
       const url = `${baseUrl}/student/${levelSeg}/${encodeURIComponent(
         departmentName
       )}/${encodeURIComponent(
@@ -433,6 +481,7 @@ const StudentSessionManagement = () => {
     itemsPerPage,
     selectedDefense, // re-run when defense stage changes
     toast, // re-run when limit changes (or when user changes page size)
+    isDean,
   ]);
 
   // Fetch real panel candidates when the defense modal opens or department selection changes
@@ -454,7 +503,6 @@ const StudentSessionManagement = () => {
     const controller = new AbortController();
     const fetchPanelCandidates = async () => {
       try {
-        setLoadingPanelCandidates(true);
         const url = `${baseUrl}/lecturer/department?departmentId=${encodeURIComponent(
           departmentId
         )}`;
@@ -596,7 +644,6 @@ const StudentSessionManagement = () => {
   };
 
   // Assign college rep handler (for Provost)
-
   const handleAssignCollegeRep = async (lecturerId: string) => {
     if (!lecturerId) return;
     if (!currentStudentId) {
@@ -608,7 +655,6 @@ const StudentSessionManagement = () => {
       return;
     }
 
-    setAssignCollegeRepLoading(true);
     try {
       const url = `${baseUrl}/student/assign-college-rep/${encodeURIComponent(
         lecturerId
@@ -658,7 +704,6 @@ const StudentSessionManagement = () => {
         variant: "destructive",
       });
     } finally {
-      setAssignCollegeRepLoading(false);
       setAssignCollegeRepOpen(false); // close modal
     }
   };
@@ -783,7 +828,7 @@ const StudentSessionManagement = () => {
         </div>
 
         {/* Non‑Provost: schedule all stages except External Defense */}
-        {!isProvost && selectedDefense !== EXTERNAL_DEFENSE_KEY && (
+        {!isProvost && selectedDefense !== EXTERNAL_DEFENSE_KEY && !isDean && (
           <div className="mt-2 sm:mt-0">
             <Button
               className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
@@ -883,6 +928,44 @@ const StudentSessionManagement = () => {
             </Button>
           </div>
         )}
+
+        {isDean && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
+            {/* Department Selector (Dean) */}
+            <Select
+              value={selectedDepartmentForDefense}
+              onValueChange={setSelectedDepartmentForDefense}
+              disabled={departmentsLoading || departments.length === 0}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue
+                  placeholder={
+                    departmentsLoading
+                      ? "Loading departments..."
+                      : "Select Department"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {departmentsLoading ? (
+                  <SelectItem disabled>Loading departments...</SelectItem>
+                ) : departmentsError ? (
+                  <SelectItem disabled>{departmentsError}</SelectItem>
+                ) : departments.length ? (
+                  departments.map((d) => (
+                    <SelectItem key={d._id} value={d._id}>
+                      {d.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem disabled>No departments</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+
+            {/* NOTE: No schedule/assign buttons for Dean — they can only view */}
+          </div>
+        )}
       </div>
 
       {/* Students Table */}
@@ -898,7 +981,16 @@ const StudentSessionManagement = () => {
                   <th className="p-3 border">Current Stage</th>
                   <th className="p-3 border">Department</th>
                   <th className="p-3 border">Faculty</th>
-                  <th className="p-3 border">Assign</th> {/* <-- added */}
+                  <th className="p-3 border">Assign</th>
+                </>
+              ) : isDean ? (
+                <>
+                  <th className="p-3 border">Matric No</th>
+                  <th className="p-3 border">Full Name</th>
+                  <th className="p-3 border">Project Topic</th>
+                  <th className="p-3 border">Current Stage</th>
+                  <th className="p-3 border">Department</th>
+                  <th className="p-3 border">Faculty</th>
                 </>
               ) : (
                 <>
@@ -910,7 +1002,6 @@ const StudentSessionManagement = () => {
                   </th>
                   <th className="p-3 border">1st Supervisor</th>
                   <th className="p-3 border">2nd Supervisor</th>
-
                   <th className="p-3 border">Assign</th>
                 </>
               )}
@@ -919,8 +1010,7 @@ const StudentSessionManagement = () => {
 
           <tbody>
             {paginated.map((s, idx) => {
-              if (isProvost) {
-                // For Provost we show just one row format:
+              if (isProvost || isDean) {
                 const currentStage = defenseStage;
                 return (
                   <tr
@@ -935,19 +1025,20 @@ const StudentSessionManagement = () => {
                     <td className="p-3 border">{currentStage}</td>
                     <td className="p-3 border">{s.department}</td>
                     <td className="p-3 border">{s.faculty}</td>
-                    {/* NEW: Assign column for Provost */}
-                    <td className="p-3 border">
-                      <Button
-                        size="sm"
-                        className="bg-amber-700 text-white"
-                        onClick={() => {
-                          setCurrentStudentId(s._id);
-                          setAssignCollegeRepOpen(true); // open the provost modal
-                        }}
-                      >
-                        Assign
-                      </Button>
-                    </td>
+                    {isProvost && (
+                      <td className="p-3 border">
+                        <Button
+                          size="sm"
+                          className="bg-amber-700 text-white"
+                          onClick={() => {
+                            setCurrentStudentId(s._id);
+                            setAssignCollegeRepOpen(true);
+                          }}
+                        >
+                          Assign
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               }

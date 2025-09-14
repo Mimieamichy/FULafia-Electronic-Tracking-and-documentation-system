@@ -137,7 +137,7 @@ export default function DashboardShell() {
                 }}
                 className="cursor-pointer hover:text-amber-700"
               >
-                Seminar & Sessions
+                Student Management
               </li>
               <li
                 onClick={() => {
