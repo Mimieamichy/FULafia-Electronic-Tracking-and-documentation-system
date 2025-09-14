@@ -18,21 +18,26 @@ interface FacultyStaff {
   role?: string;
   faculty?: string;
   department?: string;
-  // possible flags the API may return
   isFacultyRep?: boolean;
   facultyRep?: any;
   raw?: any;
 }
 
-const baseUrl = import.meta.env.VITE_BACKEND_URL;
+const baseUrl = import.meta.env.VITE_BACKEND_URL 
 
 export default function DeanFacultyTab() {
   const { token, user } = useAuth();
   const { toast } = useToast();
 
-  // role checks - adjust checks to match your app's role strings
-
-  const isDean = user?.role?.toUpperCase() === "DEAN";
+  // role detection: support either user.role string or user.roles array
+  const roleStr = (
+    (typeof user?.role === "string" && user.role) ||
+    (Array.isArray((user as any)?.roles) && (user as any).roles[0]) ||
+    ""
+  )
+    .toString()
+    .toLowerCase();
+  const isDean = roleStr === "dean" || roleStr.includes("dean");
 
   const [staff, setStaff] = useState<FacultyStaff[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,19 +49,19 @@ export default function DeanFacultyTab() {
 
   // filters
   const [filterName, setFilterName] = useState("");
-  const [filterFaculty, setFilterFaculty] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [filterStaffId, setFilterStaffId] = useState("");
 
   useEffect(() => {
     if (!token) {
-      toast({
+      toast?.({
         title: "Not authorized",
         description: "Missing token",
         variant: "destructive",
       });
       return;
     }
+    // set default auth header for axios
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     loadFacultyStaff();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,126 +70,93 @@ export default function DeanFacultyTab() {
   async function loadFacultyStaff() {
     try {
       setLoading(true);
-
       const url = `${baseUrl}/lecturer/faculty`;
-      console.log("=== debug: loadFacultyStaff starting ===");
-      console.log("Requesting:", url);
-      console.log("Token present:", !!token, token?.slice?.(0, 10));
+      console.log("DeanFacultyTab: requesting", url);
 
-      // 1) decode token payload (if it's a JWT) so we can inspect claims
-      try {
-        if (token) {
-          const parts = token.split(".");
-          if (parts.length >= 2) {
-            const payload = parts[1];
-            const json = JSON.parse(
-              atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-            );
-            console.log("Decoded token payload:", json);
-          } else {
-            console.log("Token does not look like JWT:", token);
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to decode token:", err);
-      }
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("DeanFacultyTab: raw response", res.status, res.data);
 
-      // 2) AXIOS request (your usual path) - log config & response
-      const axiosConfig = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      };
-      console.log("Axios request config:", axiosConfig);
+      // get the array from possible shapes
+      const arr: any[] = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.data)
+        ? res.data.data
+        : [];
 
-      let axiosRes;
-      try {
-        axiosRes = await axios.get(url, axiosConfig);
-        console.log("AXIOS: status:", axiosRes.status);
-        console.log("AXIOS: config.headers sent:", axiosRes.config?.headers);
-        console.log("AXIOS: full response.data:", axiosRes.data);
-        // If you want to inspect raw XHR:
-        // console.log("AXIOS: xhr (response.request):", axiosRes.request);
-      } catch (axErr: any) {
-        console.error(
-          "AXIOS request error:",
-          axErr,
-          axErr?.response?.status,
-          axErr?.response?.data
-        );
-      }
+      // map API -> UI shape; detect faculty_pg_rep from user.roles
+      const mapped: FacultyStaff[] = (arr || []).map((r: any) => {
+        const id = r._id ?? r.id ?? r.user?._id ?? "";
+        const staffId =
+          r.staffId ?? r.staffID ?? r.staff_id ?? r.user?.staffId ?? "";
+        const firstName = r.user?.firstName ?? r.firstName ?? "";
+        const lastName = r.user?.lastName ?? r.lastName ?? "";
+        const email = r.user?.email ?? r.email ?? "";
+        const faculty = r.faculty ?? r.facultyName ?? r.user?.faculty ?? "";
+        const department =
+          r.department ?? r.departmentName ?? r.user?.department ?? "";
 
-      // 3) FETCH request (raw) to compare what the server returns without axios
-      try {
-        const fetchRes = await fetch(url, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        console.log("FETCH: status:", fetchRes.status);
-        // log response headers (some browsers don't allow reading all headers due to CORS — but log what you can)
-        try {
-          const headersObj: Record<string, string> = {};
-          fetchRes.headers.forEach((v, k) => (headersObj[k] = v));
-          console.log("FETCH: response.headers:", headersObj);
-        } catch (hErr) {
-          console.warn("FETCH: could not read response headers:", hErr);
-        }
+        // normalize roles from both places
+        const userRoles: string[] = Array.isArray(r.user?.roles)
+          ? r.user.roles.map((x: any) => String(x).toLowerCase())
+          : Array.isArray(r.roles)
+          ? r.roles.map((x: any) => String(x).toLowerCase())
+          : [];
 
-        const txt = await fetchRes.text();
-        console.log("FETCH: raw text:", txt);
+        const isFacultyRep =
+          userRoles.includes("faculty_pg_rep") ||
+          !!r.isFacultyRep ||
+          !!r.facultyRep ||
+          false;
 
-        // try to parse JSON
-        try {
-          const json = JSON.parse(txt);
-          console.log("FETCH: parsed json:", json);
-        } catch (jErr) {
-          console.warn("FETCH: could not parse JSON:", jErr);
-        }
-      } catch (fErr) {
-        console.error("FETCH request error:", fErr);
-      }
+        return {
+          id,
+          _id: r._id ?? r.id,
+          title: r.title ?? r.user?.title ?? "",
+          firstName,
+          lastName,
+          staffId,
+          email,
+          role: userRoles[0] ?? r.role ?? "lecturer",
+          faculty,
+          department,
+          isFacultyRep,
+          facultyRep: r.facultyRep ?? r.faculty_rep ?? null,
+          raw: r,
+        };
+      });
 
-      // 4) For now keep UI stable — if axiosRes exists and has data, set staff
-      if (axiosRes && axiosRes.data) {
-        const arr = Array.isArray(axiosRes.data)
-          ? axiosRes.data
-          : Array.isArray(axiosRes.data?.data)
-          ? axiosRes.data.data
-          : null;
-
-        console.log("AXIOS: resolved array (arr):", arr);
-        if (Array.isArray(arr) && arr.length) {
-          console.log("AXIOS: setting staff from arr length:", arr.length);
-          // If you want to show the real items in the table, uncomment the next line:
-          // setStaff(arr);
-        } else {
-          console.warn("AXIOS: returned array is empty or not present");
-        }
-      } else {
-        console.warn("AXIOS: no response data to map");
-      }
-
-      console.log("=== debug: loadFacultyStaff finished ===");
-    } catch (err) {
-      console.error("Failed to load faculty staff (outer catch)", err);
-      toast({
+      setStaff(mapped);
+      console.log("DeanFacultyTab: mapped staff", mapped);
+    } catch (err: any) {
+      console.error("DeanFacultyTab: load error", err);
+      toast?.({
         title: "Error",
         description: "Failed to load faculty staff.",
         variant: "destructive",
       });
+      setStaff([]);
     } finally {
       setLoading(false);
     }
   }
 
-  // Derived filtered list (will be empty while we're debugging)
+  // determine the current faculty rep by checking raw.user.roles OR isFacultyRep flag
+  const currentFacultyRep = useMemo(() => {
+    return (
+      staff.find((s) => {
+        const roles = Array.isArray(s.raw?.user?.roles)
+          ? s.raw.user.roles.map((r: any) => String(r).toLowerCase())
+          : [];
+        return roles.includes("faculty_pg_rep") || !!s.isFacultyRep;
+      }) ?? null
+    );
+  }, [staff]);
+
+  // filtered list for UI
   const filtered = useMemo(() => {
     const nameTerm = filterName.trim().toLowerCase();
-    const facultyTerm = filterFaculty.trim().toLowerCase();
     const deptTerm = filterDept.trim().toLowerCase();
     const staffTerm = filterStaffId.trim().toLowerCase();
 
@@ -193,17 +165,14 @@ export default function DeanFacultyTab() {
         const full = `${s.firstName ?? ""} ${s.lastName ?? ""}`.toLowerCase();
         if (!full.includes(nameTerm)) return false;
       }
-      if (facultyTerm && !(s.faculty ?? "").toLowerCase().includes(facultyTerm))
-        return false;
       if (deptTerm && !(s.department ?? "").toLowerCase().includes(deptTerm))
         return false;
       if (staffTerm && !(s.staffId ?? "").toLowerCase().includes(staffTerm))
         return false;
       return true;
     });
-  }, [staff, filterName, filterFaculty, filterDept, filterStaffId]);
+  }, [staff, filterName, filterDept, filterStaffId]);
 
-  // Confirmation modal handlers (unchanged)
   function openConfirm(id: string, action: "make" | "unmake") {
     setConfirmId(id);
     setConfirmAction(action);
@@ -211,17 +180,37 @@ export default function DeanFacultyTab() {
 
   async function performMakeUnmake(id: string, action: "make" | "unmake") {
     if (!isDean) {
-      toast({
+      toast?.({
         title: "Not allowed",
         description: "Only a Dean can perform this action.",
         variant: "destructive",
       });
+      setConfirmId(null);
+      setConfirmAction(null);
       return;
     }
 
     const item = staff.find((s) => s.id === id || s._id === id);
     if (!item) {
-      toast({ title: "Not found", variant: "destructive" });
+      toast?.({ title: "Not found", variant: "destructive" });
+      setConfirmId(null);
+      setConfirmAction(null);
+      return;
+    }
+
+    // guard: don't allow creating a second rep
+    if (
+      action === "make" &&
+      currentFacultyRep &&
+      (currentFacultyRep.id ?? currentFacultyRep._id) !== (item.id ?? item._id)
+    ) {
+      toast?.({
+        title: "Faculty rep exists",
+        description: `There is already a faculty rep: ${
+          currentFacultyRep?.firstName ?? ""
+        } ${currentFacultyRep?.lastName ?? ""}. Remove them first.`,
+        variant: "destructive",
+      });
       setConfirmId(null);
       setConfirmAction(null);
       return;
@@ -230,58 +219,133 @@ export default function DeanFacultyTab() {
     setActionLoadingId(id);
     const prev = [...staff];
 
+    // optimistic update: set isFacultyRep and ensure raw.user.roles contains 'faculty_pg_rep' (or remove on unmake)
     setStaff((cur) =>
-      cur.map((s) =>
-        s.id === id || s._id === id
-          ? { ...s, isFacultyRep: action === "make" }
-          : s
-      )
+      cur.map((s) => {
+        if (s.id === id || s._id === id) {
+          // normalize or copy roles array
+          const existingRoles: string[] = Array.isArray(s.raw?.user?.roles)
+            ? s.raw.user.roles.map((r: any) => String(r))
+            : Array.isArray(s.raw?.roles)
+            ? s.raw.roles.map((r: any) => String(r))
+            : [];
+          let nextRoles = [...existingRoles];
+          if (action === "make") {
+            if (
+              !nextRoles.map((r) => r.toLowerCase()).includes("faculty_pg_rep")
+            )
+              nextRoles.push("faculty_pg_rep");
+          } else {
+            nextRoles = nextRoles.filter(
+              (r) => String(r).toLowerCase() !== "faculty_pg_rep"
+            );
+          }
+          return {
+            ...s,
+            isFacultyRep: action === "make",
+            raw: {
+              ...(s.raw ?? {}),
+              user: { ...(s.raw?.user ?? {}), roles: nextRoles },
+            },
+          };
+        }
+        return s;
+      })
     );
 
     try {
-      const payload: any = {
-        staffId: item.staffId ?? item.id ?? item._id,
-        id: item.id ?? item._id,
-        make: action === "make",
-      };
+      // use staffId if available; fallback to id/_id
+      const staffIdentifier = item.staffId ?? item.id ?? item._id;
+      if (!staffIdentifier)
+        throw new Error("Missing staff identifier for API call");
 
-      const res = await axios.post(
-        `${baseUrl}/lecturer/faculty_pg_rep`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const returned = res.data?.data ?? res.data ?? null;
-      if (returned) {
-        setStaff((cur) =>
-          cur.map((s) =>
-            s.id === id || s._id === id
-              ? {
-                  ...s,
-                  isFacultyRep:
-                    returned.isFacultyRep ??
-                    returned.facultyRep ??
-                    returned.is_faculty_rep ??
-                    action === "make",
-                  facultyRep: returned.facultyRep ?? s.facultyRep ?? null,
-                }
-              : s
-          )
+      if (action === "make") {
+        // assign endpoint — POST /lecturer/assign-faculty-rep/:staffId
+        const res = await axios.post(
+          `${baseUrl}/lecturer/assign-faculty-rep/${encodeURIComponent(
+            staffIdentifier
+          )}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-      }
 
-      toast({
-        title: action === "make" ? "Made Faculty Rep" : "Removed Faculty Rep",
-      });
+        const returned = res.data?.data ?? res.data ?? null;
+        // if server returned updated user/object, patch it in (prefer authoritative server data)
+        if (returned) {
+          setStaff((cur) =>
+            cur.map((s) =>
+              s.id === id || s._id === id
+                ? {
+                    ...s,
+                    isFacultyRep:
+                      returned.isFacultyRep ?? returned.facultyRep ?? true,
+                    facultyRep: returned.facultyRep ?? s.facultyRep ?? null,
+                    raw: returned.raw ?? returned ?? s.raw,
+                  }
+                : s
+            )
+          );
+        }
+
+        toast?.({ title: "Assigned faculty rep" });
+      } else {
+        // unassign: try DELETE first, fallback to POST { make: false }
+        let res;
+        try {
+          res = await axios.delete(
+            `${baseUrl}/lecturer/assign-faculty-rep/${encodeURIComponent(
+              staffIdentifier
+            )}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+        } catch (deleteErr) {
+          // fallback to POST with make: false
+          res = await axios.post(
+            `${baseUrl}/lecturer/assign-faculty-rep/${encodeURIComponent(
+              staffIdentifier
+            )}`,
+            { make: false },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
+        const returned = res.data?.data ?? res.data ?? null;
+        if (returned) {
+          setStaff((cur) =>
+            cur.map((s) =>
+              s.id === id || s._id === id
+                ? {
+                    ...s,
+                    isFacultyRep: false,
+                    facultyRep: null,
+                    raw: returned.raw ?? returned ?? s.raw,
+                  }
+                : s
+            )
+          );
+        } else {
+          // if nothing returned assume success
+          setStaff((cur) =>
+            cur.map((s) =>
+              s.id === id || s._id === id
+                ? { ...s, isFacultyRep: false, facultyRep: null }
+                : s
+            )
+          );
+        }
+        toast?.({ title: "Removed faculty rep" });
+      }
     } catch (err: any) {
-      console.error("Make/unmake faculty rep failed", err);
+      console.error("DeanFacultyTab: make/unmake failed", err);
+      // rollback optimistic update
       setStaff(prev);
-      toast({
+      toast?.({
         title: "Error",
         description:
           err?.response?.data?.message ?? err?.message ?? "Action failed",
@@ -296,32 +360,33 @@ export default function DeanFacultyTab() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-xl font-semibold">Faculty Staff</h2>
-        <div className="flex gap-3">
+
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Input
             placeholder="Filter by name"
             value={filterName}
             onChange={(e) => setFilterName(e.target.value)}
-            className="w-60"
+            className="w-full sm:w-60"
           />
-
           <Input
             placeholder="Filter by department"
             value={filterDept}
             onChange={(e) => setFilterDept(e.target.value)}
-            className="w-48"
+            className="w-full sm:w-48"
           />
           <Input
             placeholder="Filter by staff id"
             value={filterStaffId}
             onChange={(e) => setFilterStaffId(e.target.value)}
-            className="w-40"
+            className="w-full sm:w-40"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded shadow overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded shadow overflow-x-auto">
         <table className="min-w-[900px] w-full text-left">
           <thead className="bg-gray-100">
             <tr>
@@ -335,7 +400,6 @@ export default function DeanFacultyTab() {
               {isDean && <th className="p-3 text-right">Actions</th>}
             </tr>
           </thead>
-
           <tbody>
             {filtered.map((p, i) => (
               <tr
@@ -373,8 +437,21 @@ export default function DeanFacultyTab() {
                         className="bg-amber-700 text-white"
                         size="sm"
                         onClick={() => openConfirm(p.id ?? p._id ?? "", "make")}
-                        disabled={actionLoadingId === (p.id ?? p._id)}
-                        title="Make Faculty Rep"
+                        disabled={
+                          actionLoadingId === (p.id ?? p._id) ||
+                          (!!currentFacultyRep &&
+                            (currentFacultyRep.id ?? currentFacultyRep._id) !==
+                              (p.id ?? p._id))
+                        }
+                        title={
+                          !!currentFacultyRep &&
+                          (currentFacultyRep.id ?? currentFacultyRep._id) !==
+                            (p.id ?? p._id)
+                            ? `Faculty rep already assigned: ${
+                                currentFacultyRep?.firstName ?? ""
+                              } ${currentFacultyRep?.lastName ?? ""}`
+                            : "Make Faculty Rep"
+                        }
                       >
                         <Check size={14} /> Make Rep
                       </Button>
@@ -398,10 +475,91 @@ export default function DeanFacultyTab() {
         </table>
       </div>
 
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {filtered.map((p) => (
+          <div key={p.id ?? p._id} className="bg-white rounded shadow p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="font-medium capitalize">{`${p.title ?? ""} ${
+                  p.firstName ?? ""
+                } ${p.lastName ?? ""}`}</div>
+                <div className="text-sm text-gray-600">
+                  {(p.role ?? "Lecturer").replace(/_/g, " ")}
+                </div>
+                <div className="mt-2 text-sm space-y-1">
+                  <div>
+                    <strong>Staff ID:</strong> {p.staffId ?? "-"}
+                  </div>
+                  <div>
+                    <strong>Email:</strong> {p.email ?? "-"}
+                  </div>
+                  <div>
+                    <strong>Faculty:</strong> {p.faculty ?? "-"}
+                  </div>
+                  <div>
+                    <strong>Department:</strong> {p.department ?? "-"}
+                  </div>
+                </div>
+              </div>
+
+              {isDean && (
+                <div className="flex flex-col items-end gap-2">
+                  <div className="text-sm">
+                    {p.isFacultyRep ? "Faculty Rep" : ""}
+                  </div>
+
+                  {p.isFacultyRep ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openConfirm(p.id ?? p._id ?? "", "unmake")}
+                      disabled={actionLoadingId === (p.id ?? p._id)}
+                      title="Remove Faculty Rep"
+                    >
+                      <X size={14} />
+                    </Button>
+                  ) : (
+                    <Button
+                      className="bg-amber-700 text-white"
+                      size="sm"
+                      onClick={() => openConfirm(p.id ?? p._id ?? "", "make")}
+                      disabled={
+                        actionLoadingId === (p.id ?? p._id) ||
+                        (!!currentFacultyRep &&
+                          (currentFacultyRep.id ?? currentFacultyRep._id) !==
+                            (p.id ?? p._id))
+                      }
+                      title={
+                        !!currentFacultyRep &&
+                        (currentFacultyRep.id ?? currentFacultyRep._id) !==
+                          (p.id ?? p._id)
+                          ? `Faculty rep already assigned: ${
+                              currentFacultyRep?.firstName ?? ""
+                            } ${currentFacultyRep?.lastName ?? ""}`
+                          : "Make Faculty Rep"
+                      }
+                    >
+                      <Check size={14} />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {!filtered.length && (
+          <div className="text-center text-gray-500">
+            {loading ? "Loading..." : "No staff found."}
+          </div>
+        )}
+      </div>
+
       {/* Confirmation modal */}
       {confirmId && confirmAction && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h4 className="text-lg font-medium mb-3">
               {confirmAction === "make"
                 ? "Make Faculty Rep"

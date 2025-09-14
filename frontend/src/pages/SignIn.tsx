@@ -47,6 +47,7 @@ const SignIn = () => {
           navigate("/admin");
           break;
         case "supervisor":
+        case "internalsupervisor":
           navigate("/supervisor");
           break;
         case "student":
