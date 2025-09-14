@@ -22,7 +22,8 @@ export interface IScoreEntry {
  * Holds criteria definitions and panel scoring entries.
  */
 export interface IScoreSheet extends Document {
-  defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: true, unique: true }
+  defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: false, unique: true }
+  department: { type: String, required: true },
 
   criteria: {
     name: string;
@@ -67,7 +68,8 @@ const scoreEntrySchema = new Schema<IScoreEntry>(
 
 const scoreSheetSchema = new Schema<IScoreSheet>(
   {
-    defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: true, unique: true },
+    defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: false, unique: true },
+    department: { type: String, required: true },
     criteria: {
       type: [criterionSchema],
       validate: [

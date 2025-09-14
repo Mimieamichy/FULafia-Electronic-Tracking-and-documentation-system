@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
 import DefenceService from '../services/defence';
 
+
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    role: string[];
+    permissions: string[];
+    [key: string]: any;
+  };
+}
 export default class DefenceController {
   static async getAllDefences(req: Request, res: Response) {
     try {
@@ -84,12 +94,14 @@ export default class DefenceController {
   }
 
   /** Create a department-wide template score sheet */
-  static async createDeptScoreSheet(req: Request, res: Response) {
+  static async createDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
     try {
       const { criteria } = req.body;
-      const scoreSheet = await DefenceService.createDeptScoreSheet(criteria);
+      const userId = req.user?.id || ''
+      const scoreSheet = await DefenceService.createDeptScoreSheet(criteria, userId);
       res.json({ success: true, data: scoreSheet });
     } catch (err: any) {
+      console.log(err)
       res
         .status(400)
         .json({

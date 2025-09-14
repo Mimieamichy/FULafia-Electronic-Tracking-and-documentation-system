@@ -1,4 +1,4 @@
-import { Defence, Student, Project, ScoreSheet } from '../models/index';
+import { Defence, Student, Project, ScoreSheet, Lecturer } from '../models/index';
 import { Types } from 'mongoose';
 import NotificationService from "../services/notification";
 import { STAGES } from "../utils/constants";
@@ -292,11 +292,19 @@ export default class DefenceService {
   }
 
 
-  static async createDeptScoreSheet(criteria: { name: string; weight: number }[]) {
+  static async createDeptScoreSheet(criteria: { name: string; weight: number }[], userId: string) {
     const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
     if (totalWeight !== 100) throw new Error("Criteria weights must add up to 100");
 
+    const lecturer = await Lecturer.findOne({ user: userId });
+            if (!lecturer || !lecturer.department) {
+                throw new Error("Lecturer not found or departeent not set");
+            }
+    
+
     const scoreSheet = await ScoreSheet.create({
+      defence: null as any, // No specific defence
+      department: lecturer.department,
       criteria,
       entries: [],
     });
