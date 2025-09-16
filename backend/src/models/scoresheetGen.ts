@@ -4,7 +4,7 @@ import mongoose, { Document, Schema } from 'mongoose';
  * Represents a single score on a specific criterion by a panel member
  */
 export interface ICriterionScore {
-  criterion: string; // will reference criterion._id or criterion.name
+  criterion: mongoose.Types.ObjectId; // now references criterion._id
   score: number; // 0-100
 }
 
@@ -21,30 +21,30 @@ export interface IScoreEntry {
  * ScoreSheet is tied to a Defence.
  * Holds criteria definitions and panel scoring entries.
  */
-export interface IScoreSheet extends Document {
+export interface IGeneralScoreSheet extends Document {
   defence: { type: Schema.Types.ObjectId; ref: 'Defence'; required: false; unique: true };
-  department: { type: string; required: true; unique: true };
 
   criteria: {
-    _id: mongoose.Types.ObjectId; 
+    _id: mongoose.Types.ObjectId; // each criterion has its own id
     name: string;
-    weight: number;
+    weight: number; // percentage weight, sum = 100
   }[];
   entries: IScoreEntry[];
 }
 
-// ✅ criteria sub-schema with auto _id enabled
+// ✅ Each criterion now has an ObjectId (_id)
 const criterionSchema = new Schema<{ name: string; weight: number }>(
   {
     name: { type: String, required: true },
     weight: { type: Number, required: true, min: 0, max: 100 },
   },
-  { _id: true } // enable _id for each criterion
+  { _id: true } // give each criterion its own id
 );
 
+// ✅ scores now reference criterion by its id
 const criterionScoreSchema = new Schema<ICriterionScore>(
   {
-    criterion: { type: String, required: true }, // could be changed later to ObjectId reference
+    criterion: { type: Schema.Types.ObjectId, required: true }, // reference criterion._id
     score: { type: Number, required: true, min: 0, max: 100 },
   },
   { _id: false }
@@ -58,7 +58,7 @@ const scoreEntrySchema = new Schema<IScoreEntry>(
       type: [criterionScoreSchema],
       validate: {
         validator: (arr: ICriterionScore[]) => {
-          const crits = arr.map((s) => s.criterion);
+          const crits = arr.map((s) => s.criterion.toString());
           return new Set(crits).size === crits.length;
         },
         message: 'Duplicate criteria in scores are not allowed',
@@ -68,10 +68,9 @@ const scoreEntrySchema = new Schema<IScoreEntry>(
   { _id: false }
 );
 
-const scoreSheetSchema = new Schema<IScoreSheet>(
+const generalScoreSheetSchema = new Schema<IGeneralScoreSheet>(
   {
     defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: false, unique: true },
-    department: { type: String, required: true, unique: true },
     criteria: {
       type: [criterionSchema],
       validate: [
@@ -86,9 +85,9 @@ const scoreSheetSchema = new Schema<IScoreSheet>(
         },
       ],
     },
-    entries: [scoreEntrySchema], // initially empty
+    entries: [scoreEntrySchema],
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IScoreSheet>('ScoreSheet', scoreSheetSchema);
+export default mongoose.model<IGeneralScoreSheet>('GeneralScoreSheet', generalScoreSheetSchema);

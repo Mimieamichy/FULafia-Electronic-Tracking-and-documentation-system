@@ -305,11 +305,22 @@ export default class LecturerService {
         if (!user) {
             throw new Error('User not found for this lecturer');
         }
-        if (!user.roles.includes(Role.FACULTY_PG_REP)) {
-            user.roles.push(Role.FACULTY_PG_REP);
-            await user.save();
+
+        const rolesToAdd = [Role.PANEL_MEMBER, Role.FACULTY_PG_REP];
+
+        // Ensure user.roles exists as an array
+        if (!Array.isArray(user.roles)) {
+            user.roles = [];
         }
-        return user;
+
+        for (const role of rolesToAdd) {
+            if (!user.roles.includes(role)) {
+                user.roles.push(role);
+            }
+        }
+
+        await user.save();
+            return user;
     }
 
 

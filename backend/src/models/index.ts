@@ -25,6 +25,11 @@ export { default as Defence } from './defence';
 export type { IDefence } from './defence';
 
 // ScoreSheet
+export { default as GeneralScoreSheet } from './scoresheetGen';
+export type { IGeneralScoreSheet } from './scoresheetGen';
+
+
+// General ScoreSheet 
 export { default as ScoreSheet } from './scoresheet';
 export type { IScoreSheet } from './scoresheet';
 

@@ -112,5 +112,42 @@ export default class DefenceController {
     }
   }
 
+  static async UpdateCriterionDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { criteria } = req.body;
+      const { criteriaId } = req.params;
+      const userId = req.user?.id || ''
+      const scoreSheet = await DefenceService.UpdateCriterionDeptScoreSheet(userId, criteria, criteriaId);
+      res.json({ success: true, data: scoreSheet });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to update department score sheet', message: err.message});
+    }
+  }
+
+
+    /** Create a general template score sheet */
+  static async createGeneralScoreSheet(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { criteria } = req.body;
+      const scoreSheet = await DefenceService.createGeneralScoreSheet(criteria);
+      res.json({ success: true, data: scoreSheet });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false,error: 'Failed to create general score sheet',message: err.message});
+    }
+  }
+
+    static async UpdateGenScoreSheet(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { criteria } = req.body
+      const scoreSheet = await DefenceService.UpdateGenScoreSheet(criteria);
+      res.json({ success: true, data: scoreSheet });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to update general score sheet', message: err.message});
+    }
+  }
+
 }
 
