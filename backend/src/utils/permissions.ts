@@ -243,6 +243,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GET_PROVOST,
     Permission.GET_DEAN,
     Permission.ADD_DEAN,
+    Permission.GET_ALL_DEPARTMENTS,
   ],
   [Role.GENERAL]: [
     Permission.LOGIN,

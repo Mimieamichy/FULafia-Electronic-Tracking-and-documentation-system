@@ -115,9 +115,9 @@ export default class DefenceController {
   static async UpdateCriterionDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
     try {
       const { criteria } = req.body;
-      const { criteriaId } = req.params;
+      const { criterionId } = req.params;
       const userId = req.user?.id || ''
-      const scoreSheet = await DefenceService.UpdateCriterionDeptScoreSheet(userId, criteria, criteriaId);
+      const scoreSheet = await DefenceService.UpdateCriterionDeptScoreSheet(userId, criterionId, criteria);
       res.json({ success: true, data: scoreSheet });
     } catch (err: any) {
       console.log(err)
@@ -138,14 +138,39 @@ export default class DefenceController {
     }
   }
 
-    static async UpdateGenScoreSheet(req: AuthenticatedRequest, res: Response) {
+    static async updateGenCriterion(req: AuthenticatedRequest, res: Response) {
     try {
       const { criteria } = req.body
-      const scoreSheet = await DefenceService.UpdateGenScoreSheet(criteria);
+      const { criterionId } = req.params;
+      const scoreSheet = await DefenceService.updateGenCriterion(criterionId, criteria);
       res.json({ success: true, data: scoreSheet });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({success: false, error: 'Failed to update general score sheet', message: err.message});
+    }
+  }
+
+
+  static async deleteCriterionDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { criterionId } = req.params;
+      const userId = req.user?.id || ''
+      const deletedId = await DefenceService.deleteCriterionDeptScoreSheet(userId, criterionId);
+      res.json({ success: true, data: deletedId });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to delete criterion', message: err.message});
+    }
+  }
+
+  static async deleteGenCriterion(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { criterionId } = req.params;
+      const deletedId = await DefenceService.deleteGenCriterion(criterionId);
+      res.json({ success: true, data: deletedId });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to delete criterion', message: err.message});
     }
   }
 

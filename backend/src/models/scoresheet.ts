@@ -23,7 +23,7 @@ export interface IScoreEntry {
  */
 export interface IScoreSheet extends Document {
   defence: { type: Schema.Types.ObjectId; ref: 'Defence'; required: false; unique: true };
-  department: { type: string; required: true; unique: true };
+  department: { type: string; required: true; unique: false };
 
   criteria: {
     _id: mongoose.Types.ObjectId; 
@@ -71,7 +71,7 @@ const scoreEntrySchema = new Schema<IScoreEntry>(
 const scoreSheetSchema = new Schema<IScoreSheet>(
   {
     defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: false, unique: true },
-    department: { type: String, required: true, unique: true },
+    department: { type: String, required: true, unique: false },
     criteria: {
       type: [criterionSchema],
       validate: [

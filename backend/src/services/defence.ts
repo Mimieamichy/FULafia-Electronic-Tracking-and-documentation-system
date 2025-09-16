@@ -420,8 +420,6 @@ export default class DefenceService {
     return criterion;
   }
 
- 
-
 
   static async deleteGenCriterion(criterionId: string) {
     let scoreSheet = await GeneralScoreSheet.findOne();
@@ -443,7 +441,7 @@ export default class DefenceService {
     }
 
     await scoreSheet.save();
-    return { success: true, deletedId: criterionId };
+    return criterionId;
   }
 
 
