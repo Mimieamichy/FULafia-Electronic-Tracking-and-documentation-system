@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import DefenceService from '../services/defence';
+import scoresheet from 'src/models/scoresheet';
 
 
 
@@ -112,6 +113,19 @@ export default class DefenceController {
     }
   }
 
+
+   static async getDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {scoresheetId} = req.params
+      const scoreSheet = await DefenceService.getDeptScoreSheet(scoresheetId);
+      res.json({ success: true, data: scoreSheet });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to get department score sheet', message: err.message});
+    }
+  }
+
+  
   static async UpdateCriterionDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
     try {
       const { criteria } = req.body;

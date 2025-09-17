@@ -314,6 +314,10 @@ export default class DefenceService {
     return scoreSheet;
   }
 
+  static async getDeptScoreSheet(scoresheetId : string) {
+    return await ScoreSheet.findById(scoresheetId)
+
+  }
 
   static async UpdateCriterionDeptScoreSheet(
     userId: string,
