@@ -335,11 +335,9 @@ export default class LecturerService {
         const lecturers = await Lecturer.find({ department: lecturer.department })
             .populate({
                 path: "user",
-                match: { roles: Role.FACULTY_PG_REP }, // Only users who are Faculty PG Reps
-                select: "firstName lastName email roles", // fields to return
-            })
-            .populate("department", "name") // bring department name
-            .lean();
+                match: { roles: Role.FACULTY_PG_REP },
+                select: "firstName lastName email roles",
+            }).lean();
 
         // Filter out lecturers without a user (failed match)
         const facultyReps = lecturers.filter(l => l.user);
