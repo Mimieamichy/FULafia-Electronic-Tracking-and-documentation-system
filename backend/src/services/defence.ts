@@ -23,7 +23,7 @@ export default class DefenceService {
     time: string;
     studentIds: (string | Types.ObjectId)[];
     panelMemberIds: (string | Types.ObjectId)[];
-  }, userId: string) {
+  }, userId:Types.ObjectId) {
     const { stage, session, date, time, studentIds, panelMemberIds, program } = options;
 
    const department = (await Lecturer.findOne({ user: userId }).lean())?.department;
@@ -41,21 +41,8 @@ export default class DefenceService {
       ended: false,
     });
 
-
-    const criteria = ScoreSheet.find({department}).lean();
-
     // Attach defence to global score sheet
-
-    // Attach empty score sheet
-    await ScoreSheet.create({
-      defence: defence._id as Types.ObjectId,
-      criteria: criteria,
-      entries: [], // no scores yet
-    });
-
-
-
-
+    const criteria = ScoreSheet.find({department}).lean();
 
     // Fetch students with projects
     const students = await Student.find({ _id: { $in: studentIds } })
