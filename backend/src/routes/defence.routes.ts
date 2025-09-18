@@ -56,7 +56,7 @@ router.post('/start/:defenceId', authenticate, checkPermission(Permission.START_
 router.post('/submit-score/:defenceId', authenticate, checkPermission(Permission.SCORE_STUDENT), DefenceController.submitScore);
 router.post('/end/:defenceId', authenticate, checkPermission(Permission.END_DEFENSE), DefenceController.endDefence);
 router.post('/dept-score-sheet', authenticate, checkPermission(Permission.GENERATE_DEPT_SCORE_SHEET), DefenceController.createDeptScoreSheet);
-router.get('/dept-score-sheet/:scoresheetId ', authenticate, checkPermission(Permission.GENERATE_DEPT_SCORE_SHEET), DefenceController.getDeptScoreSheet);
+router.get('/dept-score-sheet/:scoresheetId', authenticate, checkPermission(Permission.GENERATE_DEPT_SCORE_SHEET), DefenceController.getDeptScoreSheet);
 router.put('/dept-score-sheet/:criterionId', authenticate, checkPermission(Permission.GENERATE_DEPT_SCORE_SHEET), DefenceController.UpdateCriterionDeptScoreSheet);
 router.delete('/dept-score-sheet/:criterionId', authenticate, checkPermission(Permission.GENERATE_DEPT_SCORE_SHEET), DefenceController.deleteCriterionDeptScoreSheet);
 router.post('/score-sheet', authenticate, checkPermission(Permission.GENERATE_GENERAL_SCORE_SHEET), DefenceController.createGeneralScoreSheet);

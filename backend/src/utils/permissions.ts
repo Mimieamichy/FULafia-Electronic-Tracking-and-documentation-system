@@ -44,6 +44,7 @@ export enum Permission {
   EDIT_STUDENT = 'edit_student',
   DELETE_STUDENT = 'delete_student',
   VIEW_ALL_STUDENTS = 'view_all_students',
+  VIEW_FACULTY_REP = 'view_faculty_rep',
 
 
 
@@ -139,6 +140,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.EDIT_STUDENT,
     Permission.DELETE_STUDENT,
     Permission.GET_COLLEGE_REP,
+    Permission.VIEW_FACULTY_REP,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -160,6 +162,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.EDIT_STUDENT,
     Permission.DELETE_STUDENT,
     Permission.GET_COLLEGE_REP,
+    Permission.VIEW_FACULTY_REP,
 
   ],
   [Role.DEAN]: [
@@ -170,6 +173,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.ASSIGN_FACULTY_REP,
     Permission.VIEW_ALL_STUDENTS,
     Permission.GET_ALL_FACULTY_DEPT,
+    Permission.VIEW_FACULTY_REP,
 
   ],
   [Role.SUPERVISOR]: [
@@ -222,7 +226,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.ASSIGN_COLLEGE_REP,
     Permission.GET_COLLEGE_REP,
     Permission.GET_ALL_FACULTY_DEPT,
-    Permission.GET_ALL_DEPARTMENTS
+    Permission.GET_ALL_DEPARTMENTS,
+    Permission.VIEW_FACULTY_REP,
   ],
   [Role.EXTERNAL_EXAMINER]: [
     Permission.APPROVE_LAST_DEFENSE,
@@ -244,6 +249,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GET_DEAN,
     Permission.ADD_DEAN,
     Permission.GET_ALL_DEPARTMENTS,
+    Permission.VIEW_FACULTY_REP,
   ],
   [Role.GENERAL]: [
     Permission.LOGIN,

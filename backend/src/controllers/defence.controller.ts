@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import DefenceService from '../services/defence';
-import scoresheet from 'src/models/scoresheet';
 
 
 

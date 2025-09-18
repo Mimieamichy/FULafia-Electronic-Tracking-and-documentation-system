@@ -48,6 +48,7 @@ router.delete('/:studentId', authenticate, checkPermission(Permission.DELETE_LEC
 router.post('/add-lecturer', authenticate, checkPermission(Permission.ADD_LECTURER), validateBody(addLectuerSchema), LecturerController.addLecturer);
 router.get('/get-hods', authenticate, checkPermission(Permission.GET_HODS), LecturerController.getHODs);
 router.get('/get-dean', authenticate, checkPermission(Permission.GET_DEAN), LecturerController.getDeans);
+router.get('/get-faculty-rep', authenticate, checkPermission(Permission.VIEW_FACULTY_REP), LecturerController.getFacultyReps);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
 router.post('/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addHOD);
 router.post('/add-external-examiner', authenticate, checkPermission(Permission.ADD_EXTERNAL_EXAMINER), LecturerController.addExternalExaminer);

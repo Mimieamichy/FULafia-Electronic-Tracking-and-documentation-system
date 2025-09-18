@@ -125,6 +125,18 @@ export default class LecturerController {
     }
   }
 
+
+  static async getFacultyReps(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id || ''
+      const facultyRep = await LecturerService.getFacultyReps(userId);
+      res.json({ success: true, data: facultyRep });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to get Faculty Rep', message: err.message });
+    }
+  }
+
   static async getProvost(req: Request, res: Response) {
     try {
       const provost = await LecturerService.getProvost();
