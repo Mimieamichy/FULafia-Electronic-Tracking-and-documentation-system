@@ -23,9 +23,10 @@ export default class DefenceService {
     time: string;
     studentIds: (string | Types.ObjectId)[];
     panelMemberIds: (string | Types.ObjectId)[];
-    criteria: { name: string; weight: number }[];
-  }) {
+  }, userId: string) {
     const { stage, session, date, time, studentIds, panelMemberIds, program } = options;
+
+   const department = (await Lecturer.findOne({ user: userId }).lean())?.department;
 
     // Create defence
     const defence = await Defence.create({
@@ -41,7 +42,7 @@ export default class DefenceService {
     });
 
 
-    const criteria = ScoreSheet.find({}).lean();
+    const criteria = ScoreSheet.find({department}).lean();
 
     // Attach defence to global score sheet
 
@@ -298,7 +299,7 @@ export default class DefenceService {
 
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer || !lecturer.department) {
-      throw new Error("Lecturer not found or departeent not set");
+    throw new Error("Lecturer not found or department = Lecturer.findById(userId) not set");
     }
 
     const tempId = new mongoose.Types.ObjectId();

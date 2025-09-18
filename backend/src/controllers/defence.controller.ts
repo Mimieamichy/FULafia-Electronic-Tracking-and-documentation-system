@@ -22,18 +22,13 @@ export default class DefenceController {
   }
 
   /** Schedule a new defence */
-  static async scheduleDefence(req: Request, res: Response) {
+  static async scheduleDefence(req: AuthenticatedRequest, res: Response) {
     try {
-      const defence = await DefenceService.scheduleDefence(req.body);
+      const userId = req.user?.id || ''
+      const defence = await DefenceService.scheduleDefence(req.body, userId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: 'Failed to schedule defence',
-          message: err.message,
-        });
+      res.status(400).json({success: false,error: 'Failed to schedule defence',message: err.message});
     }
   }
 
