@@ -320,33 +320,36 @@ export default class LecturerService {
         }
 
         await user.save();
-            return user;
+        return user;
     }
 
 
     static async getFacultyReps(userId: string) {
-  // Get the lecturer making the request
-  const lecturer = await Lecturer.findOne({ user: userId })
-  if (!lecturer || !lecturer.department) {
-    throw new Error("Lecturer not found or department not set");
-  }
+        // Get the lecturer making the request
+        const lecturer = await Lecturer.findOne({ user: userId })
+        if (!lecturer || !lecturer.department) {
+            throw new Error("Lecturer not found or department not set");
+        }
 
 
-    const lecturers = await Lecturer.find({ department: lecturer.department })
-      .populate({
-        path: "user",
-        match: { roles: Role.FACULTY_PG_REP }, // Only users who are Faculty PG Reps
-        select: "firstName lastName email roles", // fields to return
-      })
-      .populate("department", "name", "faculty") // bring department name
-      .lean();
+        const lecturers = await Lecturer.find({ department: lecturer.department })
+            .populate({
+                path: "user",
+                match: { roles: Role.FACULTY_PG_REP }, // Only users who are Faculty PG Reps
+                select: "firstName lastName email roles", // fields to return
+            })
+            .populate("department", "name") // bring department name
+            .lean();
 
-    // Filter out lecturers without a user (failed match)
-    const facultyReps = lecturers.filter(l => l.user);
+        // Filter out lecturers without a user (failed match)
+        const facultyReps = lecturers.filter(l => l.user);
 
-    return facultyReps;
-  
-}
+        return facultyReps;
+
+    }
+
+
+
 
 
 
