@@ -47,7 +47,7 @@ export default function HodDashboardOverview() {
           Welcome, {displayName} 👋
         </h1>
         <p className="text-gray-600 mt-1 text-sm sm:text-base">
-          Here’s an overview of your {user?.role} activities
+          Here’s an overview of your {user?.role}, {user?.department} activities
         </p>
       </div>
 

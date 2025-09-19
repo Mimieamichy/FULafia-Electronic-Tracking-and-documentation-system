@@ -1,5 +1,5 @@
 // src/pgc/ScoreSheetGenerator.tsx
-import React, { useState } from "react";
+import  { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -7,16 +7,21 @@ import { useToast } from "@/hooks/use-toast";
 export interface Criterion {
   title: string;
   percentage: number;
+  id?: string; // optional id if backend provides
 }
 
 interface ScoreSheetGeneratorProps {
   initialCriteria?: Criterion[];
   onPublish?: (payload: { criteria: Criterion[] }) => void | Promise<void>;
   saving?: boolean;
+  rubricId?: string | null; // optional rubric ID for deletion
+  onDeleteCriterion?: (criterionId: string) => void | Promise<void>; // optional deletion handler
 }
 
 export default function ScoreSheetGenerator({
   initialCriteria,
+  rubricId = null,
+  onDeleteCriterion,
   onPublish,
   saving = false,
 }: ScoreSheetGeneratorProps) {
@@ -30,6 +35,8 @@ export default function ScoreSheetGenerator({
         ]
   );
 
+  const seededRef = useRef<string | null>(null);
+
   const [newCriterion, setNewCriterion] = useState("");
   const [newPercentage, setNewPercentage] = useState("");
 
@@ -38,6 +45,17 @@ export default function ScoreSheetGenerator({
     0
   );
   const isTotalValid = totalPercentage === 100;
+
+  useEffect(() => {
+  // only seed if rubricId changed (new doc) OR we haven't seeded yet and initialCriteria exists
+  if (!initialCriteria) return;
+
+  const newRubricId = String(rubricId ?? "");
+  if (seededRef.current !== newRubricId) {
+    setCriteria(initialCriteria);
+    seededRef.current = newRubricId; // mark as seeded for this rubric
+  }
+}, [initialCriteria, rubricId]);
 
   function handleAddCriterion() {
     const title = newCriterion.trim();
@@ -71,9 +89,14 @@ export default function ScoreSheetGenerator({
     setNewPercentage("");
   }
 
-  function handleRemoveCriterion(idx: number) {
-    setCriteria((s) => s.filter((_, i) => i !== idx));
-  }
+  // inside ScoreSheetGenerator component
+  const handleLocalAfterDelete = (deletedId?: string, idx?: number) => {
+    if (deletedId) {
+      setCriteria((prev) => prev.filter((p) => p.id !== deletedId));
+    } else if (typeof idx === "number") {
+      setCriteria((prev) => prev.filter((_, j) => j !== idx));
+    }
+  };
 
   function updateCriterion(idx: number, patch: Partial<Criterion>) {
     setCriteria((s) => s.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
@@ -99,12 +122,6 @@ export default function ScoreSheetGenerator({
 
     const payload = { criteria };
     onPublish?.(payload);
-
-    toast({
-      title: "Rubric published",
-      description: "Score sheet published and attached to the schedule.",
-      variant: "default",
-    });
   }
 
   return (
@@ -142,13 +159,34 @@ export default function ScoreSheetGenerator({
                 min={0}
                 max={100}
               />
-              <button
-                onClick={() => handleRemoveCriterion(i)}
-                className="text-sm text-red-600 px-2 py-1"
-                aria-label={`Remove criterion ${c.title}`}
-              >
-                Remove
-              </button>
+              {c.id ? (
+                // server-created item — call parent delete
+                <button
+                  onClick={async () => {
+                    if (!c.id) return;
+                    try {
+                      await onDeleteCriterion?.(c.id);
+                      // remove from local UI after parent confirms delete
+                      handleLocalAfterDelete(c.id, undefined);
+                    } catch (err) {
+                      console.error("delete error", err);
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              ) : (
+                // not yet persisted item — just remove locally
+                <button
+                  onClick={() =>
+                    setCriteria((prev) => prev.filter((_, j) => j !== i))
+                  }
+                  className="text-sm text-red-600 px-2 py-1"
+                  aria-label={`Remove criterion ${c.title}`}
+                >
+                  Remove
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -1,13 +1,11 @@
 // src/pgc/SetDefenseModal.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-
 import { useToast } from "@/hooks/use-toast";
 
-// add a local Lecturer type (adjust fields if your API returns others)
 interface Lecturer {
   _id: string;
   fullName?: string;
@@ -16,27 +14,32 @@ interface Lecturer {
   email?: string;
 }
 
-// update props to accept Lecturer[] instead of string[]
 interface SetDefenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   defenseStage: string;
-  lecturers: Lecturer[]; // <-- changed from string[]
-  onSubmit: (data: {
-    stage: string;
-    date: string;
-    time: string;
-    panel: string[]; // array of lecturer _id strings
-    
-  }) => Promise<void>;
+  lecturers?: Lecturer[]; // optional preloaded lecturers
+  schedulerRole?: "hod" | "provost" | "pgcord"; // default "hod"
+  studentIds: string[]; // required: students to schedule
+  program: string;
+  session: string;
+  baseUrl: string;
+  token?: string | null;
+  onScheduled?: (resp: any) => void;
 }
 
 const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   isOpen,
   onClose,
   defenseStage,
-  lecturers,
-  onSubmit,
+  lecturers: initialLecturers,
+  schedulerRole = "hod",
+  studentIds,
+  program,
+  session,
+  baseUrl,
+  token,
+  onScheduled,
 }) => {
   const { toast } = useToast();
   const [date, setDate] = useState("");
@@ -44,23 +47,84 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const [panel, setPanel] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
- 
+  const [lecturers, setLecturers] = useState<Lecturer[]>(
+    initialLecturers ?? []
+  );
+  const [loadingLecturers, setLoadingLecturers] = useState(false);
+
+  const lecturerEndpoint =
+    schedulerRole === "provost"
+      ? `${baseUrl}/lecturer/get-external-examiner`
+      : `${baseUrl}/lecturer/get-faculty-rep`;
+
+  const fetchLecturers = useCallback(async () => {
+    if (initialLecturers && initialLecturers.length > 0) {
+      setLecturers(initialLecturers);
+      return;
+    }
+
+    setLoadingLecturers(true);
+    console.groupCollapsed(
+      `[SetDefenseModal] GET lecturers -> ${lecturerEndpoint}`
+    );
+    try {
+      const res = await fetch(lecturerEndpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const text = await res.text();
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
+      }
+      console.log("Raw response:", parsed);
+
+      const payload = parsed?.data ?? parsed;
+      if (Array.isArray(payload)) {
+        setLecturers(payload);
+      } else if (Array.isArray(payload?.lecturers)) {
+        setLecturers(payload.lecturers);
+      } else {
+        const maybeArray = Object.values(parsed || {}).find((v: any) =>
+          Array.isArray(v)
+        );
+        if (Array.isArray(maybeArray)) setLecturers(maybeArray as Lecturer[]);
+        else {
+          console.warn(
+            "[SetDefenseModal] unexpected lecturers payload:",
+            parsed
+          );
+          setLecturers([]);
+        }
+      }
+    } catch (err) {
+      console.error("[SetDefenseModal] fetchLecturers error:", err);
+      setLecturers([]);
+      toast({
+        title: "Failed to load panel members",
+        description: "Could not fetch lecturers. Check your network or auth.",
+        variant: "destructive",
+      });
+    } finally {
+      console.groupEnd();
+      setLoadingLecturers(false);
+    }
+  }, [initialLecturers, lecturerEndpoint, token, toast]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchLecturers();
+    setPanel([]); // reset panel selection on open
+  }, [isOpen, fetchLecturers]);
 
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    // If rubric is not attached, show destructive toast and throw an Error
-    if (!rubric) {
-      toast({
-        title: "Score sheet missing",
-        description:
-          "You must publish and attach a score sheet before saving the defense.",
-        variant: "destructive",
-      });
-      // throw an error so upstream handlers / error boundaries can react
-      throw new Error("Score sheet is required for scheduling a defense.");
-    }
-
     if (!date || !time || panel.length === 0) {
       toast({
         title: "Missing fields",
@@ -71,30 +135,86 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       return;
     }
 
+    // normalize program to backend-expected values
+    const programNormalized =
+      typeof program === "string" ? program.trim().toUpperCase() : program;
+
+    // if you want to be extra safe, map common client values:
+    const programForApi =
+      programNormalized === "MSC" || programNormalized === "PHD"
+        ? programNormalized
+        : programNormalized === "MSc".toUpperCase() // defensive - unnecessary but explicit
+        ? "MSC"
+        : programNormalized === "PhD".toUpperCase()
+        ? "PHD"
+        : programNormalized;
+
+    // optional client-side validation (prevents round-trip if wrong)
+    if (!["MSC", "PHD"].includes(programForApi)) {
+      toast({
+        title: "Invalid program",
+        description: `Program must be MSC or PHD (got "${String(program)}").`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload = {
+      stage: defenseStage,
+      session,
+      date,
+      time,
+      studentIds,
+      panelMemberIds: panel,
+      program: programForApi, // <<< send normalized value
+    };
+
+    console.groupCollapsed("[SetDefenseModal] POST /defence/schedule");
+    console.log("payload:", payload);
+
     setSaving(true);
     try {
-      await onSubmit({
-        stage: defenseStage,
-        date,
-        time,
-        panel,
-        rubric,
+      const res = await fetch(`${baseUrl}/defence/schedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
       });
+
+      const text = await res.text();
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
+      }
+
+      if (!res.ok) {
+        const msg =
+          (parsed && (parsed.message || parsed.error)) ??
+          `Server ${res.status}`;
+        throw new Error(msg);
+      }
+
       toast({
         title: "Defense scheduled",
-        description: "Defense saved with attached score sheet.",
+        description: "Defense saved successfully.",
         variant: "default",
       });
+
+      console.groupEnd();
+      onScheduled?.(parsed);
       onClose();
     } catch (err: any) {
-      // surface backend or other errors to the user
+      console.groupEnd();
+      console.error("[SetDefenseModal] schedule error:", err);
       toast({
         title: "Save failed",
         description: err?.message ?? "An error occurred while saving.",
         variant: "destructive",
       });
-      // rethrow so a parent can also catch if necessary
-      throw err;
     } finally {
       setSaving(false);
     }
@@ -106,6 +226,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">
           Schedule {defenseStage}
         </h2>
+
         <div className="mb-4">
           <Label htmlFor="date">Date</Label>
           <Input
@@ -116,6 +237,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
             className="mt-1 w-full"
           />
         </div>
+
         <div className="mb-4">
           <Label htmlFor="time">Time</Label>
           <Input
@@ -127,18 +249,18 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
           />
         </div>
 
-        {/* Panel Members */}
         <div className="mb-4">
           <Label>Panel Members</Label>
 
-          {Array.isArray(lecturers) && lecturers.length === 0 ? (
+          {loadingLecturers ? (
+            <p className="text-sm text-gray-500 mt-2">Loading panel members…</p>
+          ) : Array.isArray(lecturers) && lecturers.length === 0 ? (
             <p className="text-sm text-gray-500 mt-2">
-              No lecturers found for this department
+              No lecturers found for this role/department
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
               {lecturers.map((lec) => {
-                // compute display name safely (API nests name under user)
                 const displayName =
                   lec.fullName ||
                   `${lec.user?.firstName ?? ""} ${
@@ -155,11 +277,9 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
                     <Checkbox
                       checked={panel.includes(lec._id)}
                       onCheckedChange={(checked) => {
-                        if (checked) {
+                        if (checked)
                           setPanel((p) => Array.from(new Set([...p, lec._id])));
-                        } else {
-                          setPanel((p) => p.filter((id) => id !== lec._id));
-                        }
+                        else setPanel((p) => p.filter((id) => id !== lec._id));
                       }}
                     />
                     <span>{displayName}</span>
@@ -170,7 +290,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
           )}
         </div>
 
-        
         <div className="flex justify-end gap-3 mt-6">
           <Button
             variant="outline"
@@ -185,15 +304,13 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
               try {
                 await handleSave();
               } catch (err) {
-                // swallow here — error already shown via toast and rethrown by handleSave
-                // If you want to let it propagate, remove this catch.
                 console.error("Save aborted:", err);
               }
             }}
             disabled={saving}
             className="bg-amber-700 hover:bg-amber-800 text-white min-w-[90px]"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Scheduling..." : "Schedule"}
           </Button>
         </div>
       </div>

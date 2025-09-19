@@ -1,5 +1,5 @@
 // pgc/StudentSessionManagement.tsx
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +80,8 @@ const getStageKey = (label: string) => {
   return norm.replace(/\s+/g, "_"); // fallback
 };
 
+const START_KEY = getStageKey("Start");
+
 // after getStageKey(...) helper
 const EXTERNAL_DEFENSE_KEY = getStageKey("External Defense");
 
@@ -100,8 +102,12 @@ const StudentSessionManagement = () => {
   const { toast } = useToast();
   const noSessionWarnedRef = useRef(false);
 
-  const [scoreSheetOpen, setScoreSheetOpen] = useState(false);
   const [scoreSheetSaving, setScoreSheetSaving] = useState(false);
+  const [scoreSheetOpen, setScoreSheetOpen] = useState(false); // you already had this
+  const [initialRubricCriteria, setInitialRubricCriteria] = useState<
+    any | null
+  >(null); // holds the object you posted
+  const [currentRubricDoc, setCurrentRubricDoc] = useState<any | null>(null); // holds the fetched rubric document
 
   // Modal & selection state
   const [degreeTab, setDegreeTab] = useState<"MSc" | "PhD">("MSc");
@@ -117,9 +123,6 @@ const StudentSessionManagement = () => {
           "External Defense",
         ];
   }, [degreeTab]);
-
-  const [panelCandidates, setPanelCandidates] = useState<Lecturer[]>([]);
-  const [loadingPanelCandidates, setLoadingPanelCandidates] = useState(false);
 
   const [assignModalOpen, setAssignModalOpen] = useState(false); // for HOD / PGC assign supervisor
   const [assignCollegeRepOpen, setAssignCollegeRepOpen] = useState(false); // for Provost
@@ -183,6 +186,8 @@ const StudentSessionManagement = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+  // which students are currently selected (we'll default to all fetched students)
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
   // provost faculty/department fetch
   useEffect(() => {
@@ -459,6 +464,14 @@ const StudentSessionManagement = () => {
           : [];
         setStudents(dataArr);
 
+        // --- NEW: set an array of student ids (safe extraction)
+        const allIds = dataArr
+          .map((s: any) => s._id ?? s.id ?? s.user?._id) // handle common shapes
+          .filter(Boolean) as string[]; // remove falsy values
+
+        setSelectedStudentIds(allIds);
+        console.log("[students] selectedStudentIds set to", allIds);
+
         // set server pagination values (guard with fallback)
         setTotalStudents(
           typeof json.total === "number" ? json.total : dataArr.length
@@ -496,111 +509,16 @@ const StudentSessionManagement = () => {
     isDean,
   ]);
 
-  // Fetch real panel candidates when the defense modal opens or department selection changes
-  useEffect(() => {
-    if (!defenseModalOpen) return;
-
-    // choose department id: provost uses selectedDepartmentForDefense, others use user.department._id (if available)
-    const departmentId = isProvost
-      ? selectedDepartmentForDefense
-      : user?.department && typeof user.department === "string"
-      ? user.department
-      : user?.department?._id ?? "";
-
-    if (!departmentId) {
-      setPanelCandidates([]);
-      return;
-    }
-
-    const controller = new AbortController();
-    const fetchPanelCandidates = async () => {
-      try {
-        const url = `${baseUrl}/lecturer/department?departmentId=${encodeURIComponent(
-          departmentId
-        )}`;
-        const res = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Failed to fetch lecturers (${res.status}): ${txt}`);
-        }
-
-        const json = await res.json();
-        // normalize the payload (adjust if your API shape differs)
-        console.log("Panel candidates raw response:", json);
-
-        const arr: any[] = Array.isArray(json.data)
-          ? json.data
-          : Array.isArray(json)
-          ? json
-          : [];
-        const mapped = arr.map((f) => {
-          // Prefer API top-level 'fullName' if present
-          const topFullName = f.fullName ?? f.name ?? "";
-
-          // Otherwise pull name from nested `user` object
-          const userFirst = f.user?.firstName ?? f.user?.fname ?? "";
-          const userLast = f.user?.lastName ?? f.user?.lname ?? "";
-          const userFull = `${userFirst} ${userLast}`.trim();
-
-          // Fallbacks: staffId or _id
-          const fallback = f.staffId ?? f._id ?? "";
-
-          return {
-            _id: f._id ?? f.id ?? fallback,
-            fullName: topFullName || userFull || fallback,
-            email: f.email ?? f.user?.email ?? "",
-            raw: f, // optionally keep original object for debugging / future use
-          } as Lecturer;
-        });
-        setPanelCandidates(mapped);
-        console.log("Fetched panel candidates:", mapped);
-        setPanelCandidates(mapped);
-      } catch (err: any) {
-        if (err.name === "AbortError") return;
-        console.error("fetchPanelCandidates error:", err);
-        toast({
-          title: "Could not load panel members",
-          description:
-            err?.message ??
-            "An error occurred while fetching panel candidates.",
-          variant: "destructive",
-        });
-        setPanelCandidates([]);
-      } finally {
-        setLoadingPanelCandidates(false);
-      }
-    };
-
-    fetchPanelCandidates();
-
-    return () => controller.abort();
-  }, [
-    defenseModalOpen,
-    selectedDepartmentForDefense,
-    isProvost,
-    user,
-    token,
-    toast,
-  ]);
-
-  const handleDefenseSubmit = async (data: {
-    stage: string;
-    date: string;
-    time: string;
-    panel: string[];
-    department?: string; // 👈 department is optional
-  }) => {
-    console.log("Scheduling for department:", data.department);
-    await mockSaveDefense(data);
-  };
+  // const handleDefenseSubmit = async (data: {
+  //   stage: string;
+  //   date: string;
+  //   time: string;
+  //   panel: string[];
+  //   department?: string; // 👈 department is optional
+  // }) => {
+  //   console.log("Scheduling for department:", data.department);
+  //   await mockSaveDefense(data);
+  // };
 
   // Assign supervisor handler
   const handleAssign = async (
@@ -721,10 +639,10 @@ const StudentSessionManagement = () => {
   };
 
   // Score sheet publish handler
+
   const handleScoreSheetPublish = async (payload: {
     criteria: Criterion[];
   }) => {
-    // Defensive: ensure payload
     if (
       !payload?.criteria ||
       !Array.isArray(payload.criteria) ||
@@ -738,13 +656,11 @@ const StudentSessionManagement = () => {
       return;
     }
 
-    // Prepare body to send to backend: map title -> name
     const body = {
       criteria: payload.criteria.map((c) => ({
         name: c.title ?? String(c.title || ""),
         weight: Number(c.percentage || 0),
       })),
-      // optional extra context — include if your API can accept it
       departmentId: selectedDepartmentForDefense || undefined,
       stage: selectedDefense || undefined,
     };
@@ -760,31 +676,79 @@ const StudentSessionManagement = () => {
         body: JSON.stringify(body),
       });
 
+      // read text then try to parse to tolerate non-json responses
+      const text = await res.text();
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
+      }
+      console.log("[publish] POST response:", res.status, parsed);
+
+      // Find created id from common places (body or Location header)
+      const createdId =
+        parsed?._id ??
+        parsed?.id ??
+        parsed?.data?._id ??
+        parsed?.data?.id ??
+        (res.headers.get("location")
+          ? String(res.headers.get("location")).split("/").pop()
+          : undefined);
+
+      let finalDoc: any = null;
+      if (createdId) {
+        try {
+          // prefer GETting the authoritative doc from the server
+        } catch (getErr) {
+          console.warn(
+            "[publish] failed fetching rubric by id, falling back to POST body:",
+            getErr
+          );
+          // fallback: use parsed body if GET fails
+          finalDoc = parsed;
+        }
+      } else {
+        // No id discovered — fallback to parsed POST body
+        finalDoc = parsed;
+      }
+
+      // Normalize criteria from finalDoc (common shapes: finalDoc.criteria || finalDoc.data.criteria)
+      const apiCriteria = Array.isArray(finalDoc?.criteria)
+        ? finalDoc.criteria
+        : Array.isArray(finalDoc?.data?.criteria)
+        ? finalDoc.data.criteria
+        : Array.isArray(parsed?.criteria)
+        ? parsed.criteria
+        : [];
+
+      const mappedCriteria: Criterion[] = apiCriteria.map((c: any) => ({
+        title: String(c.name ?? c.title ?? ""),
+        percentage: Number(c.weight ?? c.percentage ?? 0),
+        id: c._id ?? c.id ?? undefined,
+      }));
+
+      // set both the UI seed list and the full doc (for rubricId)
+      setInitialRubricCriteria(mappedCriteria);
+      setCurrentRubricDoc(finalDoc ?? null);
+
       if (!res.ok) {
-        // try to read server error message
+        // Attempt to extract and present server error message
         let errText = `Server responded ${res.status}`;
         try {
-          const j = await res.json();
-          // prefer obvious error message fields
-          errText = j?.message || j?.error || JSON.stringify(j);
-        } catch {
-          try {
-            errText = await res.text();
-          } catch {}
-        }
+          const j = typeof parsed === "object" ? parsed : null;
+          if (j) errText = j?.message || j?.error || JSON.stringify(j);
+          else errText = String(parsed ?? errText);
+        } catch {}
         throw new Error(errText);
       }
 
-      // success
       toast({
         title: "Rubric published",
         description: "Score sheet published and attached to the schedule.",
         variant: "default",
       });
 
-      // Optionally: refresh rubrics/list or update UI here
-
-      // close modal
       setScoreSheetOpen(false);
     } catch (err: any) {
       console.error("Failed publishing score sheet:", err);
@@ -798,13 +762,73 @@ const StudentSessionManagement = () => {
     }
   };
 
+  const handleDeleteCriterion = async (criterionId: string) => {
+    if (!criterionId) return;
+
+    try {
+      // optional: optimistic UI remove
+      setInitialRubricCriteria((prev) =>
+        prev?.filter((c) => c.id !== criterionId)
+      );
+
+      const url = `${baseUrl}/defence/dept-score-sheet/delete/${encodeURIComponent(
+        criterionId
+      )}`;
+      const res = await fetch(url, {
+        method: "DELETE", // if your backend expects POST change to 'POST'
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const text = await res.text();
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
+      }
+      console.log("[deleteCriterion] status:", res.status, parsed);
+
+      if (!res.ok) {
+        // rollback optimistic removal on error
+        // refetch or re-seed as fallback — simple rollback:
+
+        throw new Error(parsed?.message ?? `HTTP ${res.status}`);
+      }
+
+      toast({
+        title: "Deleted",
+        description: "Criterion removed.",
+        variant: "default",
+      });
+
+      // also update currentRubricDoc.criteria locally if you keep that doc
+      setCurrentRubricDoc((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          criteria: (prev.criteria ?? []).filter(
+            (c: any) => String(c._id ?? c.id) !== String(criterionId)
+          ),
+        };
+      });
+    } catch (err: any) {
+      console.error("[deleteCriterion] failed:", err);
+      toast({
+        title: "Delete failed",
+        description: err?.message ?? String(err),
+        variant: "destructive",
+      });
+    }
+  };
+
   // Filter + paginate
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
     return (
       students
-        // only those whose currentStage matches the dropdown
-        // replace old filter .filter((s) => s.currentStage === selectedDefense.toLowerCase())
         .filter((s) => (s.currentStage ?? "").toString() === selectedDefense)
 
         // then apply the existing search filter
@@ -836,6 +860,16 @@ const StudentSessionManagement = () => {
 
   return (
     <div className="space-y-6">
+      {isPgc && (
+        <div className="mt-2 sm:mt-0">
+          <Button
+            className="border border-amber-700 text-amber-700 bg-amber-100 hover:bg-amber-50 w-full sm:w-auto"
+            onClick={() => setScoreSheetOpen(true)}
+          >
+            Create ScoreSheet
+          </Button>
+        </div>
+      )}
       {/* Degree Tabs */}
       <div className="flex border-b border-gray-200">
         {(["MSc", "PhD"] as const).map((dt) => (
@@ -918,30 +952,22 @@ const StudentSessionManagement = () => {
         </div>
 
         {/* Non‑Provost: schedule all stages except External Defense */}
-        {!isProvost && selectedDefense !== EXTERNAL_DEFENSE_KEY && !isDean && (
-          <div className="mt-2 sm:mt-0">
-            <Button
-              className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
-              onClick={() => {
-                setDefenseStage(selectedDefense);
-                setDefenseModalOpen(true);
-              }}
-            >
-              Schedule {selectedDefenseLabel}
-            </Button>
-          </div>
-        )}
-
-         {isPgc && (
-          <div className="mt-2 sm:mt-0">
-            <Button
-              className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
-              onClick={() => setScoreSheetOpen(true)}
-            >
-              Create ScoreSheet
-            </Button>
-          </div>
-        )}
+        {!isProvost &&
+          selectedDefense !== EXTERNAL_DEFENSE_KEY &&
+          selectedDefense !== START_KEY &&
+          !isDean && (
+            <div className="mt-2 sm:mt-0">
+              <Button
+                className="bg-amber-700 hover:bg-amber-800 text-white w-full sm:w-auto"
+                onClick={() => {
+                  setDefenseStage(selectedDefense);
+                  setDefenseModalOpen(true);
+                }}
+              >
+                Schedule {selectedDefenseLabel}
+              </Button>
+            </div>
+          )}
 
         {isProvost && selectedDefense === EXTERNAL_DEFENSE_KEY && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
@@ -1235,13 +1261,17 @@ const StudentSessionManagement = () => {
         isOpen={defenseModalOpen}
         onClose={closeDefenseModal}
         defenseStage={defenseStage}
-        lecturers={panelCandidates}
-        onSubmit={(data) =>
-          handleDefenseSubmit({
-            ...data,
-            department: isProvost ? selectedDepartmentForDefense : undefined,
-          })
-        }
+        schedulerRole={isProvost ? "provost" : isHod ? "hod" : "pgcord"}
+        studentIds={selectedStudentIds}
+        program={degreeTab} // string
+        session={selectedSession} // string / academic session
+        baseUrl={baseUrl}
+        token={token}
+        onScheduled={(resp) => {
+          // optional: update parent state to include the new schedule
+          console.log("schedule created:", resp);
+          // refresh schedules or UI as needed
+        }}
       />
 
       {/* PGC ScoreSheet generator modal */}
@@ -1276,6 +1306,9 @@ const StudentSessionManagement = () => {
               <ScoreSheetGenerator
                 onPublish={handleScoreSheetPublish}
                 saving={scoreSheetSaving}
+                initialCriteria={initialRubricCriteria}
+                onDeleteCriterion={handleDeleteCriterion}
+                rubricId={currentRubricDoc?._id ?? null}
               />
             </div>
           </div>

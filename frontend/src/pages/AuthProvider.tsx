@@ -75,6 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      console.log("Raw user data:", authToken);
+
       const userProfile: UserProfile = {
         userName: `${rawUser.firstName ?? ""} ${rawUser.lastName ?? ""}`.trim(),
         role: roleValue,
