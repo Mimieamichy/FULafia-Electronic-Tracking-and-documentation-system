@@ -376,6 +376,7 @@ const collegeReps = lecturers
     };
   })
   .filter((lec) => repNames.includes(lec.name)); // keep only reps
+  console.log(collegeReps)
 
   return collegeReps
 }
