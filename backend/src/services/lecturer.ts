@@ -345,17 +345,41 @@ export default class LecturerService {
         return facultyReps;
 
     }
+static async getCollegeReps(department: string, level: string, stage: string) {
+  const repNames = await Student.distinct("collegeRep", {
+  department,
+  level,
+  currentStage: stage,
+});
 
-    static async getCollegeReps(department: string, level: string, stage: string) {
-        // Fetch students in same department, level, and stage
-        const students = await Student.find({ department, level, stage })
-            .select("collegeRep");
+// Find lecturers, populate user
+const lecturers = await Lecturer.find()
+  .populate("user", "firstName lastName")
+  .select("user staffId title department faculty");
 
-        // Extract unique reps
-        const reps = Array.from(new Set(students.map(s => s.collegeRep).filter(Boolean)));
+// Filter only those lecturers whose formatted name matches a collegeRep name
+const collegeReps = lecturers
+  .map((lec) => {
+    const user: any = lec.user;
 
-        return reps;
-    }
+    const name =
+      user && typeof user === "object" && "firstName" in user && "lastName" in user
+        ? `${lec.title} ${user.firstName} ${user.lastName}`
+        : `${lec.title} Unknown Name`;
+
+    return {
+      lecturerId: lec._id,      // Lecturer doc ID
+      name,
+      staffId: lec.staffId,
+      department: lec.department,
+      faculty: lec.faculty,
+    };
+  })
+  .filter((lec) => repNames.includes(lec.name)); // keep only reps
+
+  return collegeReps
+}
+
 
 
 

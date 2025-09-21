@@ -80,66 +80,65 @@ export default class StudentService {
         return await student.save();
     }
 
+    static async editStudent(studentId: string, updateData: Partial<{
+        matricNo: string;
+        firstName: string;
+        lastName: string;
+        projectTopic: string;
+    }>) {
+        // 1. Find the student to get the associated user's ID
+        const student = await Student.findById(studentId);
+        if (!student) {
+            throw new Error('Student not found');
+        }
 
-static async editStudent(studentId: string, updateData: Partial<{
-    matricNo: string;
-    firstName: string;
-    lastName: string;
-    projectTopic: string;
-}>) {
-    // 1. Find the student to get the associated user's ID
-    const student = await Student.findById(studentId);
-    if (!student) {
-        throw new Error('Student not found');
+        if (!student.user) {
+            throw new Error('Associated user ID is missing for this student');
+        }
+
+        const { firstName, lastName, matricNo, projectTopic } = updateData;
+
+        const studentUpdates: Partial<{ matricNo?: string; projectTopic?: string }> = {};
+        if (matricNo !== undefined) studentUpdates.matricNo = matricNo;
+        if (projectTopic !== undefined) studentUpdates.projectTopic = projectTopic;
+
+        const userUpdates: Partial<{ firstName?: string; lastName?: string }> = {};
+        if (firstName !== undefined) userUpdates.firstName = firstName;
+        if (lastName !== undefined) userUpdates.lastName = lastName;
+        const updatePromises = [];
+
+        // Add update promise only if there's data for it
+        if (Object.keys(studentUpdates).length > 0) {
+            updatePromises.push(
+                Student.findByIdAndUpdate(studentId, studentUpdates)
+            );
+        }
+
+        if (Object.keys(userUpdates).length > 0) {
+            updatePromises.push(
+                User.findByIdAndUpdate(student.user, userUpdates)
+            );
+        }
+
+        //Execute all updates
+        await Promise.all(updatePromises);
+        const updatedStudent = await Student.findById(studentId).populate('user');
+        return updatedStudent;
     }
-
-    if (!student.user) {
-        throw new Error('Associated user ID is missing for this student');
-    }
-
-    const { firstName, lastName, matricNo, projectTopic } = updateData;
-
-    const studentUpdates: Partial<{ matricNo?: string; projectTopic?: string }> = {};
-    if (matricNo !== undefined) studentUpdates.matricNo = matricNo;
-    if (projectTopic !== undefined) studentUpdates.projectTopic = projectTopic;
-
-    const userUpdates: Partial<{ firstName?: string; lastName?: string }> = {};
-    if (firstName !== undefined) userUpdates.firstName = firstName;
-    if (lastName !== undefined) userUpdates.lastName = lastName;
-    const updatePromises = [];
-
-    // Add update promise only if there's data for it
-    if (Object.keys(studentUpdates).length > 0) {
-        updatePromises.push(
-            Student.findByIdAndUpdate(studentId, studentUpdates)
-        );
-    }
-
-    if (Object.keys(userUpdates).length > 0) {
-        updatePromises.push(
-            User.findByIdAndUpdate(student.user, userUpdates)
-        );
-    }
-
-    //Execute all updates
-    await Promise.all(updatePromises);
-    const updatedStudent = await Student.findById(studentId).populate('user');
-    return updatedStudent;
-}
 
     static async deleteStudent(studentId: string) {
-       const student = await Student.findById(studentId);
+        const student = await Student.findById(studentId);
 
-    if (!student) {
-        throw new Error('Student not found');
-    }
+        if (!student) {
+            throw new Error('Student not found');
+        }
 
-    const [deletedUser, deletedStudent] = await Promise.all([
-        User.findByIdAndDelete(student.user),
-        Student.findByIdAndDelete(studentId)
-    ]);
+        const [deletedUser, deletedStudent] = await Promise.all([
+            User.findByIdAndDelete(student.user),
+            Student.findByIdAndDelete(studentId)
+        ]);
 
-    return { deletedUser, deletedStudent };
+        return { deletedUser, deletedStudent };
     }
 
     static async getAllMscStudentsInDepartment(
@@ -448,9 +447,9 @@ static async editStudent(studentId: string, updateData: Partial<{
             { new: true }
         );
 
-        return {updatedStudent, updatedLecturer};
+        return { updatedStudent, updatedLecturer };
     }
 
-    
+
 
 }
