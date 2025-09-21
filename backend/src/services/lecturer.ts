@@ -1,4 +1,4 @@
-import { Lecturer, User } from '../models/index';
+import { Lecturer, User, Student } from '../models/index';
 import { Role } from '../utils/permissions';
 
 
@@ -346,6 +346,16 @@ export default class LecturerService {
 
     }
 
+    static async getCollegeReps(department: string, level: string, stage: string) {
+        // Fetch students in same department, level, and stage
+        const students = await Student.find({ department, level, stage })
+            .select("collegeRep");
+
+        // Extract unique reps
+        const reps = Array.from(new Set(students.map(s => s.collegeRep).filter(Boolean)));
+
+        return reps;
+    }
 
 
 

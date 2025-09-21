@@ -22,27 +22,9 @@ export default class DefenceService {
     date: Date;
     time: string;
     studentIds: (string | Types.ObjectId)[];
-    panelMemberIds: (string | Types.ObjectId)[];
-  }, userId:Types.ObjectId) {
-    const { stage, session, date, time, studentIds, panelMemberIds, program } = options;
-
-   const department = (await Lecturer.findOne({ user: userId }).lean())?.department;
-
-    // Create defence
-    const defence = await Defence.create({
-      stage,
-      program,
-      session,
-      date,
-      time,
-      students: studentIds,
-      panelMembers: panelMemberIds,
-      started: false,
-      ended: false,
-    });
-
-    // Attach defence to global score sheet
-    const criteria = ScoreSheet.find({department}).lean();
+    panelMemberIds?: (string | Types.ObjectId)[];
+  }) {
+    const { stage, session, date, time, studentIds, panelMemberIds = [], program } = options;
 
     // Fetch students with projects
     const students = await Student.find({ _id: { $in: studentIds } })
@@ -51,35 +33,134 @@ export default class DefenceService {
 
     const projects = await Project.find({ student: { $in: studentIds } }).lean();
 
+    //Department name (all students are from same department)
+    const departmentName = students[0]?.department;
+    const studentFaculty = students[0]?.faculty;
+    if (!departmentName && !studentFaculty) {
+      throw new Error("Department or Faculty not found for students");
+    }
+
+    // Collect supervisor/examiner/rep names
+    const supervisorNames = new Set<string>();
+    students.forEach((s) => {
+      if (s.majorSupervisor) supervisorNames.add(s.majorSupervisor);
+      if (s.minorSupervisor) supervisorNames.add(s.minorSupervisor);
+      if (s.internalExaminer) supervisorNames.add(s.internalExaminer);
+      if (s.collegeRep) supervisorNames.add(s.collegeRep);
+    });
+
+    // Find lecturers matching supervisor/examiner/rep names
+    const lecturers = await Lecturer.find({ department: departmentName })
+      .populate("user", "firstName lastName roles");
+
+
+    const matchedLecturerIds: mongoose.Types.ObjectId[] = [];
+
+    lecturers.forEach((lect) => {
+      if (!lect.user) {
+        console.warn(`Lecturer ${lect._id} has no user populated`);
+        return;
+      }
+
+      const user = lect.user as any;
+      const fullName = `${lect.title ?? ""} ${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+
+      if (supervisorNames.has(fullName)) {
+        matchedLecturerIds.push(lect._id as mongoose.Types.ObjectId);
+      }
+    })
+
+    const extraPanelMembers: mongoose.Types.ObjectId[] = [];
+    const hod = await Lecturer.findOne({ department: departmentName })
+      .populate({
+        path: "user",
+        match: { roles: "hod" }, // filter by role here
+        select: "roles firstName lastName",
+      });
+
+    if (!hod || !hod.user) {
+      throw new Error(`HOD not found for department: ${departmentName}`);
+    }
+
+    extraPanelMembers.push(hod._id as mongoose.Types.ObjectId);
+
+    const dean = await Lecturer.findOne({ faculty: studentFaculty })
+      .populate({
+        path: "user",
+        match: { roles: "dean" }, // filter by role here
+        select: "roles firstName lastName",
+      });
+
+    if (!dean || !dean.user) {
+      throw new Error(`DEAN not found for "${studentFaculty}".`);
+    }
+
+    extraPanelMembers.push(dean._id as mongoose.Types.ObjectId);
+
+    const pgcord = await Lecturer.findOne({ department: departmentName })
+      .populate({
+        path: "user",
+        match: { roles: "pgcord" }, // filter by role here
+        select: "roles firstName lastName",
+      });
+
+    if (!pgcord || !pgcord.user) {
+      throw new Error(`PG Coordinator not found for department: ${departmentName}`);
+    }
+    extraPanelMembers.push(pgcord._id as mongoose.Types.ObjectId);
+
+    // Merge provided panelMemberIds with matched lecturerIds + role-based members
+    const allPanelMembers = Array.from(
+      new Set([
+        ...panelMemberIds.map(String),
+        ...matchedLecturerIds.map(String),
+        ...extraPanelMembers.map(String),
+      ])
+    );
+
+    // Create defence
+    const defence = await Defence.create({
+      stage,
+      program,
+      session,
+      department: departmentName,
+      date,
+      time,
+      students: studentIds,
+      panelMembers: allPanelMembers,
+      started: false,
+      ended: false,
+    });
+
     // Build message
     const details = students.map((s) => {
       const proj = projects.find((p) => p.student.toString() === s._id.toString());
       const latest = proj?.versions?.[proj.versions.length - 1];
-
       const fullName = `${(s.user as any)?.firstName ?? ""} ${(s.user as any)?.lastName ?? ""}`.trim();
 
       return `
-        Matric No: ${s.matricNo}
-        Name: ${fullName}
-        Topic: ${latest?.topic ?? "No project yet"}
-        Latest File: ${latest?.fileUrl ?? "N/A"}
-      `;
+      Matric No: ${s.matricNo}
+      Name: ${fullName}
+      Topic: ${latest?.topic ?? "No project yet"}
+      Latest File: ${latest?.fileUrl ?? "N/A"}
+    `;
     });
 
-    const message = `You have been assigned to be part of the panel members for ${stage} defence scheduled on ${date}, 
-    Time: ${time}.
-    Students & their latest projects:
-    ${details.join("\n\n")}
-    `;
+  const message = `You have been assigned to be part of the panel members for ${stage} defence scheduled on ${date}, 
+  Time: ${time}.
+  Students & their latest projects:
+  ${details.join("\n\n")}
+  `;
 
     await NotificationService.createNotifications({
-      userIds: panelMemberIds,
+      userIds: allPanelMembers,
       role: "panel",
       message,
     });
 
     return defence;
   }
+
 
   /**
    * Marks defence as started
@@ -118,6 +199,52 @@ export default class DefenceService {
 
     return defence;
   }
+
+
+static async getDefenceDetails(defenceId: string, panelMemberId: string) {
+  // Ensure the panel member is actually assigned to this defence
+  const defence = await Defence.findById(defenceId)
+    .populate({
+      path: "students",
+      populate: { path: "user", select: "firstName lastName email" }
+    })
+    .populate("panelMembers", "firstName lastName roles email")
+    .lean();
+
+  if (!defence) throw new Error("Defence not found");
+
+  if (!defence.panelMembers.some((m: any) => m._id.toString() === panelMemberId)) {
+    throw new Error("You are not authorized to view this defence");
+  }
+
+  // Fetch projects
+  const projects = await Project.find({
+    student: { $in: defence.students.map((s: any) => s._id) }
+  }).lean();
+
+  // Fetch scoresheet (department based)
+  const scoreSheet = await ScoreSheet.findOne({
+    department: defence.department
+  }).lean();
+
+  return {
+    defence,
+    students: defence.students.map((s: any) => {
+      const project = projects.find(p => p.student.toString() === s._id.toString());
+      const latest = project?.versions?.[project.versions.length - 1];
+
+      return {
+        _id: s._id,
+        matricNo: s.matricNo,
+        name: `${s.user.firstName} ${s.user.lastName}`,
+        projectTopic: latest?.topic ?? "No topic yet",
+        latestFile: latest?.fileUrl ?? null
+      };
+    }),
+    criteria: scoreSheet?.criteria ?? []
+  };
+}
+
 
   /**
    * Panel member submits score for a student
@@ -231,18 +358,20 @@ export default class DefenceService {
       const student = await Student.findById(studentId);
       if (!student) continue;
 
-      let key: keyof typeof student.stageScores;
+      // Use only keys that exist in IStageScores
+      type IStageScoresKeys = keyof typeof student.stageScores;
+      let key: IStageScoresKeys;
 
       if (defence.program === "MSC") {
         switch (defence.stage) {
           case STAGES.MSC.PROPOSAL:
-            key = "proposal";
+            key = "proposalScore" as IStageScoresKeys;
             break;
           case STAGES.MSC.INTERNAL:
-            key = "internal";
+            key = "internalScore" as IStageScoresKeys;
             break;
           case STAGES.MSC.EXTERNAL:
-            key = "external";
+            key = "externalScore" as IStageScoresKeys;
             break;
           default:
             throw new Error(`Unknown MSC defence stage: ${defence.stage}`);
@@ -250,16 +379,16 @@ export default class DefenceService {
       } else if (defence.program === "PHD") {
         switch (defence.stage) {
           case STAGES.PHD.PROPOSAL_DEFENSE:
-            key = "proposalDefense";
+            key = "proposalDefenseScore" as IStageScoresKeys;
             break;
           case STAGES.PHD.SECOND_SEMINAR:
-            key = "secondSeminar";
+            key = "secondSeminarScore" as IStageScoresKeys;
             break;
           case STAGES.PHD.INTERNAL_DEFENSE:
-            key = "internalDefense";
+            key = "internalDefenseScore" as IStageScoresKeys;
             break;
           case STAGES.PHD.EXTERNAL_SEMINAR:
-            key = "externalDefense";
+            key = "externalDefenseScore" as IStageScoresKeys;
             break;
           default:
             throw new Error(`Unknown PHD defence stage: ${defence.stage}`);
@@ -286,7 +415,7 @@ export default class DefenceService {
 
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer || !lecturer.department) {
-    throw new Error("Lecturer not found or department = Lecturer.findById(userId) not set");
+      throw new Error("Lecturer not found or department = Lecturer.findById(userId) not set");
     }
 
     const tempId = new mongoose.Types.ObjectId();
@@ -302,7 +431,7 @@ export default class DefenceService {
     return scoreSheet;
   }
 
-  static async getDeptScoreSheet(scoresheetId : string) {
+  static async getDeptScoreSheet(scoresheetId: string) {
     return await ScoreSheet.findById(scoresheetId)
 
   }
@@ -435,8 +564,6 @@ export default class DefenceService {
     await scoreSheet.save();
     return criterionId;
   }
-
-
 
 
 

@@ -160,6 +160,18 @@ export default class LecturerController {
   }
 
 
+  static async getCollegeReps(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {department, level, stage} = req.query
+      const collegeRep = await LecturerService.getCollegeReps(department, level, stage);
+      res.json({ success: true, data: collegeRep });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ success: false, error: 'Failed to get college Reps for students', message: err.message });
+    }
+  }
+
+
   static async getLecturerByDepartment(req: AuthenticatedRequest, res: Response){
     try {
       const userId = req.user?.id || '';
