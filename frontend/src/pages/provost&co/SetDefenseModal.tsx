@@ -14,6 +14,7 @@ interface Lecturer {
   email?: string;
 }
 
+// interface changes — remove level
 interface SetDefenseModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,7 +27,23 @@ interface SetDefenseModalProps {
   baseUrl: string;
   token?: string | null;
   onScheduled?: (resp: any) => void;
+  // department is used for college-rep lookup (optional — pass from parent)
+  department?: string;
 }
+
+// helper (add if not already present)
+const normalizeProgram = (p?: string): string | undefined => {
+  if (!p) return p;
+  const normalized = String(p).trim();
+
+  // normalize common variants, then return lowercase
+  const up = normalized.toUpperCase();
+  if (up === "MSC" || up === "MSc".toUpperCase()) return "msc";
+  if (up === "PHD" || up === "PhD".toUpperCase()) return "phd";
+
+  return normalized.toLowerCase();
+};
+
 
 const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   isOpen,
@@ -40,6 +57,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   baseUrl,
   token,
   onScheduled,
+  department,
 }) => {
   const { toast } = useToast();
   const [date, setDate] = useState("");
@@ -52,56 +70,129 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   );
   const [loadingLecturers, setLoadingLecturers] = useState(false);
 
+  const facultyRepEndpoint = `${baseUrl}/lecturer/get-faculty-rep`;
+  const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner`;
+  const collegeRepEndpoint = `${baseUrl}/lecturer/get-college-rep`;
+
+  // pick the primary GET endpoint based on role
   const lecturerEndpoint =
-    schedulerRole === "provost"
-      ? `${baseUrl}/lecturer/get-external-examiner`
-      : `${baseUrl}/lecturer/get-faculty-rep`;
+    schedulerRole === "provost" ? externalExaminerEndpoint : facultyRepEndpoint;
+
+  const normalizePayloadCandidates = (raw: any): Lecturer[] => {
+    const payload = raw?.data ?? raw;
+    if (Array.isArray(payload)) return payload as Lecturer[];
+    if (Array.isArray(payload?.lecturers))
+      return payload.lecturers as Lecturer[];
+
+    const maybeArray = Object.values(payload || {}).find((v: any) =>
+      Array.isArray(v)
+    );
+    if (Array.isArray(maybeArray)) return maybeArray as Lecturer[];
+
+    return [];
+  };
+
+  const mergeUnique = (lists: Lecturer[][]) => {
+    const map = new Map<string, Lecturer>();
+    for (const list of lists) {
+      for (const l of list) {
+        const key = l._id || l.email || l.staffId || JSON.stringify(l);
+        if (!map.has(key)) map.set(key, l);
+      }
+    }
+    return Array.from(map.values());
+  };
 
   const fetchLecturers = useCallback(async () => {
-    if (initialLecturers && initialLecturers.length > 0) {
-      setLecturers(initialLecturers);
-      return;
-    }
-
     setLoadingLecturers(true);
-    console.groupCollapsed(
-      `[SetDefenseModal] GET lecturers -> ${lecturerEndpoint}`
-    );
-    try {
-      const res = await fetch(lecturerEndpoint, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      const text = await res.text();
-      let parsed: any = null;
-      try {
-        parsed = text ? JSON.parse(text) : null;
-      } catch {
-        parsed = text;
-      }
-      console.log("Raw response:", parsed);
+    console.groupCollapsed("[SetDefenseModal] GET lecturers (combined)");
 
-      const payload = parsed?.data ?? parsed;
-      if (Array.isArray(payload)) {
-        setLecturers(payload);
-      } else if (Array.isArray(payload?.lecturers)) {
-        setLecturers(payload.lecturers);
-      } else {
-        const maybeArray = Object.values(parsed || {}).find((v: any) =>
-          Array.isArray(v)
-        );
-        if (Array.isArray(maybeArray)) setLecturers(maybeArray as Lecturer[]);
-        else {
-          console.warn(
-            "[SetDefenseModal] unexpected lecturers payload:",
-            parsed
-          );
-          setLecturers([]);
+    // start with any initial lecturers passed from props
+    const seed: Lecturer[] = Array.isArray(initialLecturers)
+      ? initialLecturers
+      : [];
+
+    try {
+      // always attempt the primary GET endpoint
+      const results: Lecturer[][] = [seed];
+
+      try {
+        console.log(`[SetDefenseModal] GET -> ${lecturerEndpoint}`);
+        const res = await fetch(lecturerEndpoint, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const text = await res.text();
+        let parsed: any = null;
+        try {
+          parsed = text ? JSON.parse(text) : null;
+        } catch {
+          parsed = text;
         }
+        console.log("Raw response (primary):", parsed);
+        const arr = normalizePayloadCandidates(parsed);
+        results.push(arr);
+      } catch (err) {
+        console.warn("[SetDefenseModal] primary lecturers fetch failed:", err);
       }
+
+      // --- COLLEGE-REP: perform GET with query params: department (name), level, stage ---
+      if (department && String(department).trim() !== "") {
+        try {
+          const params = new URLSearchParams({
+            department: String(department).trim(), // department NAME
+            level: String((normalizeProgram(program) || "").trim()), // MSC|PHD trimmed
+            stage: String(defenseStage || ""),
+          });
+         console.log("[SetDefenseModal] fetchLecturers running — department:", department);
+
+          
+
+          const url = `${collegeRepEndpoint}?${params.toString()}`;
+          console.log(`[SetDefenseModal] GET -> ${url}`);
+
+          const res2 = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+
+          const text2 = await res2.text();
+          let parsed2: any = null;
+          try {
+            parsed2 = text2 ? JSON.parse(text2) : null;
+          } catch {
+            parsed2 = text2;
+          }
+
+          // explicit raw log
+          console.log("Raw response (college rep):", parsed2);
+
+          if (!res2.ok) {
+            console.warn(
+              `[SetDefenseModal] college-rep GET returned ${res2.status}`,
+              parsed2
+            );
+          }
+
+          const arr2 = normalizePayloadCandidates(parsed2);
+          results.push(arr2);
+        } catch (err) {
+          console.warn("[SetDefenseModal] college rep fetch failed:", err);
+        }
+      } else {
+        console.log(
+          "[SetDefenseModal] skipping college rep fetch — department name not provided"
+        );
+      }
+
+      const merged = mergeUnique(results);
+      setLecturers(merged);
     } catch (err) {
       console.error("[SetDefenseModal] fetchLecturers error:", err);
       setLecturers([]);
@@ -114,7 +205,16 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       console.groupEnd();
       setLoadingLecturers(false);
     }
-  }, [initialLecturers, lecturerEndpoint, token, toast]);
+  }, [
+    initialLecturers,
+    lecturerEndpoint,
+    collegeRepEndpoint,
+    department,
+    program,
+    defenseStage,
+    token,
+    toast,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -124,32 +224,19 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSave = async () => {
-    if (!date || !time || panel.length === 0) {
+  // POST handler for scheduling defense
+  const handleSave = async (): Promise<void> => {
+    if (!date || !time) {
       toast({
         title: "Missing fields",
-        description:
-          "Please provide date, time and select at least one panel member.",
+        description: "Please provide date and time.",
         variant: "destructive",
       });
       return;
     }
 
-    // normalize program to backend-expected values
-    const programNormalized =
-      typeof program === "string" ? program.trim().toUpperCase() : program;
+    const programForApi = normalizeProgram(program);
 
-    // if you want to be extra safe, map common client values:
-    const programForApi =
-      programNormalized === "MSC" || programNormalized === "PHD"
-        ? programNormalized
-        : programNormalized === "MSc".toUpperCase() // defensive - unnecessary but explicit
-        ? "MSC"
-        : programNormalized === "PhD".toUpperCase()
-        ? "PHD"
-        : programNormalized;
-
-    // optional client-side validation (prevents round-trip if wrong)
     if (!["MSC", "PHD"].includes(programForApi)) {
       toast({
         title: "Invalid program",
@@ -159,14 +246,25 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       return;
     }
 
-    const payload = {
+    // Inform user when scheduling without panel members (non-blocking)
+    if (panel.length === 0) {
+      toast({
+        title: "No panel selected",
+        description:
+          "Scheduling without panel members — you can add them later.",
+        variant: "default",
+      });
+    }
+
+    const payload: any = {
       stage: defenseStage,
       session,
       date,
       time,
       studentIds,
-      panelMemberIds: panel,
-      program: programForApi, // <<< send normalized value
+      program: programForApi,
+      // include panelMemberIds only when there are selected panel members
+      ...(panel.length > 0 ? { panelMemberIds: panel } : {}),
     };
 
     console.groupCollapsed("[SetDefenseModal] POST /defence/schedule");
@@ -191,6 +289,9 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         parsed = text;
       }
 
+      // explicit log of the raw response from the schedule API
+      console.log("Raw response (schedule):", parsed);
+
       if (!res.ok) {
         const msg =
           (parsed && (parsed.message || parsed.error)) ??
@@ -204,7 +305,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         variant: "default",
       });
 
-      console.groupEnd();
       onScheduled?.(parsed);
       onClose();
     } catch (err: any) {
@@ -216,6 +316,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         variant: "destructive",
       });
     } finally {
+      console.groupEnd();
       setSaving(false);
     }
   };

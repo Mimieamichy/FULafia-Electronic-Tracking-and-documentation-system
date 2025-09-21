@@ -18,13 +18,6 @@ import { useAuth } from "../AuthProvider";
 import AssignCollegeRepModal from "./AssignCollegeRepModal";
 import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
 
-interface Lecturer {
-  _id: string;
-  fullName: string;
-  email?: string;
-  raw?: any;
-}
-
 interface StudentFromAPI {
   _id: string;
   matricNo: string;
@@ -127,6 +120,7 @@ const StudentSessionManagement = () => {
   const [assignModalOpen, setAssignModalOpen] = useState(false); // for HOD / PGC assign supervisor
   const [assignCollegeRepOpen, setAssignCollegeRepOpen] = useState(false); // for Provost
   const [currentStudentId, setCurrentStudentId] = useState<string>("");
+  const [departmentName, setDepartmentName] = useState<string>("");
 
   const [defenseModalOpen, setDefenseModalOpen] = useState(false);
   const [defenseStage, setDefenseStage] = useState<string>(
@@ -255,6 +249,7 @@ const StudentSessionManagement = () => {
         });
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const json = await res.json();
+        console.log("Fetched departments:", json);
         const arr: any[] = Array.isArray(json)
           ? json
           : Array.isArray(json.data)
@@ -266,8 +261,6 @@ const StudentSessionManagement = () => {
             name: d.name ?? d.departmentName ?? "",
           }));
           setDepartments(mapped);
-
-          console.log("Fetched departments:", json);
         }
       } catch (err: any) {
         if (!cancelled)
@@ -343,7 +336,6 @@ const StudentSessionManagement = () => {
         });
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const json = await res.json();
-        console.log("Dean departments raw response:", json);
 
         const arr: any[] = Array.isArray(json)
           ? json
@@ -389,7 +381,8 @@ const StudentSessionManagement = () => {
 
       return user?.department || ""; // HOD/PGC: already a name string
     };
-
+    console.log("resolveDepartmentName ->", resolveDepartmentName());
+    setDepartmentName(resolveDepartmentName());
     let cancelled = false;
 
     const fetchStudents = async () => {
@@ -508,6 +501,64 @@ const StudentSessionManagement = () => {
     toast, // re-run when limit changes (or when user changes page size)
     isDean,
   ]);
+
+  const departmentNameToPass = (() => {
+    // helper to resolve id -> name if needed
+    const resolveIdToName = (candidate: string | undefined) => {
+      if (!candidate) return "";
+      // if candidate matches a dept id, return its name
+      const foundById = departments.find((d) => d._id === candidate);
+      if (foundById?.name) return foundById.name;
+      // if candidate matches a dept name already (case-insensitive), return normalized name
+      const foundByName = departments.find(
+        (d) =>
+          String(d.name ?? "").toLowerCase() === String(candidate).toLowerCase()
+      );
+      if (foundByName?.name) return foundByName.name;
+      // otherwise candidate might already be a free-form name — return trimmed
+      if (typeof candidate === "string" && candidate.trim() !== "")
+        return candidate.trim();
+      return "";
+    };
+
+    // treat explicit placeholder 'none' as empty
+    const rawSel = selectedDepartmentForDefense;
+    if (rawSel && rawSel !== "none") {
+      // Provost/Dean: they set selectedDepartmentForDefense — try resolve
+      const provostResolved = resolveIdToName(rawSel);
+      if (provostResolved) return provostResolved;
+    }
+
+    // HOD / PGCord (or normal user): try user.department
+    if (user?.department) {
+      const hodResolved = resolveIdToName(user.department);
+      if (hodResolved) return hodResolved;
+    }
+
+    // fallback: try from students list (first student)
+    if (Array.isArray(students) && students.length > 0) {
+      const sDept = students[0].department;
+      if (sDept) {
+        const studentResolved = resolveIdToName(sDept);
+        if (studentResolved) return studentResolved;
+        // if dept from student is plain string, use that
+        if (typeof sDept === "string" && sDept.trim() !== "")
+          return sDept.trim();
+      }
+    }
+
+    // nothing found
+    return "";
+  })();
+  console.log(
+    "[Parent] selectedDepartmentForDefense:",
+    selectedDepartmentForDefense
+  );
+  console.log("[Parent] user.department:", user?.department);
+  console.log(
+    "[Parent] departmentNameToPass (resolved):",
+    departmentNameToPass
+  );
 
   // const handleDefenseSubmit = async (data: {
   //   stage: string;
@@ -889,7 +940,6 @@ const StudentSessionManagement = () => {
           </button>
         ))}
       </div>
-
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-wrap">
         <h2 className="text-lg font-semibold text-gray-800">
@@ -1094,7 +1144,6 @@ const StudentSessionManagement = () => {
           </div>
         )}
       </div>
-
       {/* Students Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto w-full">
         <table className="min-w-full text-left border-collapse">
@@ -1219,7 +1268,6 @@ const StudentSessionManagement = () => {
           </tbody>
         </table>
       </div>
-
       {/* Pagination */}
       <div className="flex justify-center sm:justify-end items-center flex-wrap gap-2 mt-4">
         <button
@@ -1241,7 +1289,6 @@ const StudentSessionManagement = () => {
           <ChevronRight />
         </button>
       </div>
-
       {/* Modals */}
       <AssignSupervisorModal
         isOpen={assignModalOpen}
@@ -1249,7 +1296,6 @@ const StudentSessionManagement = () => {
         studentId={currentStudentId}
         onSubmit={handleAssign}
       />
-
       <AssignCollegeRepModal
         isOpen={assignCollegeRepOpen}
         onClose={() => setAssignCollegeRepOpen(false)}
@@ -1267,13 +1313,11 @@ const StudentSessionManagement = () => {
         session={selectedSession} // string / academic session
         baseUrl={baseUrl}
         token={token}
+        department={departmentNameToPass}
         onScheduled={(resp) => {
-          // optional: update parent state to include the new schedule
           console.log("schedule created:", resp);
-          // refresh schedules or UI as needed
         }}
       />
-
       {/* PGC ScoreSheet generator modal */}
       {isPgc && scoreSheetOpen && (
         <div
