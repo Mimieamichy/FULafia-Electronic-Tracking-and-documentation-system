@@ -162,7 +162,9 @@ export default class LecturerController {
 
   static async getCollegeReps(req: AuthenticatedRequest, res: Response) {
     try {
-      const {department, level, stage} = req.query
+      const department = typeof req.query.department === 'string' ? req.query.department : '';
+      const level = typeof req.query.level === 'string' ? req.query.level : '';
+      const stage = typeof req.query.stage === 'string' ? req.query.stage : '';
       const collegeRep = await LecturerService.getCollegeReps(department, level, stage);
       res.json({ success: true, data: collegeRep });
     } catch (err: any) {
