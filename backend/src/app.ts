@@ -32,7 +32,10 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10kb' })); // prevent huge payload attacks
-app.use(mongoSanitize()); // prevent MongoDB operator injection
+//app.use(mongoSanitize()); // prevent MongoDB operator injection
+
+
+
 app.use(hpp()); // prevent HTTP parameter pollution
 
 //Rate limiting (apply only to auth routes, you can add per route if needed)
