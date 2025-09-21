@@ -34,8 +34,7 @@ const scheduleDefenceSchema = Joi.object({
     .required(),
 
   panelMemberIds: Joi.array()
-    .items(Joi.string().required())
-    .min(1)
+    .items(Joi.string().required()),
 });
 
 // Get all defences
