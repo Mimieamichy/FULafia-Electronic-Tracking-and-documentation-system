@@ -33,11 +33,11 @@ export default class LecturerController {
     }
   }
 
-   static async editLecturer(req: Request, res: Response) {
+  static async editLecturer(req: Request, res: Response) {
     try {
       const lecturerId = req.params.id;
       const updateData = await LecturerService.editLecturer(lecturerId, req.body);
-      res.json({ success: true, data: updateData})
+      res.json({ success: true, data: updateData })
     } catch (err: any) {
       console.log("Error deleting lecturer:", err);
       res.status(400).json({ success: false, error: 'Failed to edit lecturer', message: err.message });
@@ -68,7 +68,7 @@ export default class LecturerController {
     }
   }
 
-    static async addDean(req: AuthenticatedRequest, res: Response) {
+  static async addDean(req: AuthenticatedRequest, res: Response) {
     try {
       const { email, title, firstName, lastName, staffId, role, faculty } = req.body;
       const userId = req.user?.id || ''
@@ -148,7 +148,7 @@ export default class LecturerController {
   }
 
 
-  
+
   static async getExternlExaminer(req: Request, res: Response) {
     try {
       const external_examiner = await LecturerService.getExternalExaminer();
@@ -162,9 +162,12 @@ export default class LecturerController {
 
   static async getCollegeReps(req: AuthenticatedRequest, res: Response) {
     try {
-      const department = typeof req.query.department === 'string' ? req.query.department : '';
-      const level = typeof req.query.level === 'string' ? req.query.level : '';
-      const stage = typeof req.query.stage === 'string' ? req.query.stage : '';
+      const { department = "", level = "", stage = "" } = req.query as {
+        department?: string;
+        level?: string;
+        stage?: string;
+      };
+
       const collegeRep = await LecturerService.getCollegeReps(department, level, stage);
       res.json({ success: true, data: collegeRep });
     } catch (err: any) {
@@ -174,7 +177,7 @@ export default class LecturerController {
   }
 
 
-  static async getLecturerByDepartment(req: AuthenticatedRequest, res: Response){
+  static async getLecturerByDepartment(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
       const provost = await LecturerService.getLecturerByDepartment(userId);
@@ -186,7 +189,7 @@ export default class LecturerController {
   }
 
 
-  static async getLecturerByFaculty(req: AuthenticatedRequest, res: Response){
+  static async getLecturerByFaculty(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
       const provost = await LecturerService.getLecturerByFaculty(userId);
@@ -200,7 +203,7 @@ export default class LecturerController {
 
   static async assignFacultyRep(req: AuthenticatedRequest, res: Response) {
     try {
-      const {staffId} = req.params
+      const { staffId } = req.params
       const faculty_pg_rep = await LecturerService.assignFacultyRep(staffId);
       res.json({ success: true, data: faculty_pg_rep });
     } catch (err: any) {
