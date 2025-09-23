@@ -1,5 +1,5 @@
 import { Notification, Lecturer, Student } from "../models/index";
-import { Types } from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 
 
 export default class NotificationService {
@@ -68,13 +68,13 @@ export default class NotificationService {
     return Notification.insertMany(notifications);
   }
 
-  static async updateReadReciept(userId: string){
-    const result = await Notification.updateMany(
-    { user: userId, read: false }, // filter unread
-    { $set: { read: true } } // mark as read + timestamp
+  static async updateReadReciept(userId: string) {
+  const result = await Notification.updateMany(
+    { recipient: new mongoose.Types.ObjectId(userId), read: false },
+    { $set: { read: true } }
   );
 
-  return result
-  }
+  return result;
+}
 }
 
