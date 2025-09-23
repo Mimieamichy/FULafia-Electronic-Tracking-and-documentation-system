@@ -52,3 +52,5 @@ export function getPermissionsFromRoles(roles: Role[]): Permission[] {
   const all = roles.flatMap(role => ROLE_PERMISSIONS[role] || []);
   return Array.from(new Set(all)); // Remove duplicates
 }
+
+

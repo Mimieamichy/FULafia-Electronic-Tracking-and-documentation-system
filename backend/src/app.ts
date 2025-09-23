@@ -4,8 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
-import hpp from 'hpp';
+
 
 dotenv.config();
 
@@ -26,17 +25,12 @@ const app = express();
 app.use(helmet()); // sets secure HTTP headers
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*', // restrict to frontend domain in prod
+  origin: process.env.FRONTEND_URL, // restrict to frontend domain in prod
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true,
 }));
 
 app.use(express.json({ limit: '10kb' })); // prevent huge payload attacks
-//app.use(mongoSanitize()); // prevent MongoDB operator injection
-
-
-
-app.use(hpp()); // prevent HTTP parameter pollution
 
 //Rate limiting (apply only to auth routes, you can add per route if needed)
 const limiter = rateLimit({

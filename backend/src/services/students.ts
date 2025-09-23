@@ -1,9 +1,10 @@
-import { Student, User, Lecturer, Project, IUser } from "../models/index";
+import { Student, User, Lecturer, Project } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
-import { paginateWithCache } from "../utils/paginatedCache"
+import { paginateWithCache } from "../utils/paginatedAndTransform"
 import NotificationService from "./notification";
 import { Types } from "mongoose";
+
 
 
 
@@ -134,7 +135,7 @@ export default class StudentService {
         }
 
         const [deletedUser, deletedStudent] = await Promise.all([
-            User.findByIdAndDelete(student.user),
+            User.findByIdAndDelete(student.user._id),
             Student.findByIdAndDelete(studentId)
         ]);
 
@@ -144,29 +145,27 @@ export default class StudentService {
     static async getAllMscStudentsInDepartment(
         department: string,
         userId: string,
-        session: Types.ObjectId,
+        session: string | Types.ObjectId,
         page = 1,
         limit = 10
     ) {
+        
+
         if (!department || department.trim() === '') {
             const lecturer = await LecturerService.getLecturerById(userId);
             // If lecturer not found, default to "none"
             department = lecturer?.department ?? 'none';
         }
+        const sessionId = session.toString()
         const level = "msc"
 
-        // Use pagination + cache utility
+        // Use pagination 
         return paginateWithCache(
             Student,
             page,
             limit,
-            `students:dept=${department}`,
-            120, // cache TTL in seconds
-            { department, level, session },
-            "user"
-        );
+            { department, level, session: sessionId });
     }
-
 
     static async getAllMscStudentsInFaculty(
         faculty: string,
@@ -181,16 +180,14 @@ export default class StudentService {
             faculty = lecturer?.faculty ?? 'none';
         }
         const level = "msc"
+        const sessionId = session.toString()
 
-        // Use pagination + cache utility
+       // Use pagination 
         return paginateWithCache(
             Student,
             page,
             limit,
-            `students:faculty=${faculty}`,
-            120, // cache TTL in seconds
-            { faculty, level, session },
-            "user"
+            { faculty, level, session: sessionId }
         );
     }
 
@@ -208,16 +205,14 @@ export default class StudentService {
         }
 
         const level = "phd"
+        const sessionId = session.toString()
 
-        // Use pagination + cache utility
+       // Use pagination 
         return paginateWithCache(
             Student,
             page,
             limit,
-            `students:dept=${department}`,
-            120, // cache TTL in seconds
-            { department, level, session },
-            "user"
+            { department, level, session: sessionId }
         );
     }
 
@@ -235,32 +230,28 @@ export default class StudentService {
             faculty = lecturer?.faculty ?? 'none';
         }
         const level = "phd"
+        const sessionId = session.toString()
 
-        // Use pagination + cache utility
+       // Use pagination 
         return paginateWithCache(
             Student,
             page,
             limit,
-            `students:faculty=${faculty}`,
-            120, // cache TTL in seconds
-            { faculty, level, session },
-            "user"
+            { department, level, session: sessionId }
         );
     }
-
 
     static async getStudentsBySupervisorMsc(userId: string) {
         const lecturer = await Lecturer.findOne({ user: userId }).populate('user');
         if (!lecturer) throw new Error('Lecturer not found');
 
-        const user = lecturer.user as any;
-        const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
+        const lecturerId = lecturer._id
         const level = 'msc'
 
         const students = await Student.find({
             $or: [
-                { majorSupervisor: supervisorName },
-                { minorSupervisor: supervisorName }
+                { majorSupervisor: lecturerId },
+                { minorSupervisor: lecturerId }
             ],
             level: level,
         }).populate('user');
@@ -296,20 +287,18 @@ export default class StudentService {
 
         return results;
     }
-
 
     static async getStudentsBySupervisorPhd(userId: string) {
         const lecturer = await Lecturer.findOne({ user: userId }).populate('user');
         if (!lecturer) throw new Error('Lecturer not found');
 
-        const user = lecturer.user as any;
-        const supervisorName = `${lecturer.title} ${user.firstName} ${user.lastName}`.trim();
+        const lecturerId = lecturer._id
         const level = 'phd'
 
         const students = await Student.find({
             $or: [
-                { majorSupervisor: supervisorName },
-                { minorSupervisor: supervisorName }
+                { majorSupervisor: lecturerId },
+                { minorSupervisor: lecturerId }
             ],
             level: level,
         }).populate('user');
@@ -345,35 +334,33 @@ export default class StudentService {
         return results;
     }
 
-    static async assignSupervisor(
-        staffId: string,
-        staffName: string,
-        type: string,
-        matricNo: string
-    ) {
+    static async assignSupervisor(staffId: string, staffName: string, type: string, matricNo: string) {
         // Decide field to update
         const updateField =
             type === 'major'
-                ? { majorSupervisor: staffName }
+                ? { majorSupervisor: staffId }
                 : type === 'minor'
-                    ? { minorSupervisor: staffName }
+                    ? { minorSupervisor: staffId }
                     : type === 'internal_examiner'
-                        ? { internalExaminer: staffName }
+                        ? { internalExaminer: staffId }
                         : {};
 
         // Update student
         const student = await Student.findOneAndUpdate(
             { matricNo },
             { $set: updateField },
-            { new: true }
+            { new: true, runValidators: true, context: 'query' }
         );
+
         if (!student) throw new Error('Student not found');
+
+
 
         // Roles to add
         let roleToAdd: string[] = [];
-        if (type === 'major') roleToAdd = ['major_supervisor', 'supervisor'];
-        else if (type === 'minor') roleToAdd = ['supervisor'];
-        else if (type === 'internal_examiner') roleToAdd = ['internal_examiner'];
+        if (type === 'major') roleToAdd = [Role.MAJOR_SUPERVISOR, Role.SUPERVISOR, Role.PANEL_MEMBER];
+        else if (type === 'minor') roleToAdd = [Role.SUPERVISOR, Role.PANEL_MEMBER];
+        else if (type === 'internal_examiner') roleToAdd = [Role.INTERNAL_EXAMINER, Role.PANEL_MEMBER];
 
         // Get lecturer
         const lecturer = await Lecturer.findById(staffId);
@@ -436,14 +423,14 @@ export default class StudentService {
         // Update the user roles to include 'college_rep'
         const updatedLecturer = await User.findByIdAndUpdate(
             user._id,
-            { $addToSet: { roles: 'college_rep' } }, // Use $addToSet to avoid duplicates
+            { $addToSet: { roles: { $each: [Role.COLLEGE_REP, Role.PANEL_MEMBER] } } },// Use $addToSet to avoid duplicates
             { new: true }
         );
 
         //update the student collection to set the collegeRep field
         const updatedStudent = await Student.findOneAndUpdate(
             { _id: studentId },
-            { $set: { collegeRep: `${lecturer.title ?? ''} ${user.firstName} ${user.lastName}`.trim() } },
+            { $set: { collegeRep: staffId } },
             { new: true }
         );
 

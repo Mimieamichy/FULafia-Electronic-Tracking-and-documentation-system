@@ -8,6 +8,7 @@ export interface IUser extends Document {
   roles: string[];
   firstName: string;
   lastName: string;
+  title?:string;
   permissions?: string[];
   isPanelMember: Boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -20,6 +21,7 @@ const userSchema = new Schema<IUser>(
     roles: { type: [String], required: true, default: [Role.GENERAL] }, // Default role is 'GENERAL'
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
+    title: { type: String, required: false },
     isPanelMember: { type: Boolean, default: false },
   },
   { timestamps: true }
