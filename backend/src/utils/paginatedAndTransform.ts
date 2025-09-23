@@ -79,7 +79,7 @@ export interface PaginatedResult<T> {
 
 */
 
-export async function paginateWithCache<T extends object>(model: Model<T>, page = 1, limit = 10, filter: Record<string, any> = {}, populate: string | object | any[] = []): Promise<PaginatedResult<T>> {
+export async function paginateFormatted<T extends object>(model: Model<T>, page = 1, limit = 10, filter: Record<string, any> = {}, populate: string | object | any[] = []): Promise<PaginatedResult<T>> {
   
   const skip = (page - 1) * limit;
   const query = model.find(filter).populate(studentPopulationPaths).skip(skip).limit(limit);
@@ -117,4 +117,33 @@ export async function paginateWithCache<T extends object>(model: Model<T>, page 
 
   return result;
 
+}
+
+
+export async function findOneFormatted<T extends object>(
+  model: Model<T>,
+  id: string,
+  populate: string | object | any[] = []
+): Promise<T | null> {
+  let query = model.findById(id).populate(studentPopulationPaths);
+
+  if (populate && (Array.isArray(populate) ? populate.length > 0 : !!populate)) {
+    query = query.populate(populate as any);
+  }
+
+  const doc = await query.lean().exec();
+  if (!doc) return null;
+
+  // Student-specific post-processing
+  if ((model as any).modelName === "Student") {
+    return {
+      ...doc,
+      majorSupervisor: formatSupervisorField((doc as any).majorSupervisor),
+      minorSupervisor: formatSupervisorField((doc as any).minorSupervisor),
+      internalExaminer: formatSupervisorField((doc as any).internalExaminer),
+      collegeRep: formatSupervisorField((doc as any).collegeRep),
+    } as unknown as T;
+  }
+
+  return doc as T;
 }

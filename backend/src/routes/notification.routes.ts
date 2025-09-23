@@ -8,7 +8,7 @@ import NotificationController from '../controllers/notification.controller';
 const router = Router();
 
 
-router.get('/notifications', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS), NotificationController.viewNotifications);
+router.get('/', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS), NotificationController.viewNotifications);
 
 
 

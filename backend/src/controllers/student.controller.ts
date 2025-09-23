@@ -41,6 +41,17 @@ export default class StudentController {
   }
 
 
+   static async getOneStudent(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { studentId } = req.params
+      const student = await StudentService.getOneStudent(studentId);
+      res.status(201).json({ success: true, data: student });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to get student', message: err.message});
+    }
+  }
+
   static async getAllMscStudentsByDepartment(req: AuthenticatedRequest, res: Response) {
     try {
       const { department, session } = req.params;

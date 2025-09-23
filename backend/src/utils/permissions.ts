@@ -102,6 +102,7 @@ export enum Permission {
   FORGOT_PASSWORD = 'forgot_password',
   RESET_PASSWORD = 'reset_password',
   VIEW_NOTIFICATIONS = 'view_notifications',
+  VIEW_ONE_STUDENT = 'view_one_student',
 }
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -257,6 +258,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.FORGOT_PASSWORD,
     Permission.RESET_PASSWORD,
     Permission.VIEW_NOTIFICATIONS,
+    Permission.VIEW_ONE_STUDENT,
   ],
 };
 

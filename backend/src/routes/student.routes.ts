@@ -31,6 +31,7 @@ export const addSupervisorSchema = Joi.object({
 // Routes
 router.post('/add', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ADD_STUDENTS),StudentController.addStudent);
 router.put('/:id', authenticate, checkPermission(Permission.EDIT_STUDENT), StudentController.editStudent);
+router.get('/:studentId', authenticate, checkPermission(Permission.VIEW_ONE_STUDENT), StudentController.getOneStudent);
 router.delete('/:id', authenticate, checkPermission(Permission.DELETE_STUDENT), StudentController.deleteStudent);
 router.get('/msc/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllMscStudentsByDepartment);
 router.get('/phd/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsByDepartment);

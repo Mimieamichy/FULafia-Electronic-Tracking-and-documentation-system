@@ -1,7 +1,7 @@
 import { Student, User, Lecturer, Project } from "../models/index";
 import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
-import { paginateWithCache } from "../utils/paginatedAndTransform"
+import { paginateFormatted, findOneFormatted } from "../utils/paginatedAndTransform"
 import NotificationService from "./notification";
 import { Types } from "mongoose";
 
@@ -79,6 +79,10 @@ export default class StudentService {
         });
 
         return await student.save();
+    }
+
+    static async getOneStudent(studentId: string) {
+       return findOneFormatted( Student, studentId)
     }
 
     static async editStudent(studentId: string, updateData: Partial<{
@@ -160,7 +164,7 @@ export default class StudentService {
         const level = "msc"
 
         // Use pagination 
-        return paginateWithCache(
+        return paginateFormatted(
             Student,
             page,
             limit,
@@ -183,7 +187,7 @@ export default class StudentService {
         const sessionId = session.toString()
 
        // Use pagination 
-        return paginateWithCache(
+        return paginateFormatted(
             Student,
             page,
             limit,
@@ -208,7 +212,7 @@ export default class StudentService {
         const sessionId = session.toString()
 
        // Use pagination 
-        return paginateWithCache(
+        return paginateFormatted(
             Student,
             page,
             limit,
@@ -233,7 +237,7 @@ export default class StudentService {
         const sessionId = session.toString()
 
        // Use pagination 
-        return paginateWithCache(
+        return paginateFormatted(
             Student,
             page,
             limit,
