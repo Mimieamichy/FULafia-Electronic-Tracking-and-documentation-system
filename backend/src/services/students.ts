@@ -112,6 +112,7 @@ export default class StudentService {
         if (lastName !== undefined) userUpdates.lastName = lastName;
         const updatePromises = [];
 
+
         // Add update promise only if there's data for it
         if (Object.keys(studentUpdates).length > 0) {
             updatePromises.push(

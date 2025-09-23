@@ -68,9 +68,13 @@ export default class NotificationService {
     return Notification.insertMany(notifications);
   }
 
-  static async updateReadReciept(userId: string) {
-  const result = await Notification.updateMany(
-    { recipient: new mongoose.Types.ObjectId(userId), read: false },
+static async updateReadReciept(userId: string, id: string) {
+  const result = await Notification.updateOne(
+    { 
+      _id: new mongoose.Types.ObjectId(id), 
+      recipient: new mongoose.Types.ObjectId(userId), 
+      read: false 
+    },
     { $set: { read: true } }
   );
 

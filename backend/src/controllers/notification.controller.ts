@@ -27,8 +27,9 @@ export default class NotificationController {
     try {
      
     const userId = req.user?.id || ''
+    const {id} = req.params
 
-      const notifications = await NotificationService.updateReadReciept(userId); 
+      const notifications = await NotificationService.updateReadReciept(userId, id); 
       res.json({ success: true, data: notifications });
     } catch (err: any) {
       res.status(400).json({ success: false, error: 'Failed to update read reciept', message: err.message });

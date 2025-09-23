@@ -9,7 +9,7 @@ const router = Router();
 
 
 router.get('/', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS), NotificationController.viewNotifications);
-router.patch('/', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS), NotificationController.updateReadReciept);
+router.patch('/:id', authenticate, checkPermission(Permission.VIEW_NOTIFICATIONS), NotificationController.updateReadReciept);
 
 
 export default router;

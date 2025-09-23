@@ -228,6 +228,7 @@ export default class StudentController {
     try {
       const { studentId } = req.params;
       const { matricNo, firstName, lastName, projectTopic } = req.body;
+      console.log(firstName, lastName)
       const updatedStudent = await StudentService.editStudent(studentId, {
         matricNo,
         firstName,
