@@ -991,7 +991,7 @@ const StudentSessionManagement = () => {
             </div>
           )}
 
-        {isProvost && selectedDefense === EXTERNAL_DEFENSE_KEY && (
+        {isProvost && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
             {/* Faculty Selector */}
             <Select
@@ -1063,21 +1063,20 @@ const StudentSessionManagement = () => {
                 )}
               </SelectContent>
             </Select>
-
-            {/* Now that a department is chosen, enable schedule button */}
-            <Button
-              className="bg-amber-700 text-white w-full sm:w-auto"
-              onClick={() => {
-                setDefenseStage(selectedDefense);
-                setDefenseModalOpen(true);
-              }}
-              disabled={!selectedDepartmentForDefense}
-            >
-              Schedule {selectedDefenseLabel}
-            </Button>
           </div>
         )}
-
+        {isProvost && selectedDefense === EXTERNAL_DEFENSE_KEY && (
+          <Button
+            className="bg-amber-700 text-white w-full sm:w-auto"
+            onClick={() => {
+              setDefenseStage(selectedDefense);
+              setDefenseModalOpen(true);
+            }}
+            disabled={!selectedDepartmentForDefense}
+          >
+            Schedule {selectedDefenseLabel}
+          </Button>
+        )}
         {isDean && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
             {/* Department Selector (Dean) */}
@@ -1159,7 +1158,6 @@ const StudentSessionManagement = () => {
           <tbody className="capitalize">
             {paginated.map((s, idx) => {
               if (isProvost || isDean) {
-                const currentStage = defenseStage;
                 return (
                   <tr
                     key={s._id}
