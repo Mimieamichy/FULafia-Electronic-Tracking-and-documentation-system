@@ -6,25 +6,67 @@ export default class LecturerService {
     static async getAllLecturers() {
         return Lecturer.find().populate("user");
     }
-    static async editLecturer(lecturerId: string, updateData: object) {
-        const updatedLecturer = await Lecturer.findByIdAndUpdate(
-            lecturerId,
-            updateData,
-            { new: true, runValidators: true }
-        );
-        if (!updatedLecturer) {
-            throw new Error("Lecturer not found");
+
+
+    static async editLecturer(lecturerId: string, updateData: Partial<{
+        staffId: string;
+        firstName: string;
+        lastName: string;
+        title: string;
+    }>
+    ) {
+        // 1. Find the lecturer to get the associated user's ID
+        const lecturer = await Lecturer.findById(lecturerId);
+        if (!lecturer) {
+            throw new Error('Lecturer not found');
         }
+        if (!lecturer.user) {
+            throw new Error('Associated user ID is missing for this lecturer');
+        }
+
+        const { firstName, lastName, title, staffId } = updateData;
+
+        // 2. Separate updates for Lecturer and User models
+        const lecturerUpdates: Partial<{ staffId?: string }> = {};
+        if (staffId !== undefined) lecturerUpdates.staffId = staffId;
+
+        const userUpdates: Partial<{ firstName?: string; lastName?: string; title?: string }> = {};
+        if (firstName !== undefined) userUpdates.firstName = firstName;
+        if (lastName !== undefined) userUpdates.lastName = lastName;
+        if (title !== undefined) userUpdates.title = title;
+
+        const updatePromises = [];
+
+        // 3. Push promises to the array only if there's data to update
+        if (Object.keys(lecturerUpdates).length > 0) {
+            updatePromises.push(
+                Lecturer.findByIdAndUpdate(lecturerId, lecturerUpdates)
+            );
+        }
+
+        if (Object.keys(userUpdates).length > 0) {
+            updatePromises.push(
+                User.findByIdAndUpdate(lecturer.user, userUpdates)
+            );
+        }
+
+        // 4. Execute all updates in parallel
+        await Promise.all(updatePromises);
+
+        // 5. Return the fully updated lecturer document
+        const updatedLecturer = await Lecturer.findById(lecturerId).populate('user');
         return updatedLecturer;
     }
+
     static async deleteLecturer(lecturerId: string) {
-        const lecturer = await Lecturer.findByIdAndDelete(lecturerId);
+        const lecturer = await Lecturer.findById({ _id: lecturerId });
         if (!lecturer) {
             throw new Error("Lecturer not found");
         }
 
         // Delete the associated user
-        await User.findByIdAndDelete(lecturer.user);
+        await User.findByIdAndDelete(lecturer.user._id);
+        await Lecturer.findByIdAndDelete(lecturer._id)
 
         return lecturer;
     }
@@ -46,12 +88,9 @@ export default class LecturerService {
             lecturer: Role.LECTURER,
             supervisor: Role.SUPERVISOR,
             major_supervisor: Role.MAJOR_SUPERVISOR,
-            panel_member: Role.PANEL_MEMBER,
             pgcord: Role.PGCOORD,
-            dean: Role.DEAN,
-            faculty_pg_rep: Role.FACULTY_PG_REP,
             internal_examiner: Role.INTERNAL_EXAMINER,
-            external_examiner: Role.EXTERNAL_EXAMINER,
+
         };
 
         const resolvedRole = roleMap[normalizedRole];
@@ -74,11 +113,11 @@ export default class LecturerService {
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
+            title: data.title,
         });
 
         return Lecturer.create({
             user: user._id,
-            title: data.title,
             department,
             faculty,
             staffId: data.staffId,
@@ -109,7 +148,7 @@ export default class LecturerService {
             throw new Error(`A HOD has already been added for the ${data.department} department.`);
         }
 
-        const roles = [Role.HOD, Role.GENERAL, Role.LECTURER];
+        const roles = [Role.HOD, Role.GENERAL, Role.LECTURER, Role.PANEL_MEMBER];
 
 
         // Create User with dynamic roles
@@ -119,11 +158,11 @@ export default class LecturerService {
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
+            title: data.title,
         });
 
         return await Lecturer.create({
             user: user._id,
-            title: data.title,
             department: data.department,
             faculty: data.faculty,
             staffId: data.staffId,
@@ -141,19 +180,19 @@ export default class LecturerService {
         faculty: string;
     }) {
 
-        //check if HOD has been added
+        //check if DEAN has been added
         const existingDean = await Lecturer.findOne({
-            department: data.faculty,
+            faculty: data.faculty,
         }).populate({
             path: 'user',
             match: { roles: Role.DEAN },
         });
 
         if (existingDean && existingDean.user) {
-            throw new Error(`A HOD has already been added for the ${data.faculty} Faculty.`);
+            throw new Error(`A DEAN has already been added for the ${data.faculty} Faculty.`);
         }
 
-        const roles = [Role.DEAN, Role.GENERAL, Role.LECTURER];
+        const roles = [Role.DEAN, Role.GENERAL, Role.LECTURER, Role.PANEL_MEMBER];
 
 
         // Create User with dynamic roles
@@ -163,11 +202,11 @@ export default class LecturerService {
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
+            title: data.title,
         });
 
         return await Lecturer.create({
             user: user._id,
-            title: data.title,
             faculty: data.faculty,
             staffId: data.staffId,
         });
@@ -182,8 +221,20 @@ export default class LecturerService {
         role: string;
     }) {
 
+        //check if PROVOST has been added
+        const existingPROVOST = await Lecturer.findOne({
+            faculty: 'none'
+        }).populate({
+            path: 'user',
+            match: { roles: Role.PROVOST },
+        });
 
-        const roles = [Role.PROVOST, Role.GENERAL, Role.LECTURER];
+        if (existingPROVOST && existingPROVOST.user) {
+            throw new Error(`A PROVOST has already been added for the school`);
+        }
+
+
+        const roles = [Role.PROVOST, Role.GENERAL, Role.LECTURER, Role.PANEL_MEMBER];
 
         // Create User with dynamic roles
         const user = await User.create({
@@ -192,11 +243,11 @@ export default class LecturerService {
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
+            title: data.title,
         });
 
         return await Lecturer.create({
             user: user._id,
-            title: data.title,
             department: 'none',
             faculty: 'none',
             staffId: data.staffId,
@@ -212,7 +263,7 @@ export default class LecturerService {
     }) {
 
 
-        const roles = [Role.EXTERNAL_EXAMINER, Role.GENERAL, Role.LECTURER];
+        const roles = [Role.EXTERNAL_EXAMINER, Role.GENERAL, Role.PANEL_MEMBER];
 
         // Create User with dynamic roles
         const user = await User.create({
@@ -221,11 +272,11 @@ export default class LecturerService {
             roles,
             firstName: data.firstName,
             lastName: data.lastName,
+            title: data.title,
         });
 
         return await Lecturer.create({
             user: user._id,
-            title: data.title,
             department: 'none',
             faculty: 'none',
             staffId: 'none',
@@ -300,39 +351,43 @@ export default class LecturerService {
             throw new Error('Lecturer not found');
         }
 
-        // Get associated user
-        const user = await User.findById(lecturer.user);
-        if (!user) {
-            throw new Error('User not found for this lecturer');
+        const oldFacultyRep = await Lecturer.findOne({ faculty: lecturer.faculty }).populate({
+            path: 'user',
+            match: { roles: Role.FACULTY_PG_REP }
+        });
+
+        if (!oldFacultyRep) {
+            throw new Error('Previous Faculty Rep not found');
         }
-
-        const rolesToAdd = [Role.PANEL_MEMBER, Role.FACULTY_PG_REP];
-
-        // Ensure user.roles exists as an array
-        if (!Array.isArray(user.roles)) {
-            user.roles = [];
-        }
-
-        for (const role of rolesToAdd) {
-            if (!user.roles.includes(role)) {
-                user.roles.push(role);
+        await User.findByIdAndUpdate(
+        oldFacultyRep.user,
+        { 'roles': Role.FACULTY_PG_REP },
+        { '$pull': { 'roles': {'$each': [Role.FACULTY_PG_REP , Role.PANEL_MEMBER,]}} }
+    );
+        const updatedUser = await User.findByIdAndUpdate(
+        lecturer.user,
+        {
+            '$addToSet': {
+                'roles': {
+                    '$each': [Role.PANEL_MEMBER, Role.FACULTY_PG_REP]
+                }
             }
-        }
-
-        await user.save();
-        return user;
+        },
+        { new: true }
+    );
+        return updatedUser;
     }
 
 
     static async getFacultyReps(userId: string) {
         // Get the lecturer making the request
         const lecturer = await Lecturer.findOne({ user: userId })
-        if (!lecturer || !lecturer.department) {
+        if (!lecturer || !lecturer.faculty) {
             throw new Error("Lecturer not found or department not set");
         }
 
 
-        const lecturers = await Lecturer.find({ department: lecturer.department })
+        const lecturers = await Lecturer.find({ faculty: lecturer.faculty })
             .populate({
                 path: "user",
                 match: { roles: Role.FACULTY_PG_REP },
@@ -345,41 +400,41 @@ export default class LecturerService {
         return facultyReps;
 
     }
-static async getCollegeReps(department: string, level: string, stage: string) {
-  const repNames = await Student.distinct("collegeRep", {
-  department,
-  level,
-  currentStage: stage,
-});
 
-// Find lecturers, populate user
-const lecturers = await Lecturer.find()
-  .populate("user", "firstName lastName")
-  .select("user staffId title department faculty");
+    static async getCollegeReps(department: string, level: string, stage: string) {
+        const repNames = await Student.distinct("collegeRep", {
+            department,
+            level,
+            currentStage: stage,
+        });
 
-// Filter only those lecturers whose formatted name matches a collegeRep name
-const collegeReps = lecturers
-  .map((lec) => {
-    const user: any = lec.user;
+        // Find lecturers, populate user
+        const lecturers = await Lecturer.find()
+            .populate("user", "firstName lastName")
+            .select("user staffId title department faculty");
 
-    const name =
-      user && typeof user === "object" && "firstName" in user && "lastName" in user
-        ? `${lec.title} ${user.firstName} ${user.lastName}`
-        : `${lec.title} Unknown Name`;
+        // Filter only those lecturers whose formatted name matches a collegeRep name
+        const collegeReps = lecturers
+            .map((lec) => {
+                const user: any = lec.user;
 
-    return {
-      lecturerId: lec._id,      // Lecturer doc ID
-      name,
-      staffId: lec.staffId,
-      department: lec.department,
-      faculty: lec.faculty,
-    };
-  })
-  .filter((lec) => repNames.includes(lec.name)); // keep only reps
-  console.log(collegeReps)
+                const name =
+                    user && typeof user === "object" && "firstName" in user && "lastName" in user
+                        ? `${user.title} ${user.firstName} ${user.lastName}`
+                        : `${user.title} Unknown Name`;
 
-  return collegeReps
-}
+                return {
+                    lecturerId: lec._id,      // Lecturer doc ID
+                    name,
+                    staffId: lec.staffId,
+                    department: lec.department,
+                    faculty: lec.faculty,
+                };
+            })
+            .filter((lec) => repNames.map(String).includes(String(lec.name))); // keep only reps
+
+        return collegeReps
+    }
 
 
 

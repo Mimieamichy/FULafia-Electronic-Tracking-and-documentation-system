@@ -9,7 +9,6 @@ export interface IDefence extends Document {
   time: string;                        // e.g. "10:00 AM"
   started: boolean;
   ended: boolean;
-
   students: mongoose.Types.ObjectId[];       // Student IDs
   panelMembers: mongoose.Types.ObjectId[];   // User IDs (panel members)
 }

@@ -1,10 +1,16 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IStageScores {
-  firstSeminar?: number;
-  secondSeminar?: number;
-  thirdSeminar?: number;
-  externalDefense?: number;
+  // PHD stages
+  firstSeminarScore?: number;
+  secondSeminarScore?: number;
+  thirdSeminarScore?: number;
+  externalDefenseScore?: number;
+
+  // MSC stages
+  proposalScore?: number;
+  internalScore?: number;
+  externalScore?: number;
 }
 
 export interface IStudent extends Document {
@@ -15,20 +21,19 @@ export interface IStudent extends Document {
   department: string;
   faculty: string;
   session: mongoose.Types.ObjectId;
-  majorSupervisor?: string;
-  minorSupervisor?: string;
-  internalExaminer?: string;
-  collegeRep?: string;
+  majorSupervisor?: mongoose.Types.ObjectId;
+  minorSupervisor?: mongoose.Types.ObjectId;
+  internalExaminer?: mongoose.Types.ObjectId;
+  collegeRep?: mongoose.Types.ObjectId;
   projectTopic?: string;
   stageScores: IStageScores;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 const stageScoresSchema = new Schema<IStageScores>(
   {},
-  { _id: false, strict: false }
+  { _id: false, strict: true }
 );
 
 const studentSchema = new Schema<IStudent>(
@@ -40,17 +45,12 @@ const studentSchema = new Schema<IStudent>(
     department: { type: String, required: true },
     faculty: { type: String, required: true },
     session: { type: Schema.Types.ObjectId, ref: 'Session', required: true },
-    majorSupervisor: { type: String, default: '' },
-    minorSupervisor: { type: String, default:  ''},
-    internalExaminer: { type: String, default: '' },
-    collegeRep: { type: String, default: '' },
+    majorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
+    minorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer', default:  null},
+    internalExaminer: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
+    collegeRep: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     projectTopic: { type: String, default: '' },
     stageScores: { type: stageScoresSchema, default: () => ({}) },
-    approvalStatus: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
-    },
   },
   { timestamps: true }
 );

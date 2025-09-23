@@ -3,7 +3,8 @@ export const STAGES = {
     START: 'start',
     PROPOSAL: 'proposal',
     INTERNAL: 'internal',
-    EXTERNAL: 'external'
+    EXTERNAL: 'external',
+    COMPLETED: 'completed'
   },
   PHD: {
     START: 'start',
@@ -11,6 +12,7 @@ export const STAGES = {
     SECOND_SEMINAR: 'second_seminar',
     INTERNAL_DEFENSE: 'internal_defense',
     EXTERNAL_SEMINAR: 'external_defense',
+    COMPLETED: 'completed'
   }
 };
 

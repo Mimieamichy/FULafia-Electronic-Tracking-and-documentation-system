@@ -25,6 +25,7 @@ export default class LecturerController {
   static async deleteLecturer(req: Request, res: Response) {
     try {
       const lecturerId = req.params.id;
+      console.log(lecturerId)
       await LecturerService.deleteLecturer(lecturerId);
       res.json({ success: true, message: 'Lecturer deleted successfully' })
     } catch (err: any) {
@@ -35,11 +36,17 @@ export default class LecturerController {
 
   static async editLecturer(req: Request, res: Response) {
     try {
-      const lecturerId = req.params.id;
-      const updateData = await LecturerService.editLecturer(lecturerId, req.body);
-      res.json({ success: true, data: updateData })
+      const {lecturerId} = req.params;
+      const { title, firstName, lastName, staffId } = req.body;
+      const updatedLecturer = await LecturerService.editLecturer(lecturerId, {
+        staffId,
+        firstName,
+        lastName,
+        title
+      });
+      res.json({ success: true, data: updatedLecturer })
     } catch (err: any) {
-      console.log("Error deleting lecturer:", err);
+      console.log("Error updating lecturer:", err);
       res.status(400).json({ success: false, error: 'Failed to edit lecturer', message: err.message });
     }
   }

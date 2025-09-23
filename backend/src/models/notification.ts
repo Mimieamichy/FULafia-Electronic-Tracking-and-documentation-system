@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface INotification extends Document {
-  recipient: mongoose.Types.ObjectId; // User ID
+  recipient: mongoose.Types.ObjectId | string; // User ID
   role: string; // e.g. 'hod', 'lecturer', etc.
   message: string;
   read: boolean;

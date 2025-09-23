@@ -1,8 +1,8 @@
-import { Project, Student, Lecturer, User, Session } from '../models/index';
+import { Project, Student,Session } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
-import mongoose from 'mongoose';
+
 
 export default class ProjectService {
   static async uploadProject(userId: string, fileUrl: string) {
@@ -30,46 +30,20 @@ export default class ProjectService {
 
     await project.save();
 
-    // 4. Notify major & minor supervisors (lookup by name if exists)
-    // Split supervisor full name into parts (assuming format: "Title FirstName LastName")
-    function parseName(fullName: string) {
-      const parts = fullName.trim().split(" ");
-      if (parts.length < 2) return { firstName: fullName, lastName: "" };
-
-      // Last part = lastName, rest (except title) = firstName
-      const lastName = parts.pop()!;
-      const title = parts[0].endsWith(".") ? parts.shift() : null;
-      const firstName = parts.join(" ");
-      return { firstName, lastName, title };
+    function isDefined<T>(value: T | undefined | null): value is T {
+      return value !== undefined && value !== null;
     }
 
-    const supervisorNames = [student.majorSupervisor, student.minorSupervisor].filter(Boolean);
 
-    if (supervisorNames.length > 0) {
-      const lecturerIds: string[] = [];
+    // 4. Notify major & minor supervisors 
+    const supervisorIds = [student.majorSupervisor, student.minorSupervisor, student.internalExaminer, student.collegeRep].filter(isDefined)
 
-      for (const supName of supervisorNames) {
-        if (!supName) continue; // Type guard to ensure supName is string
-        const { firstName, lastName } = parseName(supName);
-
-        // Find User by name
-        const user = await User.findOne({ firstName, lastName });
-        if (!user) continue;
-
-        // Find Lecturer by user
-        const lecturer = await Lecturer.findOne({ user: user._id });
-        if (!lecturer) continue;
-
-        lecturerIds.push(String(lecturer._id));
-      }
-
-      if (lecturerIds.length > 0) {
-        await NotificationService.createNotifications({
-          lecturerIds,
-          role: "lecturer",
-          message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
-        });
-      }
+    if (supervisorIds) {
+      await NotificationService.createNotifications({
+        lecturerIds: supervisorIds,
+        role: "supervisor",
+        message: `New project version uploaded by ${student.matricNo} (${student.projectTopic}).`,
+      });
     }
 
     return project;
@@ -205,49 +179,53 @@ export default class ProjectService {
 
     await Promise.all([project.save(), student.save()]);
 
+     function isDefined<T>(value: T | undefined | null): value is T {
+      return value !== undefined && value !== null;
+    }
+    const correctStudentId = [studentId].filter(isDefined)
+    await NotificationService.createNotifications({
+        studentIds: correctStudentId,
+        role: "student",
+        message: `Your project has been approved by your supervisor you are now moved to ${nextStage}`,
+      });
+
     return { project, student };
   }
 
 
   static async getStudentProjects(userId: string) {
-  const student = await Student.findOne({ user: userId });
-  if (!student) throw new Error("Student not found");
+    const student = await Student.findOne({ user: userId });
+    if (!student) throw new Error("Student not found");
 
-  // FORMAT Session YYYY/YYYY
-  const sessionId = student.session as any;
-  const session = await Session.findById(sessionId);
-  if (!session) throw new Error("Session not found");
-  student.session = session.sessionName as any;
+    // FORMAT Session YYYY/YYYY
+    const sessionId = student.session as any;
+    const session = await Session.findById(sessionId);
+    if (!session) throw new Error("Session not found");
+    student.session = session.sessionName as any;
 
 
-  const project = await Project.findOne({ student: student._id })
-  .populate("versions.uploadedBy", "firstName lastName email")
-  .populate("versions.comments.author", "firstName lastName email");
+    const project = await Project.findOne({ student: student._id })
+      .populate("versions.uploadedBy", "firstName lastName email")
+      .populate("versions.comments.author", "firstName lastName email");
 
-if (!project) throw new Error("Project not found");
+    if (!project) throw new Error("Project not found");
 
-// format comments with lecturer info
-for (const version of project.versions) {
-  for (const comment of version.comments as any[]) {
-    const author = comment.author as any;
+    // format comments with lecturer info
+    for (const version of project.versions) {
+      for (const comment of version.comments as any[]) {
+        const author = comment.author as any;
 
-    // lookup lecturer for this user
-    const lecturer = await mongoose.model("Lecturer").findOne(
-      { user: author._id },
-      "title"
-    );
+        comment.set(
+          "authorName",
+          `${author.title} ${author.firstName} ${author.lastName}`,
+          { strict: false }
+        );
+      }
+    }
 
-    comment.set(
-      "authorName",
-      `${lecturer?.title ? lecturer.title + " " : ""}${author.firstName} ${author.lastName}`,
-      { strict: false }
-    );
+
+    return { student, project };
   }
-}
-
-
-  return { student, project };
-}
 
 
 }
