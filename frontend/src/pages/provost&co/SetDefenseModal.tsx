@@ -12,6 +12,7 @@ interface Lecturer {
   staffId?: string;
   user?: { firstName?: string; lastName?: string; email?: string };
   email?: string;
+  name?: string;
 }
 
 // interface changes — remove level
@@ -44,6 +45,14 @@ const normalizeProgram = (p?: string): string | undefined => {
   return normalized.toLowerCase();
 };
 
+const normalizeProgram2 = (p?: string) => {
+  if (!p) return p;
+  const normalized = String(p).trim().toUpperCase();
+  if (normalized === "MSC" || normalized === "PHD") return normalized;
+  if (normalized === "MSc".toUpperCase()) return "MSC";
+  if (normalized === "PhD".toUpperCase()) return "PHD";
+  return normalized;
+};
 
 const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   isOpen,
@@ -147,9 +156,10 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
             level: String((normalizeProgram(program) || "").trim()), // MSC|PHD trimmed
             stage: String(defenseStage || ""),
           });
-         console.log("[SetDefenseModal] fetchLecturers running — department:", department);
-
-          
+          console.log(
+            "[SetDefenseModal] fetchLecturers running — department:",
+            department
+          );
 
           const url = `${collegeRepEndpoint}?${params.toString()}`;
           console.log(`[SetDefenseModal] GET -> ${url}`);
@@ -171,6 +181,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
           }
 
           // explicit raw log
+          console.log("text", text2);
           console.log("Raw response (college rep):", parsed2);
 
           if (!res2.ok) {
@@ -235,7 +246,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       return;
     }
 
-    const programForApi = normalizeProgram(program);
+    const programForApi = normalizeProgram2(program);
 
     if (!["MSC", "PHD"].includes(programForApi)) {
       toast({
@@ -367,7 +378,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
                   `${lec.user?.firstName ?? ""} ${
                     lec.user?.lastName ?? ""
                   }`.trim() ||
-                  lec.staffId ||
+                  lec.name ||
                   lec._id;
 
                 return (
