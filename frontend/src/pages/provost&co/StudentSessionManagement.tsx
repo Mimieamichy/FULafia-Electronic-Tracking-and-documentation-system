@@ -392,7 +392,7 @@ const StudentSessionManagement = () => {
           toast({
             title: "No session selected",
             description: "Please select a session to view students.",
-            variant: "destructive",
+            variant: "warning",
           });
           noSessionWarnedRef.current = true;
         }
@@ -1156,7 +1156,7 @@ const StudentSessionManagement = () => {
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="capitalize">
             {paginated.map((s, idx) => {
               if (isProvost || isDean) {
                 const currentStage = defenseStage;
@@ -1170,7 +1170,7 @@ const StudentSessionManagement = () => {
                       {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
                     </td>
                     <td className="p-3 border">{s.projectTopic}</td>
-                    <td className="p-3 border">{currentStage}</td>
+                    <td className="p-3 border">{s.currentStage}</td>
                     <td className="p-3 border">{s.department}</td>
                     <td className="p-3 border">{s.faculty}</td>
                     {isProvost && (

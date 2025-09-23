@@ -52,7 +52,7 @@ export default function UploadWorkPage() {
   // ---------- helpers ----------
   const mapComment = (c: any, versionNumber?: number): CommentItem => {
     const authorName =
-      c.authorName ??
+      
       (c.author
         ? `${c.author.firstName ?? ""} ${c.author.lastName ?? ""}`.trim()
         : undefined) ??
@@ -510,7 +510,7 @@ console.log("payload:", payload);
                 comments.map((c, i) => (
                   <div
                     key={`${c.uploadedAt ?? i}-${i}`}
-                    className={`relative p-2 rounded-lg max-w-[100%] text-sm ${
+                    className={`relative p-2 rounded-lg capitalize max-w-[100%] text-sm ${
                       (c.by || "").toLowerCase() ===
                       (userName || "").toLowerCase()
                         ? "bg-amber-200 self-end text-right"

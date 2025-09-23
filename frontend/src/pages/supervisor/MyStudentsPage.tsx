@@ -602,7 +602,7 @@ export default function MyStudentsPage() {
                     selected.comments.map((c, i) => (
                       <div
                         key={i}
-                        className={`relative p-2 rounded-lg max-w-[80%] text-sm ${
+                        className={`relative p-2 capitalize rounded-lg max-w-[80%] text-sm ${
                           c.by === userName
                             ? "bg-amber-200 self-end text-right"
                             : "bg-white self-start text-left border"
