@@ -234,6 +234,8 @@ export default function LecturerTab() {
         setLecturers((prev) =>
           prev.map((p) => (p.id === editId ? { ...p, ...form } as Lecturer : p))
         );
+
+        console.log("Lecturer updated:", editId, payload);
         toast({ title: "Updated", description: "Lecturer updated." });
         setModalOpen(false);
         setEditId(null);

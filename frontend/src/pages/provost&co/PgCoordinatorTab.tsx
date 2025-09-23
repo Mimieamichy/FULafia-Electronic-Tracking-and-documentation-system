@@ -37,7 +37,7 @@ export default function PgCoordinatorTab() {
           )
           .map((item: any) => ({
             id: item._id,
-            name: `${item.title} ${item.user.firstName} ${item.user.lastName}`,
+            name: `${item.user.title} ${item.user.firstName} ${item.user.lastName}`,
           }));
         console.log("pgcord filtered:", pgList);
         

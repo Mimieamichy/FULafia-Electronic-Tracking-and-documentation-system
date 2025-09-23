@@ -245,7 +245,7 @@ export default function AddHodModal({
       setError(err.message || "Failed to add staff");
     } finally {
       setLoading(false);
-      window.location.reload();
+      
     }
   };
 
@@ -295,7 +295,7 @@ export default function AddHodModal({
                   <SelectValue placeholder="Select Title" />
                 </SelectTrigger>
                 <SelectContent>
-                  {["MR.", "MRS.", "MISS.", "DR.", "PROF.", "ENGR."].map(
+                  {["MR.", "MRS.", "MISS.", "DR.","ASSOC. PROF.", "PROF.", "ENGR."].map(
                     (t) => (
                       <SelectItem key={t} value={t}>
                         {t}

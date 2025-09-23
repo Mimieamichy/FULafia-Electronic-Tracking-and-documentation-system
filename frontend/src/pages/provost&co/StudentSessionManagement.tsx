@@ -13,7 +13,7 @@ import {
 import { ChevronLeft, ChevronRight, Pen, X } from "lucide-react";
 import AssignSupervisorModal from "./AssignSupervisorModal";
 import SetDefenseModal from "./SetDefenseModal";
-import { mockSaveDefense } from "@/lib/mockDefenseService";
+import EditStudentModal from "./EditStudentModal";
 import { useAuth } from "../AuthProvider";
 import AssignCollegeRepModal from "./AssignCollegeRepModal";
 import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
@@ -96,6 +96,7 @@ const StudentSessionManagement = () => {
   const noSessionWarnedRef = useRef(false);
 
   const [scoreSheetSaving, setScoreSheetSaving] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [scoreSheetOpen, setScoreSheetOpen] = useState(false); // you already had this
   const [initialRubricCriteria, setInitialRubricCriteria] = useState<
     any | null
@@ -309,7 +310,7 @@ const StudentSessionManagement = () => {
           setSelectedSession(mapped[0]._id);
         }
 
-        console.log("Fetched sessions:", mapped);
+        
       } catch (err) {
         console.error("Failed to fetch sessions:", err);
       }
@@ -381,7 +382,7 @@ const StudentSessionManagement = () => {
 
       return user?.department || ""; // HOD/PGC: already a name string
     };
-    console.log("resolveDepartmentName ->", resolveDepartmentName());
+    
     setDepartmentName(resolveDepartmentName());
     let cancelled = false;
 
@@ -427,8 +428,6 @@ const StudentSessionManagement = () => {
         stageSeg ? `&stage=${encodeURIComponent(stageSeg)}` : ""
       }`;
 
-      console.log("Fetching students from:", url);
-
       try {
         const res = await fetch(url, {
           method: "GET",
@@ -463,7 +462,7 @@ const StudentSessionManagement = () => {
           .filter(Boolean) as string[]; // remove falsy values
 
         setSelectedStudentIds(allIds);
-        console.log("[students] selectedStudentIds set to", allIds);
+        
 
         // set server pagination values (guard with fallback)
         setTotalStudents(
@@ -550,28 +549,9 @@ const StudentSessionManagement = () => {
     // nothing found
     return "";
   })();
-  console.log(
-    "[Parent] selectedDepartmentForDefense:",
-    selectedDepartmentForDefense
-  );
-  console.log("[Parent] user.department:", user?.department);
-  console.log(
-    "[Parent] departmentNameToPass (resolved):",
-    departmentNameToPass
-  );
+  
+ 
 
-  // const handleDefenseSubmit = async (data: {
-  //   stage: string;
-  //   date: string;
-  //   time: string;
-  //   panel: string[];
-  //   department?: string; // 👈 department is optional
-  // }) => {
-  //   console.log("Scheduling for department:", data.department);
-  //   await mockSaveDefense(data);
-  // };
-
-  // Assign supervisor handler
   const handleAssign = async (
     studentId: string,
     supType: "major" | "minor" | "internal_examiner",
@@ -640,8 +620,7 @@ const StudentSessionManagement = () => {
       const url = `${baseUrl}/student/assign-college-rep/${encodeURIComponent(
         lecturerId
       )}/${encodeURIComponent(currentStudentId)}`;
-      // debug log (optional)
-      // console.log("AssignCollegeRep POST ->", url);
+     
 
       const res = await fetch(url, {
         method: "POST",
@@ -690,7 +669,6 @@ const StudentSessionManagement = () => {
   };
 
   // Score sheet publish handler
-
   const handleScoreSheetPublish = async (payload: {
     criteria: Criterion[];
   }) => {
@@ -735,7 +713,6 @@ const StudentSessionManagement = () => {
       } catch {
         parsed = text;
       }
-      console.log("[publish] POST response:", res.status, parsed);
 
       // Find created id from common places (body or Location header)
       const createdId =
@@ -812,7 +789,8 @@ const StudentSessionManagement = () => {
       setScoreSheetSaving(false);
     }
   };
-
+  
+// Delete criterion handler
   const handleDeleteCriterion = async (criterionId: string) => {
     if (!criterionId) return;
 
@@ -1225,9 +1203,18 @@ const StudentSessionManagement = () => {
                   className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                 >
                   <td className="p-3 border">{s.matricNo}</td>
-                  <td className="p-3 border capitalize">
-                    {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                  <td className="p-3 border">
+                    <button
+                      className="text-amber-700 underline capitalize"
+                      onClick={() => {
+                        setCurrentStudentId(s._id);
+                        setEditModalOpen(true);
+                      }}
+                    >
+                      {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                    </button>
                   </td>
+
                   <td className="p-3 border capitalize">{s.projectTopic}</td>
                   <td className="p-3 border">
                     {s.stageScores?.[selectedDefense.toLowerCase()] ?? "—"}
@@ -1318,6 +1305,25 @@ const StudentSessionManagement = () => {
           console.log("schedule created:", resp);
         }}
       />
+
+      {/* student edit modal */}
+      <EditStudentModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        studentId={currentStudentId}
+        baseUrl={baseUrl}
+        token={token}
+        onUpdated={(updated) =>
+          setStudents((prev) =>
+            prev.map((p) =>
+              p._id === (updated._id ?? currentStudentId)
+                ? { ...p, ...updated }
+                : p
+            )
+          )
+        }
+      />
+
       {/* PGC ScoreSheet generator modal */}
       {isPgc && scoreSheetOpen && (
         <div

@@ -44,10 +44,10 @@ export default function HodDashboardOverview() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 max-w-screen-lg mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
-          Welcome, {displayName} 👋
+          Welcome, <span className="font-semibold capitalize">{displayName}</span> 👋
         </h1>
         <p className="text-gray-600 mt-1 text-sm sm:text-base">
-          Here’s an overview of your {user?.role}, {user?.department} activities
+          Here’s an overview of your <span className="font-semibold uppercase">{user?.role}</span>, <span className="font-semibold">{user?.department}</span> activities
         </p>
       </div>
 

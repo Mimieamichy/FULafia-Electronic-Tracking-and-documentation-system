@@ -62,7 +62,7 @@ export default function AdminStaffManagement() {
         setHods(
           (hodRes.data.data || []).map((raw: any) => ({
             id: raw._id,
-            title: raw.title,
+            title: raw.user.title,
             name: `${raw.user?.firstName ?? ""} ${
               raw.user?.lastName ?? ""
             }`.trim(),
@@ -72,12 +72,13 @@ export default function AdminStaffManagement() {
           }))
         );
         console.log("HODs:", hods);
+        console.log("Raw HODs:", hodRes.data.data);
 
         // map Provosts
         setProvosts(
           (provRes.data.data || []).map((raw: any) => ({
             id: raw._id,
-            title: raw.title,
+            title: raw.user.title,
             name: `${raw.user?.firstName ?? ""} ${
               raw.user?.lastName ?? ""
             }`.trim(),
@@ -85,11 +86,12 @@ export default function AdminStaffManagement() {
           }))
         );
         console.log("Provosts:", provosts);
+        console.log("Raw Provosts:", provRes.data.data);
         // map Deans
         setDeans(
           (deanRes.data.data || []).map((raw: any) => ({
             id: raw._id,
-            title: raw.title,
+            title: raw.user.title,
             name: `${raw.user?.firstName ?? ""} ${
               raw.user?.lastName ?? ""
             }`.trim(),
@@ -108,7 +110,7 @@ export default function AdminStaffManagement() {
       }
     };
     load();
-  }, [token, toast]);
+  }, [token, toast, deans, hods, provosts]);
 
   const handleDelete = async (id: string) => {
     if (!token) {
