@@ -309,8 +309,6 @@ const StudentSessionManagement = () => {
         if (!selectedSession && mapped.length) {
           setSelectedSession(mapped[0]._id);
         }
-
-        
       } catch (err) {
         console.error("Failed to fetch sessions:", err);
       }
@@ -382,7 +380,7 @@ const StudentSessionManagement = () => {
 
       return user?.department || ""; // HOD/PGC: already a name string
     };
-    
+
     setDepartmentName(resolveDepartmentName());
     let cancelled = false;
 
@@ -462,7 +460,6 @@ const StudentSessionManagement = () => {
           .filter(Boolean) as string[]; // remove falsy values
 
         setSelectedStudentIds(allIds);
-        
 
         // set server pagination values (guard with fallback)
         setTotalStudents(
@@ -549,8 +546,6 @@ const StudentSessionManagement = () => {
     // nothing found
     return "";
   })();
-  
- 
 
   const handleAssign = async (
     studentId: string,
@@ -620,7 +615,6 @@ const StudentSessionManagement = () => {
       const url = `${baseUrl}/student/assign-college-rep/${encodeURIComponent(
         lecturerId
       )}/${encodeURIComponent(currentStudentId)}`;
-     
 
       const res = await fetch(url, {
         method: "POST",
@@ -789,8 +783,8 @@ const StudentSessionManagement = () => {
       setScoreSheetSaving(false);
     }
   };
-  
-// Delete criterion handler
+
+  // Delete criterion handler
   const handleDeleteCriterion = async (criterionId: string) => {
     if (!criterionId) return;
 
@@ -1205,6 +1199,7 @@ const StudentSessionManagement = () => {
                   <td className="p-3 border">{s.matricNo}</td>
                   <td className="p-3 border">
                     <button
+                      title="Edit student"
                       className="text-amber-700 underline capitalize"
                       onClick={() => {
                         setCurrentStudentId(s._id);
