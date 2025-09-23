@@ -15,6 +15,8 @@ export default class LecturerService {
         title: string;
     }>
     ) {
+
+        console.log(lecturerId)
         // 1. Find the lecturer to get the associated user's ID
         const lecturer = await Lecturer.findById(lecturerId);
         if (!lecturer) {

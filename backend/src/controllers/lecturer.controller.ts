@@ -24,8 +24,7 @@ export default class LecturerController {
 
   static async deleteLecturer(req: Request, res: Response) {
     try {
-      const lecturerId = req.params.id;
-      console.log(lecturerId)
+      const {lecturerId} = req.params;
       await LecturerService.deleteLecturer(lecturerId);
       res.json({ success: true, message: 'Lecturer deleted successfully' })
     } catch (err: any) {
