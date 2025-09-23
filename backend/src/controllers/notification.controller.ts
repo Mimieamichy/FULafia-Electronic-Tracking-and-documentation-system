@@ -22,4 +22,16 @@ export default class NotificationController {
       res.status(400).json({ success: false, error: 'Failed to get notification text', message: err.message });
     }
   };
+
+  static updateReadReciept = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+     
+    const userId = req.user?.id || ''
+
+      const notifications = await NotificationService.updateReadReciept(userId); 
+      res.json({ success: true, data: notifications });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: 'Failed to update read reciept', message: err.message });
+    }
+  };
 }

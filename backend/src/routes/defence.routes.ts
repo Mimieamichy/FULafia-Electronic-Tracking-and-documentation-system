@@ -43,6 +43,7 @@ router.post('/schedule', authenticate, checkPermission(Permission.SCHEDULE_DEFEN
 router.post('/start/:defenceId', authenticate, checkPermission(Permission.START_DEFENSE), DefenceController.startDefence);
 router.post('/submit-score/:defenceId', authenticate, checkPermission(Permission.SCORE_STUDENT), DefenceController.submitScore);
 router.post('/end/:defenceId', authenticate, checkPermission(Permission.END_DEFENSE), DefenceController.endDefence);
+router.post('/approve/:studentId', authenticate, checkPermission(Permission.APPROVE_DEFENSE), DefenceController.approveStudentDefence);
 
 
 export default router;

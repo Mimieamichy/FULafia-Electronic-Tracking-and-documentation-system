@@ -31,9 +31,21 @@ export interface IStudent extends Document {
   updatedAt?: Date;
 }
 
+
 const stageScoresSchema = new Schema<IStageScores>(
-  {},
-  { _id: false, strict: true }
+  {
+    // PHD stages
+    firstSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
+    secondSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
+    thirdSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
+    externalDefenseScore: { type: Number, min: 0, max: 100, default: 0 },
+
+    // MSC stages
+    proposalScore: { type: Number, min: 0, max: 100, default: 0 },
+    internalScore: { type: Number, min: 0, max: 100, default: 0 },
+    externalScore: { type: Number, min: 0, max: 100, default: 0 },
+  },
+  { _id: false }
 );
 
 const studentSchema = new Schema<IStudent>(
@@ -46,7 +58,7 @@ const studentSchema = new Schema<IStudent>(
     faculty: { type: String, required: true },
     session: { type: Schema.Types.ObjectId, ref: 'Session', required: true },
     majorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
-    minorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer', default:  null},
+    minorSupervisor: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     internalExaminer: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     collegeRep: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     projectTopic: { type: String, default: '' },

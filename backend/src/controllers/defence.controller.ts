@@ -77,13 +77,19 @@ export default class DefenceController {
       const defence = await DefenceService.endDefence(defenceId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: 'Failed to end defence',
-          message: err.message,
-        });
+      res.status(400).json({success: false, error: 'Failed to end defence', message: err.message});
+    }
+  }
+
+
+  /** Approve defence for each student */
+  static async approveStudentDefence(req: Request, res: Response) {
+    try {
+      const { studentId } = req.params;
+      const student = await DefenceService.approveStudentDefence(studentId);
+      res.json({ success: true, data: student });
+    } catch (err: any) {
+      res.status(400).json({success: false, error: 'Failed to approve defence for student', message: err.message});
     }
   }
 

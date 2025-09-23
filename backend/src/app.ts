@@ -18,6 +18,7 @@ import studentRoutes from './routes/student.routes';
 import departmentRoutes from './routes/department.routes';
 import facultyRoutes from './routes/faculty.routes';
 import defenceRoutes from './routes/defence.routes';
+import scoreSheetRoute from './routes/scoresheet.routes'
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/student', studentRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use('/api/defence', defenceRoutes);
+app.use('/api/defence', scoreSheetRoute);
 
 //Global error handler (avoid exposing stack traces in prod)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

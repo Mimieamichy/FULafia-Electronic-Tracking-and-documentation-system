@@ -404,7 +404,7 @@ export default class StudentService {
             NotificationService.createNotifications({
                 studentIds: [String(student._id)],
                 role: 'student',
-                message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')}.`
+                message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')} .`
             })
         ]);
 

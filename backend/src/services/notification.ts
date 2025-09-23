@@ -8,12 +8,12 @@ export default class NotificationService {
       const notifications = await Notification.find({ recipient: userId })
         .sort({ createdAt: -1 })
         .lean();
-
       return notifications;
     } catch (error) {
       throw new Error(`Failed to fetch notifications: ${(error as Error).message}`);
     }
   }
+
   static async createNotifications(options: {
     userIds?: (Types.ObjectId | string)[];    // direct userIds
     lecturerIds?: (Types.ObjectId | string)[]; // resolve via Lecturer.user
@@ -66,6 +66,15 @@ export default class NotificationService {
     if (notifications.length === 0) return [];
 
     return Notification.insertMany(notifications);
+  }
+
+  static async updateReadReciept(userId: string){
+    const result = await Notification.updateMany(
+    { user: userId, read: false }, // filter unread
+    { $set: { read: true } } // mark as read + timestamp
+  );
+
+  return result
   }
 }
 
