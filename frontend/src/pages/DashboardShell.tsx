@@ -11,16 +11,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useNotificationStore } from "@/lib/notificationStore";
 import UpdatePasswordModal from "./UpdatePasswordModal";
 import HodDashboardOverview from "./provost&co/HodDashboardOverview";
 import PgLecturerManagement from "./provost&co/PgLecturerManagement";
 import StudentSessionManagement from "./provost&co/StudentSessionManagement";
-import NotificationsTab from "./provost&co/NotificationsTab";
 import MyStudentsPage from "./supervisor/MyStudentsPage";
 import CreateSession from "./provost&co/CreateSession";
 import ProvostDashboardOverview from "./provost&co/ProvostDashboard";
 import ProvostActivityLog from "./provost&co/ProvostActivityLog";
 import DefenseDayPage from "./DefenseDayPage";
+import NotificationCenter from "./NotificationCenter";
 import { useNavigate } from "react-router-dom";
 export type DashboardView =
   | "overview"
@@ -31,12 +32,15 @@ export type DashboardView =
   | "activityLog"
   | "defenseDay";
 
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
 export default function DashboardShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const role = user?.role?.toUpperCase() || "";
   const isHod = role === "HOD";
   const isProvost = role === "PROVOST";
   const userName = user?.userName || "User";
+
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<DashboardView>("overview");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -44,6 +48,10 @@ export default function DashboardShell() {
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = useNotificationStore((s) => s.unreadCount());
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -60,6 +68,21 @@ export default function DashboardShell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    if (token) {
+      fetchNotifications({ baseUrl, token });
+    }
+  }, [token, fetchNotifications]);
+
+  // optional: refresh when window focus to keep counts in sync across tabs
+  useEffect(() => {
+    const onFocus = () => {
+      if (token) fetchNotifications({ baseUrl, token });
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [token, fetchNotifications]);
+
   const renderView = () => {
     switch (currentView) {
       case "overview":
@@ -68,9 +91,7 @@ export default function DashboardShell() {
             onCreateSessionClick={() => setSessionModalOpen(true)}
           />
         ) : (
-          <HodDashboardOverview
-           
-          />
+          <HodDashboardOverview />
         );
       case "pgLecturer":
         return <PgLecturerManagement />;
@@ -79,7 +100,7 @@ export default function DashboardShell() {
       case "myStudents":
         return <MyStudentsPage />;
       case "notifications":
-        return <NotificationsTab />;
+        return <NotificationCenter />;
       case "activityLog":
         return isProvost ? <ProvostActivityLog /> : null;
       case "defenseDay":
@@ -183,10 +204,21 @@ export default function DashboardShell() {
 
         {/* Right‑side icons */}
         <div className="flex items-center gap-4">
-          <Bell
-            className="w-6 h-6 text-gray-600 cursor-pointer"
-            onClick={() => setCurrentView("notifications")}
-          />
+          <div className="relative">
+            <Bell
+              className="w-6 h-6 text-gray-600 cursor-pointer"
+              onClick={() => setCurrentView("notifications")}
+            />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-white bg-amber-600 rounded-full"
+                aria-label={`${unreadCount} unread notifications`}
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
+
           <Lock
             className="w-6 h-6 text-gray-600 cursor-pointer"
             onClick={() => setResetModalOpen(true)}
@@ -202,15 +234,16 @@ export default function DashboardShell() {
       <main className="container mx-auto px-4 py-8">{renderView()}</main>
 
       {/* Create Session Modal (HOD only) */}
-      {isHod || isProvost && (
-        <CreateSession
-          isOpen={sessionModalOpen}
-          onClose={() => setSessionModalOpen(false)}
-          onCreated={() => {
-            /* ... */
-          }}
-        />
-      )}
+      {isHod ||
+        (isProvost && (
+          <CreateSession
+            isOpen={sessionModalOpen}
+            onClose={() => setSessionModalOpen(false)}
+            onCreated={() => {
+              /* ... */
+            }}
+          />
+        ))}
 
       {/* Reset Password Modal */}
       <UpdatePasswordModal

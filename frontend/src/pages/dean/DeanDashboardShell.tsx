@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import DeanDashboard from "./DeanDashboard";
 import MyStudentsPage from "../supervisor/MyStudentsPage";
-import DeanNotifications from "./Notification";
+import NotificationCenter from "../NotificationCenter";
 import DeanActivityLog from "./DeanActivityLog";
 import DefenseDayPage from "../DefenseDayPage";
 import UpdatePasswordModal from "../UpdatePasswordModal";
@@ -71,7 +71,7 @@ export default function DeanDashboardShell() {
       case "defenseDay":
         return <DefenseDayPage />;
       case "notifications":
-        return <DeanNotifications />;
+        return <NotificationCenter />;
       default:
         return null;
     }

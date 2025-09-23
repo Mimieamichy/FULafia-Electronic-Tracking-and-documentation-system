@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import SupervisorDashboard from "./SupervisorDashboard";
 import MyStudentsPage from "./MyStudentsPage";
-import SupervisorNotifications from "./SupervisorNotifications";
+import NotificationCenter from "../NotificationCenter";
 import DefenseDayPage from "../DefenseDayPage";
 import UpdatePasswordModal from "../UpdatePasswordModal";
 
@@ -55,7 +55,7 @@ export default function SupervisorDashboardShell() {
       case "defenseDay":
         return <DefenseDayPage />;
       case "notifications":
-        return <SupervisorNotifications />;
+        return <NotificationCenter />;
       default:
         return null;
     }

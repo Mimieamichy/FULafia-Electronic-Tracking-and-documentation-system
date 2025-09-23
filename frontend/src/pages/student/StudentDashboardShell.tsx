@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import StudentDashboard from "./StudentDashboard";
 import UploadWorkPage from "./UploadWorkPage";
-import StudentNotifications from "./Notifications";
+import NotificationCenter from "../NotificationCenter";
 import UpdatePasswordModal from "../UpdatePasswordModal";
 
 export type StudentView = "dashboard" | "uploadWork" | "notifications";
@@ -54,7 +54,7 @@ const StudentDashboardShell = () => {
       case "uploadWork":
         return <UploadWorkPage />;
       case "notifications":
-        return <StudentNotifications />;
+        return <NotificationCenter />;
       default:
         return null;
     }
