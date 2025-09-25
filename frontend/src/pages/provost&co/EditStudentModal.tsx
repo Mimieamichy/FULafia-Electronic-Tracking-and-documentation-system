@@ -42,12 +42,15 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${baseUrl}/student/${encodeURIComponent(studentId)}`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
+        const res = await fetch(
+          `${baseUrl}/student/${encodeURIComponent(studentId)}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
+        );
         if (!res.ok) {
           const txt = await res.text();
           throw new Error(`Failed to fetch student (${res.status}): ${txt}`);
@@ -59,11 +62,22 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
         const stu = json?.data ?? json ?? {};
         // user could be nested (user.firstName/lastName)
         const u = stu.user ?? {};
+        console.log("EditStudentModal fetched student:", stu);
 
-        setFirstName(String(u.firstName ?? u.first_name ?? u.firstname ?? "").trim());
-        setLastName(String(u.lastName ?? u.last_name ?? u.lastname ?? "").trim());
-        setMatricNo(String(stu.matricNo ?? stu.matric_no ?? stu.matric ?? "").trim());
-        setProjectTopic(String(stu.projectTopic ?? stu.project_topic ?? stu.topic ?? "").trim());
+        setFirstName(
+          String(u.firstName ?? u.first_name ?? u.firstname ?? "").trim()
+        );
+        setLastName(
+          String(u.lastName ?? u.last_name ?? u.lastname ?? "").trim()
+        );
+        setMatricNo(
+          String(stu.matricNo ?? stu.matric_no ?? stu.matric ?? "").trim()
+        );
+        setProjectTopic(
+          String(
+            stu.projectTopic ?? stu.project_topic ?? stu.topic ?? ""
+          ).trim()
+        );
         setEmail(String(u.email ?? stu.email ?? "").trim());
       } catch (err: any) {
         console.error("EditStudentModal fetch error:", err);
@@ -82,7 +96,11 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const handleSave = async () => {
     // minimal validation
     if (!matricNo) {
-      toast({ title: "Validation", description: "Matric number is required.", variant: "destructive" });
+      toast({
+        title: "Validation",
+        description: "Matric number is required.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -94,20 +112,21 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
         matricNo: String(matricNo).trim(),
         projectTopic: String(projectTopic).trim(),
         email: String(email).trim(),
-        user: {
-          firstName: String(firstName).trim(),
-          lastName: String(lastName).trim(),
-        },
+        firstName: String(firstName).trim(),
+        lastName: String(lastName).trim(),
       };
 
-      const res = await fetch(`${baseUrl}/student/${encodeURIComponent(studentId)}`, {
-        method: "PUT", // if your API expects PATCH change to 'PATCH'
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${baseUrl}/student/${encodeURIComponent(studentId)}`,
+        {
+          method: "PUT", // if your API expects PATCH change to 'PATCH'
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const text = await res.text();
       let parsed: any = null;
@@ -123,16 +142,32 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
         throw new Error(errMsg);
       }
 
-      toast({ title: "Saved", description: "Student updated successfully.", variant: "default" });
+      toast({
+        title: "Saved",
+        description: "Student updated successfully.",
+        variant: "default",
+      });
 
       // call parent to update local list if provided
       const updatedStudent = parsed?.data ?? parsed ?? null;
-      if (onUpdated) onUpdated(updatedStudent ?? { _id: studentId, matricNo, projectTopic, user: { firstName, lastName, email } });
+      if (onUpdated)
+        onUpdated(
+          updatedStudent ?? {
+            _id: studentId,
+            matricNo,
+            projectTopic,
+            user: { firstName, lastName, email },
+          }
+        );
 
       onClose();
     } catch (err: any) {
       console.error("EditStudentModal save error:", err);
-      toast({ title: "Save failed", description: err?.message ?? String(err), variant: "destructive" });
+      toast({
+        title: "Save failed",
+        description: err?.message ?? String(err),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -141,12 +176,23 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center"
+    >
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 max-w-xl w-full mx-4 bg-white rounded-lg shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="relative z-10 max-w-xl w-full mx-4 bg-white rounded-lg shadow-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h3 className="text-lg font-medium">Edit Student</h3>
-          <button onClick={onClose} aria-label="Close" className="p-1 rounded hover:bg-gray-100">
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-1 rounded hover:bg-gray-100"
+          >
             <X />
           </button>
         </div>
@@ -161,31 +207,48 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm block mb-1">First name</label>
-                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                  <Input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="text-sm block mb-1">Last name</label>
-                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                  <Input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm block mb-1">Matric No</label>
-                <Input value={matricNo} onChange={(e) => setMatricNo(e.target.value)} />
+                <Input
+                  value={matricNo}
+                  onChange={(e) => setMatricNo(e.target.value)}
+                />
               </div>
 
               <div>
                 <label className="text-sm block mb-1">Project Topic</label>
-                <Input value={projectTopic} onChange={(e) => setProjectTopic(e.target.value)} />
+                <Input
+                  value={projectTopic}
+                  onChange={(e) => setProjectTopic(e.target.value)}
+                />
               </div>
 
               <div>
                 <label className="text-sm block mb-1">Email</label>
-                <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
 
               <div className="flex justify-end gap-2 mt-4">
-                <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+                <Button variant="secondary" onClick={onClose} disabled={saving}>
+                  Cancel
+                </Button>
                 <Button onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : "Save"}
                 </Button>

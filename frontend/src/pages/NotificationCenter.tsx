@@ -8,7 +8,7 @@ export default function NotificationCenter() {
   const { user, token } = useAuth();
   const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const notifications = useNotificationStore((s) => s.notifications);
+  
   const loading = useNotificationStore((s) => s.loading);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const markAsReadLocal = useNotificationStore((s) => s.markAsReadLocal);
@@ -37,7 +37,7 @@ export default function NotificationCenter() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{user?.role ?? "User"} Notifications</h1>
+      <h1 className="text-2xl font-bold uppercase">{user?.role ?? "User"} Notifications</h1>
       <div className="bg-white rounded-lg shadow p-6 space-y-4 max-w-2xl">
         {loading ? (
           <div className="text-sm text-gray-500">Loading notifications...</div>

@@ -3,6 +3,7 @@ import {create} from "zustand";
 
 export type NotificationItem = {
   _id: string;
+  id?: string;
   recipient?: string;
   role?: string | string[];
   message: string;
@@ -21,7 +22,8 @@ type State = {
   setNotifications: (notes: NotificationItem[]) => void;
   fetchNotifications: (opts: { baseUrl: string; token?: string }) => Promise<void>;
   markAsReadLocal: (id: string) => void;
-  markAsReadApi: (opts: { baseUrl: string; token?: string; id: string }) => Promise<void>;
+  // changed to return boolean so callers can know success/failure
+  markAsReadApi: (opts: { baseUrl: string; token?: string; id: string }) => Promise<boolean>;
   // utility selectors (derived)
   unreadCount: () => number;
   visibleForUser: (userId?: string | null, userRoles?: string[] | null) => NotificationItem[];
@@ -60,47 +62,111 @@ export const useNotificationStore = create<State>((set, get) => ({
         return;
       }
 
-      set({ notifications: payload as NotificationItem[], loading: false });
-      console.log("[notificationStore] fetched notifications:", payload);
+      // Normalize each notification so it has both _id and id fields
+      const normalized = (payload as NotificationItem[]).map((n) => {
+        const _id = (n as any)._id ?? (n as any).id ?? undefined;
+        const id = (n as any).id ?? (n as any)._id ?? undefined;
+        return {
+          ...n,
+          _id,
+          id,
+        };
+      });
+
+      set({ notifications: normalized as NotificationItem[], loading: false });
+      console.log("[notificationStore] fetched notifications:", normalized);
     } catch (err: any) {
       console.error("[notificationStore] fetch exception:", err);
       set({ error: err?.message ?? String(err), loading: false });
     }
   },
 
-  markAsReadLocal: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) => (n._id === id ? { ...n, read: true } : n)),
-    })),
-
-  markAsReadApi: async ({ baseUrl, token, id }) => {
-    try {
-      const body = JSON.stringify({ _id: id, read: true });
-      const res = await fetch(`${baseUrl}/notification`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body,
-      });
-
-      console.log("[notificationStore] PATCH status:", res.status, res.statusText);
-      const txt = await res.text();
-      try {
-        console.log("[notificationStore] PATCH body:", txt ? JSON.parse(txt) : txt);
-      } catch {
-        console.log("[notificationStore] PATCH text:", txt);
-      }
-
-      if (!res.ok) {
-        console.warn("[notificationStore] markAsReadApi failed:", res.status);
-      }
-      // Optionally: re-fetch the notifications to ensure canonical state:
-      // await get().fetchNotifications({ baseUrl, token });
-    } catch (err) {
-      console.warn("[notificationStore] markAsReadApi exception:", err);
+  // defensive local updater — will only mark the matching item (requires truthy id)
+  markAsReadLocal: (id) => {
+    if (!id) {
+      console.warn("[notificationStore] markAsReadLocal called with empty id, ignoring.");
+      return;
     }
+    set((state) => ({
+      notifications: state.notifications.map((n) => {
+        const nid = (n as any)._id ?? (n as any).id ?? undefined;
+        if (!nid) return n; // don't accidentally match undefined === undefined
+        return String(nid) === String(id) ? { ...n, read: true } : n;
+      }),
+    }));
+  },
+
+  // tries several common request shapes, re-fetches on success, returns true on success
+  markAsReadApi: async ({ baseUrl, token, id }) => {
+    if (!id) {
+      console.warn("[notificationStore] markAsReadApi called with empty id.");
+      return false;
+    }
+
+    const candidates = [
+      { url: `${baseUrl}/notification`, method: "PATCH", body: { _id: id, read: true } },
+      { url: `${baseUrl}/notification`, method: "PATCH", body: { id, read: true } },
+      { url: `${baseUrl}/notification`, method: "PATCH", body: { notificationId: id, read: true } },
+      { url: `${baseUrl}/notification/${encodeURIComponent(id)}`, method: "PATCH", body: { read: true } },
+      { url: `${baseUrl}/notification/${encodeURIComponent(id)}`, method: "PUT", body: { read: true } },
+    ];
+
+    for (const c of candidates) {
+      try {
+        const res = await fetch(c.url, {
+          method: c.method,
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(c.body),
+        });
+
+        console.log("[notificationStore] tried", c.method, c.url, "status:", res.status, res.statusText);
+
+        const txt = await res.text();
+        let parsed: any = null;
+        try {
+          parsed = txt ? JSON.parse(txt) : null;
+          console.log("[notificationStore] response payload:", parsed);
+        } catch {
+          console.log("[notificationStore] response text:", txt);
+        }
+
+        // heuristics: server returned updated item(s) with read:true
+        const looksUpdated =
+          parsed &&
+          ((parsed.read === true && (String(parsed._id) === String(id) || String(parsed.id) === String(id))) ||
+            (Array.isArray(parsed) && parsed.some((x) => (x._id === id || x.id === id) && x.read === true)));
+
+        if (res.ok && looksUpdated) {
+          // success — re-fetch canonical list to be safe
+          if (typeof get().fetchNotifications === "function") {
+            await get().fetchNotifications({ baseUrl, token });
+          }
+          return true;
+        }
+
+        // if res.ok but server didn't return updated object, try re-fetching and check store
+        if (res.ok) {
+          if (typeof get().fetchNotifications === "function") {
+            await get().fetchNotifications({ baseUrl, token });
+            const n = get().notifications.find((x) => {
+              const nid = (x as any)._id ?? (x as any).id ?? undefined;
+              return nid && String(nid) === String(id);
+            });
+            if (n && n.read) return true;
+          }
+        }
+
+        // try next candidate
+      } catch (err) {
+        console.warn("[notificationStore] attempt failed:", err);
+      }
+    }
+
+    console.warn("[notificationStore] none of the request shapes produced an apparent update. Check server API.");
+    return false;
   },
 
   unreadCount: () => {
@@ -122,7 +188,7 @@ export const useNotificationStore = create<State>((set, get) => ({
       if (userRolesArr.length === 0) return false;
       for (const nr of notifRoles) {
         if (userRolesArr.includes(nr)) return true;
-        if (nr === "supervisor" && userRolesArr.some((ur) => ur.includes("supervisor"))) return true;
+        if ((nr === "supervisor" || nr === "hod" || nr === "provost") && userRolesArr.some((ur) => ur.includes("supervisor") || ur.includes("hod") || ur.includes("provost"))) return true;
         if (userRolesArr.some((ur) => ur.includes(nr) || nr.includes(ur))) return true;
       }
       return false;

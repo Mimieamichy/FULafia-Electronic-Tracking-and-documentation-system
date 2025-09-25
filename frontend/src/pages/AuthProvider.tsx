@@ -27,6 +27,7 @@ interface AuthContextProps {
     password: string
   ) => Promise<{ user: UserProfile; token: string }>;
   logout: () => void;
+  roles: string[] | null;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -34,16 +35,19 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [roles, setRoles] = useState<string[]>([]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("token");
+    const storedRoles = localStorage.getItem("roles");
 
 
     if (storedUser && storedToken) {
       try {
         setUser(JSON.parse(storedUser));
         setToken(storedToken);
+        if (storedRoles) setRoles(JSON.parse(storedRoles));
         axios.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${storedToken}`;
@@ -51,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn("Failed to parse stored user:", err);
         localStorage.removeItem("user");
         localStorage.removeItem("token");
+        localStorage.removeItem("roles")
       }
     }
   }, []);
@@ -65,9 +70,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Defensive role extraction
       let roleValue = "unknown";
+      let roleArray: string[] = [];
+
       if (rawUser) {
         if (Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
           roleValue = rawUser.roles[0];
+           roleArray = rawUser.roles.map((r: any) => r.toString());
+
         } else if (typeof rawUser.roles === "string") {
           roleValue = rawUser.roles;
         } else if (rawUser.role) {
@@ -75,7 +84,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      console.log("Raw user data:", authToken);
+      console.log("User profile created:", rawUser);
+     
+      console.log("Roles array:", roleArray);
 
       const userProfile: UserProfile = {
         userName: `${rawUser.firstName ?? ""} ${rawUser.lastName ?? ""}`.trim(),
@@ -86,10 +97,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         faculty: rawUser.faculty,
       };
 
-      console.log("User profile created:", userProfile);
       // update state + persistence
       setUser(userProfile);
       setToken(authToken);
+      localStorage.setItem("roles", JSON.stringify(roleArray));
       localStorage.setItem("user", JSON.stringify(userProfile));
       localStorage.setItem("token", authToken);
       axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
@@ -111,11 +122,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+    localStorage.removeItem("roles")
     delete axios.defaults.headers.common["Authorization"];
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, roles }}>
       {children}
     </AuthContext.Provider>
   );
