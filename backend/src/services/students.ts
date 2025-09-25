@@ -82,7 +82,7 @@ export default class StudentService {
     }
 
     static async getOneStudent(studentId: string) {
-       return findOneFormatted( Student, studentId)
+       return findOneFormatted(Student, studentId)
     }
 
     static async editStudent(studentId: string, updateData: Partial<{
@@ -360,12 +360,11 @@ export default class StudentService {
         if (!student) throw new Error('Student not found');
 
 
-
         // Roles to add
         let roleToAdd: string[] = [];
-        if (type === 'major') roleToAdd = [Role.MAJOR_SUPERVISOR, Role.SUPERVISOR, Role.PANEL_MEMBER];
+        if (type === 'major') roleToAdd = [Role.SUPERVISOR, Role.MAJOR_SUPERVISOR, Role.PANEL_MEMBER];
         else if (type === 'minor') roleToAdd = [Role.SUPERVISOR, Role.PANEL_MEMBER];
-        else if (type === 'internal_examiner') roleToAdd = [Role.INTERNAL_EXAMINER, Role.PANEL_MEMBER];
+        else if (type === 'internal_examiner') roleToAdd = [Role.SUPERVISOR, Role.INTERNAL_EXAMINER, Role.PANEL_MEMBER];
 
         // Get lecturer
         const lecturer = await Lecturer.findById(staffId);
