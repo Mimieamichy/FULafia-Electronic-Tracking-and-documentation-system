@@ -1222,7 +1222,7 @@ const StudentSessionManagement = () => {
                       </button>
                     ) : s.user ? (
                       <button
-                        title="Edit student"
+                        title="View student"
                         className="text-amber-700 underline capitalize"
                         onClick={() => {
                           setViewStudentId(s._id);
@@ -1304,6 +1304,7 @@ const StudentSessionManagement = () => {
         studentId={currentStudentId}
         onSubmit={handleAssign}
       />
+
       <AssignCollegeRepModal
         isOpen={assignCollegeRepOpen}
         onClose={() => setAssignCollegeRepOpen(false)}

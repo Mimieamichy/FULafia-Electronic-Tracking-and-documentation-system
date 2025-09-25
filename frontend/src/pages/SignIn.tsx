@@ -61,6 +61,7 @@ const SignIn = () => {
         case "external_examiner":
         case "college_rep":
         case "faculty_rep":
+        case "panel_member":
           navigate("/defense-day");
           break;
         default:
