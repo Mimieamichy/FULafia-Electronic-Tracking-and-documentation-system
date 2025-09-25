@@ -118,7 +118,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.EDIT_LECTURER,
     Permission.VIEW_LECTURERS,
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
-    Permission.VIEW_ALL_SESSIONS,
     Permission.VIEW_PROJECT_BY_DEPARTMENT,
     Permission.SCHEDULE_DEFENSE,
     Permission.END_DEFENSE,
@@ -142,6 +141,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DELETE_STUDENT,
     Permission.GET_COLLEGE_REP,
     Permission.VIEW_FACULTY_REP,
+    Permission.GET_PROVOST,
+    Permission.GET_DEAN,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -259,6 +260,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.RESET_PASSWORD,
     Permission.VIEW_NOTIFICATIONS,
     Permission.VIEW_ONE_STUDENT,
+    Permission.VIEW_ALL_SESSIONS,
   ],
 };
 
