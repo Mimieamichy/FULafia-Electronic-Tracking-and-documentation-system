@@ -1,5 +1,5 @@
 // src/pgc/SetDefenseModal.tsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,14 +15,22 @@ interface Lecturer {
   name?: string;
 }
 
-// interface changes — remove level
+// added optional student object type (only _id and currentStage are needed)
+interface StudentObj {
+  _id: string;
+  currentStage?: string;
+}
+
+// interface changes — remove level, add allStudents
 interface SetDefenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   defenseStage: string;
   lecturers?: Lecturer[]; // optional preloaded lecturers
   schedulerRole?: "hod" | "provost" | "pgcord"; // default "hod"
-  studentIds: string[]; // required: students to schedule
+  studentIds: string[]; // required: students to schedule (fallback)
+  // optional: full student objects from parent so we can filter by currentStage here
+  allStudents?: StudentObj[];
   program: string;
   session: string;
   baseUrl: string;
@@ -61,6 +69,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   lecturers: initialLecturers,
   schedulerRole = "hod",
   studentIds,
+  allStudents, // <-- new optional prop
   program,
   session,
   baseUrl,
@@ -82,6 +91,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const facultyRepEndpoint = `${baseUrl}/lecturer/get-faculty-rep`;
   const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner`;
   const collegeRepEndpoint = `${baseUrl}/lecturer/get-college-rep`;
+  const provostEndpoint = `${baseUrl}/lecturer/get-provost`; // new
 
   // pick the primary GET endpoint based on role
   const lecturerEndpoint =
@@ -98,6 +108,9 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     );
     if (Array.isArray(maybeArray)) return maybeArray as Lecturer[];
 
+    // if it's a single object (like a provost object), wrap it in an array
+    if (payload && typeof payload === "object") return [payload as Lecturer];
+
     return [];
   };
 
@@ -111,6 +124,24 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     }
     return Array.from(map.values());
   };
+
+  // --- NEW: compute the actual student IDs to schedule filtered by currentStage
+  const studentIdsToSchedule = useMemo(() => {
+    if (Array.isArray(allStudents) && allStudents.length > 0) {
+      const matched = allStudents
+        .filter(
+          (s) =>
+            String(s.currentStage ?? "").trim() !== "" &&
+            String(s.currentStage) === String(defenseStage)
+        )
+        .map((s) => s._id)
+        .filter(Boolean);
+      // if none matched, fall back to incoming studentIds to avoid emptying unexpectedly
+      return matched.length > 0 ? matched : studentIds;
+    }
+    // fallback if allStudents not provided
+    return studentIds;
+  }, [allStudents, studentIds, defenseStage]);
 
   const fetchLecturers = useCallback(async () => {
     setLoadingLecturers(true);
@@ -153,7 +184,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         try {
           const params = new URLSearchParams({
             department: String(department).trim(), // department NAME
-            level: String((normalizeProgram(program) || "").trim()), // MSC|PHD trimmed
+            level: String((normalizeProgram(program) || "").trim()), // msc|phd trimmed
             stage: String(defenseStage || ""),
           });
           console.log(
@@ -202,6 +233,32 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         );
       }
 
+      // --- NEW: fetch provost when schedulerRole is hod or pgcord and merge it in
+      if (schedulerRole === "hod" || schedulerRole === "pgcord") {
+        try {
+          console.log(`[SetDefenseModal] GET -> ${provostEndpoint}`);
+          const resProv = await fetch(provostEndpoint, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+          const textProv = await resProv.text();
+          let parsedProv: any = null;
+          try {
+            parsedProv = textProv ? JSON.parse(textProv) : null;
+          } catch {
+            parsedProv = textProv;
+          }
+          console.log("Raw response (provost):", parsedProv);
+          const arrProv = normalizePayloadCandidates(parsedProv);
+          results.push(arrProv);
+        } catch (err) {
+          console.warn("[SetDefenseModal] provost fetch failed:", err);
+        }
+      }
+
       const merged = mergeUnique(results);
       setLecturers(merged);
     } catch (err) {
@@ -223,6 +280,8 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     department,
     program,
     defenseStage,
+    provostEndpoint,
+    schedulerRole,
     token,
     toast,
   ]);
@@ -272,7 +331,8 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       session,
       date,
       time,
-      studentIds,
+      // use the computed filtered IDs (studentIdsToSchedule)
+      studentIds: studentIdsToSchedule,
       program: programForApi,
       // include panelMemberIds only when there are selected panel members
       ...(panel.length > 0 ? { panelMemberIds: panel } : {}),

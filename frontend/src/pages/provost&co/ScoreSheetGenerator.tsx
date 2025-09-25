@@ -1,5 +1,5 @@
 // src/pgc/ScoreSheetGenerator.tsx
-import  { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -47,15 +47,15 @@ export default function ScoreSheetGenerator({
   const isTotalValid = totalPercentage === 100;
 
   useEffect(() => {
-  // only seed if rubricId changed (new doc) OR we haven't seeded yet and initialCriteria exists
-  if (!initialCriteria) return;
+    // only seed if rubricId changed (new doc) OR we haven't seeded yet and initialCriteria exists
+    if (!initialCriteria) return;
 
-  const newRubricId = String(rubricId ?? "");
-  if (seededRef.current !== newRubricId) {
-    setCriteria(initialCriteria);
-    seededRef.current = newRubricId; // mark as seeded for this rubric
-  }
-}, [initialCriteria, rubricId]);
+    const newRubricId = String(rubricId ?? "");
+    if (seededRef.current !== newRubricId) {
+      setCriteria(initialCriteria);
+      seededRef.current = newRubricId; // mark as seeded for this rubric
+    }
+  }, [initialCriteria, rubricId]);
 
   function handleAddCriterion() {
     const title = newCriterion.trim();
@@ -125,7 +125,7 @@ export default function ScoreSheetGenerator({
   }
 
   return (
-    <div className="space-y-6 p-4 border rounded-md bg-white">
+    <div className="space-y-6 p-4 border rounded-md bg-white max-h-[calc(100vh-6rem)] overflow-auto">
       <div>
         <label className="block text-sm font-medium mb-1">
           Scoring Criteria

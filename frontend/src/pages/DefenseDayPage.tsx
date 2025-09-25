@@ -114,15 +114,15 @@ export default function DefenseDayPage() {
   );
 
   // HOD / Provost membership checks
-  const isHodOrProvost =
-    normalizedRoles.some((r) =>
-  r === "hod" ||
-  r === "provost" ||
-  r.includes("hod") ||
-  r.includes("provost") ||
-  r.startsWith("hod") ||
-  r.startsWith("provost")
-);
+  const isHodOrProvost = normalizedRoles.some(
+    (r) =>
+      r === "hod" ||
+      r === "provost" ||
+      r.includes("hod") ||
+      r.includes("provost") ||
+      r.startsWith("hod") ||
+      r.startsWith("provost")
+  );
 
   // optional single-role string you can use elsewhere (falls back to first role)
   const role = (user?.role ?? normalizedRoles[0] ?? "").toUpperCase();
@@ -317,7 +317,9 @@ export default function DefenseDayPage() {
               setActiveTab("students"); // reset to students when switching defense day
             }}
             className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
-              i === activeDefenseIdx ? "bg-amber-700 text-white" : "bg-gray-100 text-gray-700"
+              i === activeDefenseIdx
+                ? "bg-amber-700 text-white"
+                : "bg-gray-100 text-gray-700"
             }`}
           >
             {d.title}
@@ -337,7 +339,9 @@ export default function DefenseDayPage() {
             <p className="text-sm text-gray-700 mt-2">
               Countdown:{" "}
               <strong>{formatCountdown(getCountdownFor(activeDefense))}</strong>
-              {activeDefense.sessionActive ? " (Session active)" : " (Not started)"}
+              {activeDefense.sessionActive
+                ? " (Session active)"
+                : " (Not started)"}
             </p>
           </div>
 
@@ -346,11 +350,15 @@ export default function DefenseDayPage() {
             <div className="flex gap-2">
               <Button
                 className={`flex items-center ${
-                  activeDefense.sessionActive ? "bg-red-600 text-white" : "bg-green-600 text-white"
+                  activeDefense.sessionActive
+                    ? "bg-red-600 text-white"
+                    : "bg-green-600 text-white"
                 }`}
                 onClick={() => toggleSession(activeDefense.id)}
               >
-                {activeDefense.sessionActive ? "End Defense Session" : "Start Defense Session"}
+                {activeDefense.sessionActive
+                  ? "End Defense Session"
+                  : "Start Defense Session"}
               </Button>
             </div>
           )}
@@ -411,7 +419,10 @@ export default function DefenseDayPage() {
               </thead>
               <tbody>
                 {activeDefense.students.map((s, idx) => (
-                  <tr key={s.id} className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}>
+                  <tr
+                    key={s.id}
+                    className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
+                  >
                     <td className="p-3 border">{s.matNo}</td>
                     <td className="p-3 border">{s.name}</td>
                     <td className="p-3 border">{s.topic}</td>
@@ -451,7 +462,9 @@ export default function DefenseDayPage() {
 
         {activeTab === "assessment" && isHodOrProvost && (
           <div className="space-y-3">
-            <h3 className="text-md font-semibold">Assessment (Approve to next stage)</h3>
+            <h3 className="text-md font-semibold">
+              Assessment (Approve to next stage)
+            </h3>
             <div className="overflow-x-auto bg-white rounded-lg shadow">
               <table className="w-full min-w-[600px] text-left border-collapse">
                 <thead>
@@ -465,16 +478,25 @@ export default function DefenseDayPage() {
                 </thead>
                 <tbody>
                   {activeDefense.students.map((s, idx) => (
-                    <tr key={s.id} className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}>
+                    <tr
+                      key={s.id}
+                      className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
+                    >
                       <td className="p-3 border">{s.matNo}</td>
                       <td className="p-3 border">{s.name}</td>
                       <td className="p-3 border">{s.currentStage}</td>
-                      <td className="p-3 border">{computeScore(s, criteria)}</td>
+                      <td className="p-3 border">
+                        {computeScore(s, criteria)}
+                      </td>
                       <td className="p-3 border">
                         <Button
                           onClick={() => handleApprove(activeDefense.id, s.id)}
                           disabled={!!s.approved}
-                          className={`px-3 py-1 ${s.approved ? "bg-gray-300" : "bg-green-600 text-white"}`}
+                          className={`px-3 py-1 ${
+                            s.approved
+                              ? "bg-gray-300"
+                              : "bg-green-600 text-white"
+                          }`}
                         >
                           {s.approved ? "Approved" : "Approve"}
                         </Button>
@@ -498,7 +520,9 @@ export default function DefenseDayPage() {
       >
         <DialogContent className="max-w-lg w-full">
           <DialogHeader>
-            <DialogTitle>{selectedStudent?.student.name}’s Submission & Comments</DialogTitle>
+            <DialogTitle>
+              {selectedStudent?.student.name}’s Submission & Comments
+            </DialogTitle>
           </DialogHeader>
 
           {selectedStudent && (
@@ -520,12 +544,15 @@ export default function DefenseDayPage() {
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-700">Comments</h3>
                 {selectedStudent.student.comments.length === 0 ? (
-                  <p className="text-gray-500 italic text-sm">No comments yet.</p>
+                  <p className="text-gray-500 italic text-sm">
+                    No comments yet.
+                  </p>
                 ) : (
                   <ul className="space-y-2">
                     {selectedStudent.student.comments.map((c, i) => (
                       <li key={i} className="bg-gray-100 p-2 rounded text-sm">
-                        <strong className="text-amber-700">{c.by}:</strong> {c.text}
+                        <strong className="text-amber-700">{c.by}:</strong>{" "}
+                        {c.text}
                       </li>
                     ))}
                   </ul>
@@ -541,7 +568,10 @@ export default function DefenseDayPage() {
                     onChange={(e) => setNewComment(e.target.value)}
                     rows={3}
                   />
-                  <Button className="bg-amber-700 text-white flex items-center" onClick={handleAddComment}>
+                  <Button
+                    className="bg-amber-700 text-white flex items-center"
+                    onClick={handleAddComment}
+                  >
                     <CheckCircle className="w-4 h-4 mr-1" />
                     Save Comment
                   </Button>

@@ -17,7 +17,7 @@ import SetDefenseModal from "./SetDefenseModal";
 import EditStudentModal from "./EditStudentModal";
 import { useAuth } from "../AuthProvider";
 import AssignCollegeRepModal from "./AssignCollegeRepModal";
-import waterMark from "../fulafia logo.png"
+import waterMark from "../fulafia logo.png";
 import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
 
 interface StudentFromAPI {
@@ -185,8 +185,6 @@ const StudentSessionManagement = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
-  // which students are currently selected (we'll default to all fetched students)
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
   // provost faculty/department fetch
   useEffect(() => {
@@ -457,13 +455,6 @@ const StudentSessionManagement = () => {
           ? json
           : [];
         setStudents(dataArr);
-
-        // --- NEW: set an array of student ids (safe extraction)
-        const allIds = dataArr
-          .map((s: any) => s._id ?? s.id ?? s.user?._id) // handle common shapes
-          .filter(Boolean) as string[]; // remove falsy values
-
-        setSelectedStudentIds(allIds);
 
         // set server pagination values (guard with fallback)
         setTotalStudents(
@@ -885,6 +876,21 @@ const StudentSessionManagement = () => {
     setSelectedDepartmentForDefense("");
   };
 
+  // near other hooks, add:
+  const defenseStudentIds = useMemo(() => {
+    // include all students whose currentStage matches the selected defense key
+    if (!Array.isArray(students) || !selectedDefense) return [];
+    return students
+      .filter((s) => String(s.currentStage) === String(selectedDefense))
+      .map((s) => s._id ?? s.id)
+      .filter(Boolean) as string[];
+  }, [students, selectedDefense]);
+
+  console.log("Rendering ", defenseStudentIds.length, "students for", {
+    selectedDefense,
+    selectedDefenseLabel,
+  });
+
   return (
     <div className="space-y-6">
       {isPgc && (
@@ -1169,16 +1175,16 @@ const StudentSessionManagement = () => {
                   >
                     <td className="p-3 border">{s.matricNo}</td>
                     <td className="p-3 border">
-                    <button
-                      title="View student"
-                      className="text-amber-700 underline capitalize"
-                      onClick={() => {
-                        setViewStudentId(s._id);
-                        setViewModalOpen(true);
-                      }}
-                    >
-                      {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
-                    </button>
+                      <button
+                        title="View student"
+                        className="text-amber-700 underline capitalize"
+                        onClick={() => {
+                          setViewStudentId(s._id);
+                          setViewModalOpen(true);
+                        }}
+                      >
+                        {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                      </button>
                     </td>
                     <td className="p-3 border">{s.projectTopic}</td>
                     <td className="p-3 border">{s.currentStage}</td>
@@ -1317,7 +1323,7 @@ const StudentSessionManagement = () => {
         onClose={closeDefenseModal}
         defenseStage={defenseStage}
         schedulerRole={isProvost ? "provost" : isHod ? "hod" : "pgcord"}
-        studentIds={selectedStudentIds}
+        studentIds={defenseStudentIds}
         program={degreeTab} // string
         session={selectedSession} // string / academic session
         baseUrl={baseUrl}
