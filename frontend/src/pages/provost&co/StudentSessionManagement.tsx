@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Pen, X } from "lucide-react";
 import AssignSupervisorModal from "./AssignSupervisorModal";
+import ProvostViewStudentModal from "./ProvostViewStudentModal";
 import SetDefenseModal from "./SetDefenseModal";
 import EditStudentModal from "./EditStudentModal";
 import { useAuth } from "../AuthProvider";
@@ -97,6 +98,8 @@ const StudentSessionManagement = () => {
 
   const [scoreSheetSaving, setScoreSheetSaving] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewStudentId, setViewStudentId] = useState<string | null>(null);
   const [scoreSheetOpen, setScoreSheetOpen] = useState(false); // you already had this
   const [initialRubricCriteria, setInitialRubricCriteria] = useState<
     any | null
@@ -1165,7 +1168,16 @@ const StudentSessionManagement = () => {
                   >
                     <td className="p-3 border">{s.matricNo}</td>
                     <td className="p-3 border">
+                    <button
+                      title="View student"
+                      className="text-amber-700 underline capitalize"
+                      onClick={() => {
+                        setViewStudentId(s._id);
+                        setViewModalOpen(true);
+                      }}
+                    >
                       {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                    </button>
                     </td>
                     <td className="p-3 border">{s.projectTopic}</td>
                     <td className="p-3 border">{s.currentStage}</td>
@@ -1196,16 +1208,31 @@ const StudentSessionManagement = () => {
                 >
                   <td className="p-3 border">{s.matricNo}</td>
                   <td className="p-3 border">
-                   {isPgc ? <button
-                      title="Edit student"
-                      className="text-amber-700 underline capitalize"
-                      onClick={() => {
-                        setCurrentStudentId(s._id);
-                        setEditModalOpen(true);
-                      }}
-                    >
-                      {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
-                    </button> : s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                    {isPgc ? (
+                      <button
+                        title="Edit student"
+                        className="text-amber-700 underline capitalize"
+                        onClick={() => {
+                          setCurrentStudentId(s._id);
+                          setEditModalOpen(true);
+                        }}
+                      >
+                        {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                      </button>
+                    ) : s.user ? (
+                      <button
+                        title="Edit student"
+                        className="text-amber-700 underline capitalize"
+                        onClick={() => {
+                          setViewStudentId(s._id);
+                          setViewModalOpen(true);
+                        }}
+                      >
+                        {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
+                      </button>
+                    ) : (
+                      ""
+                    )}
                   </td>
 
                   <td className="p-3 border capitalize">{s.projectTopic}</td>
@@ -1315,6 +1342,15 @@ const StudentSessionManagement = () => {
             )
           )
         }
+      />
+
+      {/* student view modal */}
+      <ProvostViewStudentModal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        studentId={viewStudentId ?? ""}
+        baseUrl={import.meta.env.VITE_BACKEND_URL}
+        token={token}
       />
 
       {/* PGC ScoreSheet generator modal */}
