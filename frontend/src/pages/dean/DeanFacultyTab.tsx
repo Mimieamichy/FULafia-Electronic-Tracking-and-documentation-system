@@ -255,10 +255,10 @@ export default function DeanFacultyTab() {
 
     try {
       // use staffId if available; fallback to id/_id
-      const staffIdentifier = item.staffId ?? item.id ?? item._id;
+      const staffIdentifier =item.id ?? item._id;
       if (!staffIdentifier)
         throw new Error("Missing staff identifier for API call");
-
+      
       if (action === "make") {
         // assign endpoint — POST /lecturer/assign-faculty-rep/:staffId
         const res = await axios.post(

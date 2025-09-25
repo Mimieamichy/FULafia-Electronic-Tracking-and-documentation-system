@@ -115,7 +115,14 @@ export default function DefenseDayPage() {
 
   // HOD / Provost membership checks
   const isHodOrProvost =
-    normalizedRoles.includes("hod") || normalizedRoles.includes("provost");
+    normalizedRoles.some((r) =>
+  r === "hod" ||
+  r === "provost" ||
+  r.includes("hod") ||
+  r.includes("provost") ||
+  r.startsWith("hod") ||
+  r.startsWith("provost")
+);
 
   // optional single-role string you can use elsewhere (falls back to first role)
   const role = (user?.role ?? normalizedRoles[0] ?? "").toUpperCase();

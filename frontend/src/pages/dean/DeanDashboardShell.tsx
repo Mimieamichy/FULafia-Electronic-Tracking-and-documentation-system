@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Menu, Bell, Lock, Power } from "lucide-react";
 import { useAuth } from "../AuthProvider";
+import { useNotificationStore } from "@/lib/notificationStore";
 import {
   Dialog,
   DialogContent,
@@ -29,14 +30,19 @@ export type DeanView =
   | "defenseDay"
   | "notifications";
 
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
 export default function DeanDashboardShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const role = user?.role || "Dean";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [currentView, setCurrentView] = useState<DeanView>("dashboard");
   const [resetModalOpen, setResetModalOpen] = useState(false);
+  const unreadCount = useNotificationStore((s) => s.unreadCount());
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -55,6 +61,21 @@ export default function DeanDashboardShell() {
     if (isMenuOpen) document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (token) {
+      fetchNotifications({ baseUrl, token });
+    }
+  }, [token, fetchNotifications]);
+
+  // optional: refresh when window focus to keep counts in sync across tabs
+  useEffect(() => {
+    const onFocus = () => {
+      if (token) fetchNotifications({ baseUrl, token });
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [token, fetchNotifications]);
 
   const renderView = () => {
     switch (currentView) {
@@ -108,6 +129,15 @@ export default function DeanDashboardShell() {
               <li
                 className="cursor-pointer hover:text-amber-700"
                 onClick={() => {
+                  setCurrentView("facultyTab");
+                  setIsMenuOpen(false);
+                }}
+              >
+                Faculty Lecturers
+              </li>
+              <li
+                className="cursor-pointer hover:text-amber-700"
+                onClick={() => {
                   setCurrentView("studentSessionManagement");
                   setIsMenuOpen(false);
                 }}
@@ -124,15 +154,17 @@ export default function DeanDashboardShell() {
               >
                 My Students
               </li>
+
               <li
                 className="cursor-pointer hover:text-amber-700"
                 onClick={() => {
-                  setCurrentView("facultyTab");
+                  setCurrentView("defenseDay");
                   setIsMenuOpen(false);
                 }}
               >
-                Faculty Lecturers
+                Defense Page
               </li>
+              
               <li
                 className="cursor-pointer hover:text-amber-700"
                 onClick={() => {
@@ -142,15 +174,7 @@ export default function DeanDashboardShell() {
               >
                 Activity Log
               </li>
-              <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("defenseDay");
-                  setIsMenuOpen(false);
-                }}
-              >
-                Defense Day
-              </li>
+              
               <li
                 className="cursor-pointer hover:text-amber-700"
                 onClick={() => {
@@ -169,10 +193,20 @@ export default function DeanDashboardShell() {
           <span className="hidden sm:inline capitalize text-gray-600">
             Welcome, {role}
           </span>
-          <Bell
-            className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
-            onClick={() => setCurrentView("notifications")}
-          />
+          <div className="relative">
+            <Bell
+              className="w-6 h-6 text-gray-600 cursor-pointer"
+              onClick={() => setCurrentView("notifications")}
+            />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-white bg-amber-600 rounded-full"
+                aria-label={`${unreadCount} unread notifications`}
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
           <Lock
             className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
             onClick={() => setResetModalOpen(true)}

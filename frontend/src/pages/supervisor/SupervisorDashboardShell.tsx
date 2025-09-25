@@ -130,7 +130,7 @@ export default function SupervisorDashboardShell() {
                   setIsMenuOpen(false);
                 }}
               >
-                Defense Day
+                Defense Page
               </li>
               <li
                 className="cursor-pointer hover:text-amber-700"
@@ -148,7 +148,7 @@ export default function SupervisorDashboardShell() {
         {/* Right-side Controls */}
         <div className="flex items-center gap-4">
           <span className="hidden sm:inline text-gray-600">
-            Welcome, {role}
+            Welcome, {user?.userName} 
           </span>
           <div className="relative">
             <Bell

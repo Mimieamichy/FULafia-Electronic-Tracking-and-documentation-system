@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Menu, Bell, Lock, Power } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthProvider";
+import { useNotificationStore } from "@/lib/notificationStore";
 import {
   Dialog,
   DialogContent,
@@ -17,15 +18,18 @@ import UpdatePasswordModal from "../UpdatePasswordModal";
 
 export type StudentView = "dashboard" | "uploadWork" | "notifications";
 
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
 const StudentDashboardShell = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const userName = user?.userName || "Student";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [currentView, setCurrentView] = useState<StudentView>("dashboard");
   const [resetModalOpen, setResetModalOpen] = useState(false);
-  
+  const unreadCount = useNotificationStore((s) => s.unreadCount());
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
@@ -46,6 +50,21 @@ const StudentDashboardShell = () => {
     else document.removeEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (token) {
+      fetchNotifications({ baseUrl, token });
+    }
+  }, [token, fetchNotifications]);
+
+  // optional: refresh when window focus to keep counts in sync across tabs
+  useEffect(() => {
+    const onFocus = () => {
+      if (token) fetchNotifications({ baseUrl, token });
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [token, fetchNotifications]);
 
   const renderView = () => {
     switch (currentView) {
@@ -103,10 +122,20 @@ const StudentDashboardShell = () => {
 
         {/* Right-side icons */}
         <div className="flex items-center gap-4">
-          <Bell
-            className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
-            onClick={() => setCurrentView("notifications")}
-          />
+          <div className="relative">
+            <Bell
+              className="w-6 h-6 text-gray-600 cursor-pointer"
+              onClick={() => setCurrentView("notifications")}
+            />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-white bg-amber-600 rounded-full"
+                aria-label={`${unreadCount} unread notifications`}
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
           <Lock
             className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
             onClick={() => setResetModalOpen(true)}

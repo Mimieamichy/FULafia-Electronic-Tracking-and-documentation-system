@@ -187,7 +187,7 @@ export default function DashboardShell() {
                 }}
                 className="cursor-pointer hover:text-amber-700"
               >
-                Defense Day
+                Defense Page
               </li>
               <li
                 onClick={() => {
