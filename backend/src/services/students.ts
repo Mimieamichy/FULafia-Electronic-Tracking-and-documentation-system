@@ -82,7 +82,7 @@ export default class StudentService {
     }
 
     static async getOneStudent(studentId: string) {
-       return findOneFormatted(Student, studentId)
+        return findOneFormatted(Student, studentId)
     }
 
     static async editStudent(studentId: string, updateData: Partial<{
@@ -154,7 +154,7 @@ export default class StudentService {
         page = 1,
         limit = 10
     ) {
-        
+
 
         if (!department || department.trim() === '') {
             const lecturer = await LecturerService.getLecturerById(userId);
@@ -187,7 +187,7 @@ export default class StudentService {
         const level = "msc"
         const sessionId = session.toString()
 
-       // Use pagination 
+        // Use pagination 
         return paginateFormatted(
             Student,
             page,
@@ -212,7 +212,7 @@ export default class StudentService {
         const level = "phd"
         const sessionId = session.toString()
 
-       // Use pagination 
+        // Use pagination 
         return paginateFormatted(
             Student,
             page,
@@ -237,7 +237,7 @@ export default class StudentService {
         const level = "phd"
         const sessionId = session.toString()
 
-       // Use pagination 
+        // Use pagination 
         return paginateFormatted(
             Student,
             page,
@@ -340,107 +340,136 @@ export default class StudentService {
     }
 
     static async assignSupervisor(staffId: string, staffName: string, type: string, matricNo: string) {
-        // Decide field to update
-        const updateField =
-            type === 'major'
-                ? { majorSupervisor: staffId }
-                : type === 'minor'
-                    ? { minorSupervisor: staffId }
-                    : type === 'internal_examiner'
-                        ? { internalExaminer: staffId }
-                        : {};
+    // Decide field to update
+    const updateField =
+        type === 'major'
+            ? { majorSupervisor: staffId }
+            : type === 'minor'
+                ? { minorSupervisor: staffId }
+                : type === 'internal_examiner'
+                    ? { internalExaminer: staffId }
+                    : {};
 
-        // Update student
-        const student = await Student.findOneAndUpdate(
-            { matricNo },
-            { $set: updateField },
-            { new: true, runValidators: true, context: 'query' }
-        );
+    // Update student
+    const student = await Student.findOneAndUpdate(
+        { matricNo },
+        { $set: updateField },
+        { new: true, runValidators: true, context: 'query' }
+    );
 
-        if (!student) throw new Error('Student not found');
+    if (!student) throw new Error('Student not found');
 
+    // Roles to add
+    let roleToAdd: string[] = [];
+    if (type === 'major') roleToAdd = [Role.SUPERVISOR, Role.MAJOR_SUPERVISOR, Role.PANEL_MEMBER];
+    else if (type === 'minor') roleToAdd = [Role.SUPERVISOR, Role.PANEL_MEMBER];
+    else if (type === 'internal_examiner') roleToAdd = [Role.SUPERVISOR, Role.INTERNAL_EXAMINER, Role.PANEL_MEMBER];
 
-        // Roles to add
-        let roleToAdd: string[] = [];
-        if (type === 'major') roleToAdd = [Role.SUPERVISOR, Role.MAJOR_SUPERVISOR, Role.PANEL_MEMBER];
-        else if (type === 'minor') roleToAdd = [Role.SUPERVISOR, Role.PANEL_MEMBER];
-        else if (type === 'internal_examiner') roleToAdd = [Role.SUPERVISOR, Role.INTERNAL_EXAMINER, Role.PANEL_MEMBER];
+    // Get lecturer
+    const lecturer = await Lecturer.findById(staffId);
+    if (!lecturer) throw new Error('Lecturer not found');
 
-        // Get lecturer
-        const lecturer = await Lecturer.findById(staffId);
-        if (!lecturer) throw new Error('Lecturer not found');
-
-        const userId = lecturer.user;
-        const user = await User.findById(userId);
-        if (user) {
+    const userId = lecturer.user;
+    const user = await User.findById(userId);
+    
+    if (user) {
+        if (user.roles.includes("hod") || user.roles.includes("pgcord")) {
+            // HOD or PG CORD → only remove (they already have privilege)
             for (const role of roleToAdd) {
-                if (user.roles.includes("hod") || user.roles.includes("pgcord")) {
-                    // HOD or PG CORD → only remove (they already have privilege)
-                    await User.updateOne(
-                        { _id: userId },
-                        { $pull: { roles: role } }
-                    );
-                } else {
-                    // Normal user → ensure uniqueness (remove first, then add)
-                    await User.updateOne(
-                        { _id: userId },
-                        { $pull: { roles: role } }
-                    );
-
-                    await User.updateOne(
-                        { _id: userId },
-                        { $push: { roles: { $each: [role], $position: 0 } } }
-                    );
-                }
+                await User.updateOne(
+                    { _id: userId },
+                    { $pull: { roles: role } }
+                );
             }
-        }
-        // Send notifications in parallel to avoid lag
-        await Promise.all([
-            NotificationService.createNotifications({
-                lecturerIds: [staffId],
-                role: roleToAdd[0] || 'supervisor',
-                message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
-            }),
-            NotificationService.createNotifications({
-                studentIds: [String(student._id)],
-                role: 'student',
-                message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')} .`
-            })
-        ]);
+        } else {
+            // Normal user → ensure specific order with SUPERVISOR first
+            const currentRoles = user.roles || [];
+            
+            // Remove the roles we're going to add (if they exist)
+            const filteredRoles = currentRoles.filter(role => 
+                !roleToAdd.includes(role)
+            );
+            
+            // Create new roles array with SUPERVISOR as first role
+            const newRoles = [...roleToAdd, ...filteredRoles];
 
-        return student;
+            await User.updateOne(
+                { _id: userId },
+                { $set: { roles: newRoles } }
+            );
+        }
     }
+
+    // Send notifications in parallel to avoid lag
+    await Promise.all([
+        NotificationService.createNotifications({
+            lecturerIds: [staffId],
+            role: roleToAdd[0] || 'supervisor',
+            message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
+        }),
+        NotificationService.createNotifications({
+            studentIds: [String(student._id)],
+            role: 'student',
+            message: `${staffName} has been assigned as your ${type.replace(/_/g, ' ')} .`
+        })
+    ]);
+
+    return student;
+}
 
     static async assignCollegeRep(staffId: string, studentId: string) {
-        // Find the lecturer by staffId
-        const lecturer = await Lecturer.findOne({ _id: staffId }).populate('user');
-        if (!lecturer) {
-            throw new Error('Lecturer not found');
-        }
-
-        // Find associated user (populated)
-        const user = lecturer.user as any
-        // Check if the lecturer is already a college rep
-        if (user?.roles?.includes('college_rep')) {
-            throw new Error('This lecturer is already a college representative');
-        }
-        // Update the user roles to include 'college_rep'
-        const updatedLecturer = await User.findByIdAndUpdate(
-            user._id,
-            { $addToSet: { roles: { $each: [Role.COLLEGE_REP, Role.PANEL_MEMBER] } } },// Use $addToSet to avoid duplicates
-            { new: true }
-        );
-
-        //update the student collection to set the collegeRep field
-        const updatedStudent = await Student.findOneAndUpdate(
-            { _id: studentId },
-            { $set: { collegeRep: staffId } },
-            { new: true }
-        );
-
-        return { updatedStudent, updatedLecturer };
+    // Find the lecturer by staffId
+    const lecturer = await Lecturer.findOne({ _id: staffId }).populate('user');
+    if (!lecturer) {
+        throw new Error('Lecturer not found');
     }
 
+    // Find associated user (populated)
+    const user = lecturer.user as any;
+    
+    // Check if the lecturer is already a college rep
+    if (user?.roles?.includes(Role.COLLEGE_REP)) {
+        throw new Error('This lecturer is already a college representative');
+    }
+
+    // Get current user to preserve existing roles
+    const currentUser = await User.findById(user._id);
+    const currentRoles = currentUser?.roles || [];
+    
+    // Remove the roles we're going to add (if they exist)
+    const filteredRoles = currentRoles.filter(role => 
+        role !== Role.COLLEGE_REP && role !== Role.PANEL_MEMBER
+    );
+    
+    // Create new roles array with COLLEGE_REP as first role
+    const newRoles = [Role.COLLEGE_REP, Role.PANEL_MEMBER, ...filteredRoles];
+
+    // Update the user roles with specific order
+    const updatedLecturer = await User.findByIdAndUpdate(
+        user._id,
+        { $set: { roles: newRoles } },
+        { new: true }
+    );
+
+    // Update the student collection to set the collegeRep field
+    const updatedStudent = await Student.findOneAndUpdate(
+        { _id: studentId },
+        { $set: { collegeRep: staffId } },
+        { new: true }
+    );
+
+    const studentName = updatedStudent?.user ? `${(updatedStudent.user as any).firstName} ${(updatedStudent.user as any).lastName}` : 'the student';
+
+    const message = `You have been assigned College rep for ${studentName} in ${updatedStudent?.department}.`;
+
+    await NotificationService.createNotifications({
+        lecturerIds: [staffId],
+        role: "college_rep",
+        message,
+    });
+
+    return { updatedStudent, updatedLecturer };
+}
 
 
 }

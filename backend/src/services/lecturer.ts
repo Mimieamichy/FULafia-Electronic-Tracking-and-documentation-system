@@ -347,38 +347,48 @@ export default class LecturerService {
         return lecturer;
     }
 
-    static async assignFacultyRep(staffId: string) {
-        const lecturer = await Lecturer.findById({ _id: staffId }).populate('user');
-        if (!lecturer) {
-            throw new Error('Lecturer not found');
-        }
+  static async assignFacultyRep(staffId: string) {
+    const lecturer = await Lecturer.findById(staffId).populate('user');
+    if (!lecturer) {
+        throw new Error('Lecturer not found');
+    }
 
-        const oldFacultyRep = await Lecturer.findOne({ faculty: lecturer.faculty }).populate({
-            path: 'user',
-            match: { roles: Role.FACULTY_PG_REP }
-        });
+    const oldFacultyRep = await Lecturer.findOne({ faculty: lecturer.faculty }).populate({
+        path: 'user',
+        match: { roles: Role.FACULTY_PG_REP }
+    });
 
-        if (!oldFacultyRep) {
-            throw new Error('Previous Faculty Rep not found');
-        }
+    if (oldFacultyRep && oldFacultyRep.user) {
         await User.findByIdAndUpdate(
-        oldFacultyRep.user,
-        { 'roles': Role.FACULTY_PG_REP },
-        { '$pull': { 'roles': {'$each': [Role.FACULTY_PG_REP , Role.PANEL_MEMBER,]}} }
-    );
-        const updatedUser = await User.findByIdAndUpdate(
-        lecturer.user,
-        {
-            '$addToSet': {
-                'roles': {
-                    '$each': [Role.PANEL_MEMBER, Role.FACULTY_PG_REP]
-                }
+            oldFacultyRep.user._id,
+            { 
+                $pull: { roles: Role.FACULTY_PG_REP } 
             }
+        );
+    }
+
+    // Get current user to preserve existing roles
+    const currentUser = await User.findById(lecturer.user._id);
+    const currentRoles = currentUser?.roles || [];
+    
+    // Remove the roles we're going to add (if they exist)
+    const filteredRoles = currentRoles.filter(role => 
+        role !== Role.FACULTY_PG_REP && role !== Role.PANEL_MEMBER
+    );
+    
+    // Create new roles array with specific order
+    const newRoles = [Role.FACULTY_PG_REP, Role.PANEL_MEMBER, ...filteredRoles];
+
+    const updatedUser = await User.findByIdAndUpdate(
+        lecturer.user._id,
+        {
+            $set: { roles: newRoles }
         },
         { new: true }
     );
-        return updatedUser;
-    }
+
+    return updatedUser;
+}
 
 
     static async getFacultyReps(userId: string) {

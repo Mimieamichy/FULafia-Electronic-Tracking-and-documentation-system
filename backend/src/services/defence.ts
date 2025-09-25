@@ -1,8 +1,9 @@
-import { Defence, Student, Project, ScoreSheet, Lecturer } from '../models/index';
+import { Defence, Student, Project, ScoreSheet, Lecturer, User } from '../models/index';
 import { Types } from 'mongoose';
 import NotificationService from "../services/notification";
 import { STAGES } from "../utils/constants";
 import { IStageScores } from '../models/student';
+import { Role } from '../utils/permissions';
 
 export default class DefenceService {
   /** Get all defences with student details
@@ -90,6 +91,34 @@ export default class DefenceService {
     const finalPanelMemberIds = Array.from(allPanelMembers);
 
 
+    //6. Check if panel member role has been added to panel members else add it 
+     if (finalPanelMemberIds.length > 0) {
+      // Fetch all lecturers who will be panel members and populate their user data
+      const panelLecturers = await Lecturer.find({ 
+        _id: { $in: finalPanelMemberIds } 
+      }).populate('user');
+
+      // Update users who don't have the PANEL_MEMBER role
+      const updatePromises = panelLecturers
+        .filter(lecturer => 
+          lecturer.user &&
+          typeof lecturer.user === 'object' &&
+          Array.isArray((lecturer.user as any).roles) &&
+          !(lecturer.user as any).roles.includes(Role.PANEL_MEMBER)
+        )
+        .map(lecturer => {
+          (lecturer.user as any).roles.push(Role.PANEL_MEMBER);
+          return (lecturer.user as any).save();
+        });
+
+      // Wait for all role updates to complete
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        console.log(`Added PANEL_MEMBER role to ${updatePromises.length} users`);
+      }
+    }
+
+
     // Create defence
     const defence = await Defence.create({
       stage,
@@ -120,17 +149,15 @@ export default class DefenceService {
 
     const message = `You have been assigned to be part of the panel members for ${stage} defence scheduled on ${date}, 
   Time: ${time}.
-  Students & their latest projects:
-  ${details.join("\n\n")}
   `;
 
     await NotificationService.createNotifications({
-      userIds: finalPanelMemberIds,
+      lecturerIds: finalPanelMemberIds,
       role: "panel",
       message,
     });
 
-    return defence;
+    return {defence, details};
   }
 
 
@@ -149,7 +176,7 @@ export default class DefenceService {
     const message = `The ${defence.stage} defence has started. You may now score and comment on students' project.`;
 
     await NotificationService.createNotifications({
-      userIds: defence.panelMembers,
+      lecturerIds: defence.panelMembers,
       role: "panel members",
       message,
     });
@@ -404,7 +431,7 @@ export default class DefenceService {
     const message = `Your project has been approved, you can proceed to prepare for next stage.`;
 
     await NotificationService.createNotifications({
-      userIds: [studentId],
+      studentIds: [studentId],
       role: "student",
       message,
     });
@@ -424,7 +451,7 @@ static async rejectStudentDefence(studentId: string) {
   const message = `Your project was not approved, you need to rejoin defence for ${student.currentStage}.`;
 
     await NotificationService.createNotifications({
-      userIds: [studentId],
+      studentIds: [studentId],
       role: "student",
       message,
     });
