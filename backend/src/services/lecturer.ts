@@ -307,7 +307,7 @@ export default class LecturerService {
         return Lecturer.find()
             .populate({
                 path: 'user',
-                match: { roles: 'provost' }, // filters users whose roles include 'provost'
+                match: { roles: 'provost' }, 
             })
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
@@ -414,39 +414,22 @@ export default class LecturerService {
     }
 
     static async getCollegeReps(department: string, level: string, stage: string) {
-        const repNames = await Student.distinct("collegeRep", {
-            department,
-            level,
-            currentStage: stage,
-        });
+  // Get all unique lecturer IDs that are set as collegeRep for matching students
+  const repIds = await Student.distinct("collegeRep", {
+    department,
+    level,
+    currentStage: stage,
+  });
 
-        // Find lecturers, populate user
-        const lecturers = await Lecturer.find()
-            .populate("user", "firstName lastName")
-            .select("user staffId title department faculty");
+  if (!repIds.length) return [];
 
-        // Filter only those lecturers whose formatted name matches a collegeRep name
-        const collegeReps = lecturers
-            .map((lec) => {
-                const user: any = lec.user;
+  // Fetch lecturer docs with those IDs
+  const collegeReps = await Lecturer.find({ _id: { $in: repIds } })
+    .populate("user", "firstName lastName")
+    .select("user staffId title department faculty");
 
-                const name =
-                    user && typeof user === "object" && "firstName" in user && "lastName" in user
-                        ? `${user.title} ${user.firstName} ${user.lastName}`
-                        : `${user.title} Unknown Name`;
-
-                return {
-                    lecturerId: lec._id,      // Lecturer doc ID
-                    name,
-                    staffId: lec.staffId,
-                    department: lec.department,
-                    faculty: lec.faculty,
-                };
-            })
-            .filter((lec) => repNames.map(String).includes(String(lec.name))); // keep only reps
-
-        return collegeReps
-    }
+    return collegeReps;
+}
 
 
 
