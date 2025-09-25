@@ -1,5 +1,5 @@
 // pgc/StudentSessionManagement.tsx
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import SetDefenseModal from "./SetDefenseModal";
 import EditStudentModal from "./EditStudentModal";
 import { useAuth } from "../AuthProvider";
 import AssignCollegeRepModal from "./AssignCollegeRepModal";
+import waterMark from "../fulafia logo.png"
 import ScoreSheetGenerator, { Criterion } from "./ScoreSheetGenerator";
 
 interface StudentFromAPI {
@@ -1351,6 +1352,7 @@ const StudentSessionManagement = () => {
         studentId={viewStudentId ?? ""}
         baseUrl={import.meta.env.VITE_BACKEND_URL}
         token={token}
+        watermarkUrl={waterMark}
       />
 
       {/* PGC ScoreSheet generator modal */}
