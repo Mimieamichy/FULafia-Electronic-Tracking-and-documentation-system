@@ -50,6 +50,7 @@ type Student = {
   stage: string;
   stageKey?: string; // raw key from backend, e.g. "proposal_defense"
   stageLabel?: string; // human-friendly label, e.g. "Proposal Defense"
+  department?: string;
 
   scores: {
     proposal: number | null;
@@ -204,9 +205,11 @@ export default function MyStudentsPage() {
             studentObj._id ??
             studentObj.id ??
             studentObj.matricNo ??
+            
             Math.random().toString(36).slice(2),
           matNo: studentObj.matricNo ?? studentObj.matNo ?? "",
           name: `${first} ${last}`.trim(),
+          department: studentObj.department,
           topic:
             studentObj.projectTopic ??
             latest?.topic ??
@@ -474,6 +477,7 @@ export default function MyStudentsPage() {
                 <th className="p-3 border">Proposal</th>
                 <th className="p-3 border">Internal</th>
                 <th className="p-3 border">External</th>
+                <th className="p-3 border">Depertment</th>
                 <th className="p-3 border">Action</th>
               </tr>
             </thead>
@@ -500,6 +504,9 @@ export default function MyStudentsPage() {
                   </td>
                   <td className="p-3 border text-sm">
                     {stu.scores.external ?? "—"}
+                  </td>
+                  <td className="p-3 border text-sm">
+                    {stu.department ?? "—"}
                   </td>
                   <td className="p-3 border">
                     <Button

@@ -52,6 +52,7 @@ export default function ProvostViewStudentModal({
         }
         const json = await res.json();
         const payload = json?.data ?? json ?? {};
+        console.log("Fetched student data:", payload);
         if (!cancelled) setStudent(payload);
       } catch (err: any) {
         console.error("ProvostViewStudentModal fetch error:", err);
@@ -265,6 +266,12 @@ export default function ProvostViewStudentModal({
                 <div className="text-sm text-gray-500 w-40">College Rep</div>
                 <div className="font-medium">
                   {student.collegeRep ?? student.college_rep ?? "-"}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-500 w-40">Internal Examiner</div>
+                <div className="font-medium">
+                  {student.internalExaminer ?? "-"}
                 </div>
               </div>
 
