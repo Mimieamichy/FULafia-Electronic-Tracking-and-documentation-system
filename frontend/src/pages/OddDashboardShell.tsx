@@ -1,9 +1,8 @@
-// src/SupervisorDashboardShell.tsx
-import { useState, useRef, useEffect } from "react";
-import { Menu, Bell, Lock, Power } from "lucide-react";
-import { useNotificationStore } from "@/lib/notificationStore";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../AuthProvider";
+// src/DashboardShell.tsx
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "./AuthProvider";
+import { Menu, Power, Bell, Lock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,43 +11,44 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import SupervisorDashboard from "./SupervisorDashboard";
-import MyStudentsPage from "./MyStudentsPage";
-import NotificationCenter from "../NotificationCenter";
-import DefenseDayPage from "../DefenseDayPage";
-import UpdatePasswordModal from "../UpdatePasswordModal";
-
-export type SupervisorView =
-  | "dashboard"
-  | "myStudents"
-  | "defenseDay"
-  | "notifications";
+import { useNotificationStore } from "@/lib/notificationStore";
+import UpdatePasswordModal from "./UpdatePasswordModal";
+import DefenseDayPage from "./DefenseDayPage";
+import NotificationCenter from "./NotificationCenter";
+import { useNavigate } from "react-router-dom";
+export type DashboardView = "notifications" | "defenseDay";
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
-export default function SupervisorDashboardShell() {
+export default function OddDashboardShell() {
   const { user, logout, token } = useAuth();
+  const userName = user?.userName || "User";
 
-  const role = user?.role || "User";
+  const navigate = useNavigate();
+  const [currentView, setCurrentView] = useState<DashboardView>("defenseDay");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const [currentView, setCurrentView] = useState<SupervisorView>("dashboard");
-  const [resetModalOpen, setResetModalOpen] = useState(false);
   const unreadCount = useNotificationStore((s) => s.unreadCount());
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
+  // close menu on outside click
   useEffect(() => {
-    const onClick = (e: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsMenuOpen(false);
       }
     };
-    if (isMenuOpen) document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    if (isMenuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [isMenuOpen]);
 
   useEffect(() => {
@@ -68,76 +68,51 @@ export default function SupervisorDashboardShell() {
 
   const renderView = () => {
     switch (currentView) {
-      case "dashboard":
-        return <SupervisorDashboard />;
-      case "myStudents":
-        return <MyStudentsPage />;
-      case "defenseDay":
-        return <DefenseDayPage />;
       case "notifications":
         return <NotificationCenter />;
+
+      case "defenseDay":
+        return <DefenseDayPage />;
       default:
         return null;
     }
-  };
-  // Logout
-  const handleLogout = () => {
-    logout();
-    navigate("/");
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center relative">
-        {/* Hamburger */}
+      <header className="bg-white shadow-sm p-4 flex justify-between items-center relative">
         <div className="flex items-center gap-4">
           <Menu
             className="w-6 h-6 text-gray-600 cursor-pointer"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
+            onClick={() => setIsMenuOpen((o) => !o)}
           />
+          <span className="text-gray-700 capitalize">Welcome, {userName}</span>
         </div>
 
-        {/* Side Menu */}
+        {/* Side‑menu */}
         {isMenuOpen && (
           <div
             ref={menuRef}
-            className="absolute top-16 left-4 bg-white shadow-lg rounded-lg p-4 w-56 z-20"
+            className="absolute top-16 left-4 bg-white shadow-lg rounded-lg p-4 w-64 z-10"
           >
             <ul className="space-y-2 text-gray-700">
+              
               <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("dashboard");
-                  setIsMenuOpen(false);
-                }}
-              >
-                Dashboard
-              </li>
-              <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("myStudents");
-                  setIsMenuOpen(false);
-                }}
-              >
-                My Students
-              </li>
-              <li
-                className="cursor-pointer hover:text-amber-700"
                 onClick={() => {
                   setCurrentView("defenseDay");
                   setIsMenuOpen(false);
                 }}
+                className="cursor-pointer hover:text-amber-700"
               >
                 Defense Day
               </li>
               <li
-                className="cursor-pointer hover:text-amber-700"
                 onClick={() => {
                   setCurrentView("notifications");
                   setIsMenuOpen(false);
                 }}
+                className="cursor-pointer hover:text-amber-700"
               >
                 Notifications
               </li>
@@ -145,11 +120,8 @@ export default function SupervisorDashboardShell() {
           </div>
         )}
 
-        {/* Right-side Controls */}
+        {/* Right‑side icons */}
         <div className="flex items-center gap-4">
-          <span className="hidden sm:inline text-gray-600">
-            Welcome, {role}
-          </span>
           <div className="relative">
             <Bell
               className="w-6 h-6 text-gray-600 cursor-pointer"
@@ -164,21 +136,22 @@ export default function SupervisorDashboardShell() {
               </span>
             )}
           </div>
+
           <Lock
-            className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
+            className="w-6 h-6 text-gray-600 cursor-pointer"
             onClick={() => setResetModalOpen(true)}
           />
           <Power
-            className="w-6 h-6 text-red-500 cursor-pointer hover:text-red-600"
-            onClick={() => setShowLogoutModal(true)}
+            className="w-6 h-6 text-red-500 cursor-pointer"
+            onClick={() => setLogoutModalOpen(true)}
           />
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {renderView()}
-      </main>
+      {/* Main content */}
+      <main className="container mx-auto px-4 py-8">{renderView()}</main>
+
+     
 
       {/* Reset Password Modal */}
       <UpdatePasswordModal
@@ -187,20 +160,18 @@ export default function SupervisorDashboardShell() {
       />
 
       {/* Logout Confirmation Modal */}
-      <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-        <DialogContent className="max-w-md bg-white rounded-lg">
+      <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
+        <DialogContent className="max-w-md mx-auto">
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
           </DialogHeader>
-          <p className="text-gray-600 mt-2">
-            Are you sure you want to log out?
-          </p>
-          <DialogFooter className="mt-6 flex justify-end gap-4">
-            <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
+          <p className="p-4">Are you sure you want to log out?</p>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setLogoutModalOpen(false)}>
               Cancel
             </Button>
             <Button className="bg-red-600 text-white" onClick={handleLogout}>
-              Log Out
+              Logout
             </Button>
           </DialogFooter>
         </DialogContent>

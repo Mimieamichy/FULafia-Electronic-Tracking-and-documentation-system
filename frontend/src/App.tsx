@@ -13,6 +13,9 @@ import DashboardShell from "./pages/DashboardShell";
 import DeanDashboardShell from "./pages/dean/DeanDashboardShell";
 import ResetPassword from "./pages/ResetPassword";
 import ForgetPassword from "./pages/ForgetPassword";
+import DefenseDayPage from "./pages/DefenseDayPage";
+import OddDashboardShell from "./pages/OddDashboardShell";
+
 
 
 const queryClient = new QueryClient();
@@ -33,6 +36,7 @@ const App = () => (
           <Route path="/dean" element={<DeanDashboardShell />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/forget-password" element={<ForgetPassword />} />
+          <Route path="/defense-day" element={<OddDashboardShell />} />
 
           {/* Catch-all route for 404 Not Found */}
           <Route path="*" element={<NotFound />} />

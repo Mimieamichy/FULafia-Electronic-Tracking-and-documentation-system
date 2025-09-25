@@ -30,9 +30,15 @@ const SignIn = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { user: loggedInUser } = await login(formData.email, formData.password);
+      const { user: loggedInUser } = await login(
+        formData.email,
+        formData.password
+      );
 
-      const role = (loggedInUser?.role ?? "unknown").toString().trim().toLowerCase();
+      const role = (loggedInUser?.role ?? "unknown")
+        .toString()
+        .trim()
+        .toLowerCase();
 
       switch (role) {
         case "hod":
@@ -47,11 +53,15 @@ const SignIn = () => {
           navigate("/admin");
           break;
         case "supervisor":
-        case "internalsupervisor":
           navigate("/supervisor");
           break;
         case "student":
           navigate("/student");
+          break;
+        case "external_examiner":
+        case "college_rep":
+        case "faculty_rep":
+          navigate("/defense-day");
           break;
         default:
           toast({
@@ -86,13 +96,17 @@ const SignIn = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="max-w-md w-full">
           <div className="mb-8">
-            <h1 className="text-4xl font-semibold text-gray-800 mb-2">Sign In</h1>
+            <h1 className="text-4xl font-semibold text-gray-800 mb-2">
+              Sign In
+            </h1>
             <p className="text-gray-600">Fill in your details to sign in</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-gray-700 font-medium mb-3">Email:</label>
+              <label className="block text-gray-700 font-medium mb-3">
+                Email:
+              </label>
               <Input
                 type="email"
                 value={formData.email}
@@ -103,12 +117,16 @@ const SignIn = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 font-medium mb-3">Password:</label>
+              <label className="block text-gray-700 font-medium mb-3">
+                Password:
+              </label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
                   className="w-full border-gray-300 rounded-full px-6 py-4 pr-14 text-lg"
                   required
                 />
@@ -121,7 +139,10 @@ const SignIn = () => {
                 </button>
               </div>
               <div className="text-right mt-2">
-                <Link to="/forget-password" className="text-sm text-amber-700 hover:underline">
+                <Link
+                  to="/forget-password"
+                  className="text-sm text-amber-700 hover:underline"
+                >
                   Forgot password?
                 </Link>
               </div>

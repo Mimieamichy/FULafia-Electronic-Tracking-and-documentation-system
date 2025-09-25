@@ -1196,7 +1196,7 @@ const StudentSessionManagement = () => {
                 >
                   <td className="p-3 border">{s.matricNo}</td>
                   <td className="p-3 border">
-                    <button
+                   {isPgc ? <button
                       title="Edit student"
                       className="text-amber-700 underline capitalize"
                       onClick={() => {
@@ -1205,7 +1205,7 @@ const StudentSessionManagement = () => {
                       }}
                     >
                       {s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
-                    </button>
+                    </button> : s.user ? `${s.user.firstName} ${s.user.lastName}` : ""}
                   </td>
 
                   <td className="p-3 border capitalize">{s.projectTopic}</td>
