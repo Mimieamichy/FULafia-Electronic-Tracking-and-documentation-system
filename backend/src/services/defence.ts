@@ -142,8 +142,8 @@ export default class DefenceService {
     return defence; // Return only defence, not details
   }
 
-  
-  
+
+
 
   /**
    * Marks defence as started
@@ -445,6 +445,25 @@ export default class DefenceService {
 
 
     return { student, defence };
+  }
+
+
+  static async getLatestDefence(program: string, userId: string) {
+    const lecturer = await Lecturer.findOne({ user: userId });
+    if (!lecturer) throw new Error("Lecturer profile not found");
+    const department = lecturer.department;
+
+    const defence = await Defence.findOne({ program, department })
+      .sort({ createdAt: -1 }).select('_id stage program session date time department createdAt')
+
+    if (!defence) {
+      const message = program
+        ? `No ${program} defences found`
+        : "No defences found";
+      throw new Error(message);
+    }
+
+    return defence;
   }
 
 
