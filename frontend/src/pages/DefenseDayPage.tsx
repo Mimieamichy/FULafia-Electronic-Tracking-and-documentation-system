@@ -5,6 +5,7 @@ import ScoreSheetPanel from "./ScoreSheetDefense";
 import StudentsPanel from "./StudentsPanel";
 import AssessmentPanel from "./AssessmentPanel";
 import StudentCommentModal from "./StudentCommentModal";
+import { useToast } from "@/hooks/use-toast";
 
 // --- Types ---
 interface Criterion {
@@ -90,6 +91,7 @@ export default function DefenseDayPage() {
   // --- auth & roles
   const { user, roles = [] } = useAuth();
   const userName = user?.userName ?? "User";
+  const { toast } = useToast();
 
   // normalize roles to a predictable lowercase array
   const normalizedRoles: string[] = Array.isArray(roles)
@@ -141,6 +143,9 @@ export default function DefenseDayPage() {
 
   // Countdown 'now'
   const [now, setNow] = useState(Date.now());
+
+  // toggling state for Start/End API request
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     setCriteria(defaultCriteria);
@@ -231,12 +236,84 @@ export default function DefenseDayPage() {
     );
   };
 
+  // API-backed toggling for session start/end
+  const handleToggleSession = async (defenseId: string) => {
+    // find defense current state
+    const def = defenseDays.find((d) => d.id === defenseId);
+    if (!def) return;
+
+    const currentlyActive = !!def.sessionActive;
+
+    // confirm before ending
+    if (currentlyActive) {
+      const ok = confirm("Are you sure you want to end this defense session?");
+      if (!ok) return;
+    }
+
+    if (toggling) return; // guard double-clicks
+    setToggling(true);
+
+    const action = currentlyActive ? "end" : "start";
+    const url = `/defence/${action}/${encodeURIComponent(defenseId)}`;
+
+    try {
+      // If your API needs auth headers, add them here.
+      // e.g. headers: { Authorization: `Bearer ${user?.token}` }
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // "Authorization": `Bearer ${token}`, // <-- add if required
+        },
+        // body: JSON.stringify({}), // include payload if your API expects one
+      });
+
+      if (!res.ok) {
+        // try to parse server error
+        let errText = `Failed to ${action} session (${res.status})`;
+        try {
+          const json = await res.json();
+          if (json?.message) errText = json.message;
+        } catch {
+          // ignore parse error
+        }
+        throw new Error(errText);
+      }
+
+      // optionally parse response to get updated sessionActive value from server
+      // const payload = await res.json();
+      // const newActive = payload?.sessionActive ?? !currentlyActive;
+
+      // update UI state after success
+      setDefenseDays((prev) =>
+        prev.map((d) =>
+          d.id === defenseId ? { ...d, sessionActive: !currentlyActive } : d
+        )
+      );
+
+      toast({
+        title: `Session ${action === "start" ? "Started" : "Ended"}`,
+        description: `The defense session has been ${
+          action === "start" ? "started" : "ended"
+        } successfully.`,
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error("Failed to toggle session:", err);
+     
+      toast({
+        title: "Session Toggle Failed",
+        description: err?.message ?? "Network error while toggling session.",
+        variant: "destructive",
+      });
+    } finally {
+      setToggling(false);
+    }
+  };
+
   const toggleSession = (defenseId: string) => {
-    setDefenseDays((prev) =>
-      prev.map((d) =>
-        d.id === defenseId ? { ...d, sessionActive: !d.sessionActive } : d
-      )
-    );
+    // kept for compatibility; call the API-backed handler
+    void handleToggleSession(defenseId);
   };
 
   const handleScoreChange = (
@@ -295,7 +372,12 @@ export default function DefenseDayPage() {
 
   const handleSubmitScores = (defenseId: string) => {
     // In a real app you'd call an API here. We'll just show a tiny UI effect.
-    alert("Scores submitted (mock). Replace with API call.");
+    
+    toast({
+      title: "Scores Submitted",
+      description: "The scores have been submitted successfully.",
+      variant: "default",
+    });
   };
 
   return (
@@ -331,7 +413,9 @@ export default function DefenseDayPage() {
               <p className="text-sm text-amber-700/90 mt-1">
                 {new Date(activeDefense.date).toLocaleString()} | Level:{" "}
                 <strong>{activeDefense.level}</strong> | Defense:{" "}
-                <strong className="capitalize">{activeDefense.currentStage}</strong>
+                <strong className="capitalize">
+                  {activeDefense.currentStage}
+                </strong>
               </p>
               <p className="text-sm text-gray-700 mt-3">
                 Countdown:{" "}
@@ -352,17 +436,20 @@ export default function DefenseDayPage() {
                       ? "bg-amber-50 border border-amber-100 text-amber-700 hover:bg-amber-700 hover:text-white"
                       : "bg-amber-700 text-white hover:bg-amber-50 hover:text-amber-700 border hover:border-amber-700"
                   }`}
-                  onClick={() => toggleSession(activeDefense.id)}
+                  onClick={() => handleToggleSession(activeDefense.id)}
+                  disabled={toggling}
                 >
-                  {activeDefense.sessionActive
+                  {toggling
+                    ? activeDefense.sessionActive
+                      ? "Ending..."
+                      : "Starting..."
+                    : activeDefense.sessionActive
                     ? "End Session"
                     : "Start Session"}
                 </Button>
               </div>
             )}
           </div>
-
-          {/* HOD / Provost controls */}
         </div>
       )}
 
