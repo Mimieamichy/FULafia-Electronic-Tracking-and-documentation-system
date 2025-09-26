@@ -448,7 +448,7 @@ export default class DefenceService {
   }
 
 
-  static async getLatestDefence(program: string, userId: string) {
+  static async getDefenceForPanelMember(program: string, userId: string) {
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer) throw new Error("Lecturer profile not found");
     

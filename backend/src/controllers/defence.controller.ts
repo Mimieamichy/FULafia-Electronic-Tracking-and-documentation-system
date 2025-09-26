@@ -106,11 +106,11 @@ export default class DefenceController {
   }
 
   /**GEt most recent defence */
-  static async getLatestDefence(req: AuthenticatedRequest, res: Response) {
+  static async getDefenceForPanelMember(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
       const {level} = req.params
-      const defence = await DefenceService.getLatestDefence(level, userId);
+      const defence = await DefenceService.getDefenceForPanelMember(level, userId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
       res.status(400).json({success: false,error: 'Failed to get most recent defence',message: err.message});
