@@ -256,7 +256,9 @@ export default class StudentService {
         const students = await Student.find({
             $or: [
                 { majorSupervisor: lecturerId },
-                { minorSupervisor: lecturerId }
+                { minorSupervisor: lecturerId },
+                { internalExaminer: lecturerId },
+                { collegeRep: lecturerId }
             ],
             level: level,
         }).populate('user');
@@ -303,7 +305,9 @@ export default class StudentService {
         const students = await Student.find({
             $or: [
                 { majorSupervisor: lecturerId },
-                { minorSupervisor: lecturerId }
+                { minorSupervisor: lecturerId },
+                { internalExaminer: lecturerId },
+                { collegeRep: lecturerId }
             ],
             level: level,
         }).populate('user');

@@ -30,8 +30,8 @@ export default class ScoreSheetController {
 
    static async getDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
     try {
-      const {scoresheetId} = req.params
-      const scoreSheet = await ScoreSheetService.getDeptScoreSheet(scoresheetId);
+      const {department} = req.params
+      const scoreSheet = await ScoreSheetService.getDeptScoreSheet(department);
       res.json({ success: true, data: scoreSheet });
     } catch (err: any) {
       console.log(err)
@@ -78,6 +78,15 @@ export default class ScoreSheetController {
     }
   }
 
+static async getGenScoreSheet(req: AuthenticatedRequest, res: Response) {
+    try {
+      const scoreSheet = await ScoreSheetService.getGenScoreSheet();
+      res.json({ success: true, data: scoreSheet });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({success: false, error: 'Failed to get general score sheet', message: err.message});
+    }
+  }
 
   static async deleteCriterionDeptScoreSheet(req: AuthenticatedRequest, res: Response) {
     try {

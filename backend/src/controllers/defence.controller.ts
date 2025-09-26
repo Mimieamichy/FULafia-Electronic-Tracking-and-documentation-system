@@ -93,6 +93,17 @@ export default class DefenceController {
     }
   }
 
+  /** Get a defence with student details */
+  static async getDefenceDetails(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { defenceId } = req.params;
+      const panelMemberId = req.user?.id || '';
+      const defence = await DefenceService.getDefenceDetails(defenceId, panelMemberId);
+      res.json({ success: true, data: defence });
+    } catch (err: any) {
+      res.status(400).json({success: false,error: 'Failed to get defence details',message: err.message});
+    }
+  }
   
 }
 

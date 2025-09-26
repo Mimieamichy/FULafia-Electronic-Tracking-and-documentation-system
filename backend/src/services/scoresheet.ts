@@ -25,8 +25,8 @@ export default class ScoreSheetService {
     return scoreSheet;
   }
 
-  static async getDeptScoreSheet(scoresheetId: string) {
-    return await ScoreSheet.findById(scoresheetId)
+  static async getDeptScoreSheet(department: string) {
+    return await ScoreSheet.findOne({ department })
 
   }
 
@@ -107,7 +107,6 @@ export default class ScoreSheetService {
     return scoreSheet;
   }
 
-
   static async updateGenCriterion(
     criterionId: string,
     update: { name?: string; weight?: number }
@@ -135,6 +134,10 @@ export default class ScoreSheetService {
     return criterion;
   }
 
+
+  static async getGenScoreSheet() {
+    return await ScoreSheet.find()
+  }
 
   static async deleteGenCriterion(criterionId: string) {
     let scoreSheet = await GeneralScoreSheet.findOne();

@@ -7,7 +7,6 @@ export default class LecturerService {
         return Lecturer.find().populate("user");
     }
 
-
     static async editLecturer(lecturerId: string, updateData: Partial<{
         staffId: string;
         firstName: string;
@@ -88,10 +87,7 @@ export default class LecturerService {
         // Validate and map string to enum
         const roleMap: Record<string, Role> = {
             lecturer: Role.LECTURER,
-            supervisor: Role.SUPERVISOR,
-            major_supervisor: Role.MAJOR_SUPERVISOR,
             pgcord: Role.PGCOORD,
-            internal_examiner: Role.INTERNAL_EXAMINER,
 
         };
 
@@ -307,7 +303,7 @@ export default class LecturerService {
         return Lecturer.find()
             .populate({
                 path: 'user',
-                match: { roles: 'provost' }, 
+                match: { roles: 'provost' },
             })
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
@@ -347,48 +343,48 @@ export default class LecturerService {
         return lecturer;
     }
 
-  static async assignFacultyRep(staffId: string) {
-    const lecturer = await Lecturer.findById(staffId).populate('user');
-    if (!lecturer) {
-        throw new Error('Lecturer not found');
-    }
+    static async assignFacultyRep(staffId: string) {
+        const lecturer = await Lecturer.findById(staffId).populate('user');
+        if (!lecturer) {
+            throw new Error('Lecturer not found');
+        }
 
-    const oldFacultyRep = await Lecturer.findOne({ faculty: lecturer.faculty }).populate({
-        path: 'user',
-        match: { roles: Role.FACULTY_PG_REP }
-    });
+        const oldFacultyRep = await Lecturer.findOne({ faculty: lecturer.faculty }).populate({
+            path: 'user',
+            match: { roles: Role.FACULTY_PG_REP }
+        });
 
-    if (oldFacultyRep && oldFacultyRep.user) {
-        await User.findByIdAndUpdate(
-            oldFacultyRep.user._id,
-            { 
-                $pull: { roles: Role.FACULTY_PG_REP } 
-            }
+        if (oldFacultyRep && oldFacultyRep.user) {
+            await User.findByIdAndUpdate(
+                oldFacultyRep.user._id,
+                {
+                    $pull: { roles: Role.FACULTY_PG_REP }
+                }
+            );
+        }
+
+        // Get current user to preserve existing roles
+        const currentUser = await User.findById(lecturer.user._id);
+        const currentRoles = currentUser?.roles || [];
+
+        // Remove the roles we're going to add (if they exist)
+        const filteredRoles = currentRoles.filter(role =>
+            role !== Role.FACULTY_PG_REP && role !== Role.PANEL_MEMBER
         );
+
+        // Create new roles array with specific order
+        const newRoles = [Role.FACULTY_PG_REP, Role.PANEL_MEMBER, ...filteredRoles];
+
+        const updatedUser = await User.findByIdAndUpdate(
+            lecturer.user._id,
+            {
+                $set: { roles: newRoles }
+            },
+            { new: true }
+        );
+
+        return updatedUser;
     }
-
-    // Get current user to preserve existing roles
-    const currentUser = await User.findById(lecturer.user._id);
-    const currentRoles = currentUser?.roles || [];
-    
-    // Remove the roles we're going to add (if they exist)
-    const filteredRoles = currentRoles.filter(role => 
-        role !== Role.FACULTY_PG_REP && role !== Role.PANEL_MEMBER
-    );
-    
-    // Create new roles array with specific order
-    const newRoles = [Role.FACULTY_PG_REP, Role.PANEL_MEMBER, ...filteredRoles];
-
-    const updatedUser = await User.findByIdAndUpdate(
-        lecturer.user._id,
-        {
-            $set: { roles: newRoles }
-        },
-        { new: true }
-    );
-
-    return updatedUser;
-}
 
 
     static async getFacultyReps(userId: string) {
@@ -414,22 +410,22 @@ export default class LecturerService {
     }
 
     static async getCollegeReps(department: string, level: string, stage: string) {
-  // Get all unique lecturer IDs that are set as collegeRep for matching students
-  const repIds = await Student.distinct("collegeRep", {
-    department,
-    level,
-    currentStage: stage,
-  });
+        // Get all unique lecturer IDs that are set as collegeRep for matching students
+        const repIds = await Student.distinct("collegeRep", {
+            department,
+            level,
+            currentStage: stage,
+        });
 
-  if (!repIds.length) return [];
+        if (!repIds.length) return [];
 
-  // Fetch lecturer docs with those IDs
-  const collegeReps = await Lecturer.find({ _id: { $in: repIds } })
-    .populate("user", "firstName lastName")
-    .select("user staffId title department faculty");
+        // Fetch lecturer docs with those IDs
+        const collegeReps = await Lecturer.find({ _id: { $in: repIds } })
+            .populate("user", "firstName lastName")
+            .select("user staffId title department faculty");
 
-    return collegeReps;
-}
+        return collegeReps;
+    }
 
 
 
