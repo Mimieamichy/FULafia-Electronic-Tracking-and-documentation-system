@@ -164,6 +164,15 @@ const StudentSessionManagement = () => {
 
   const selectedDefenseLabel = getLabelFromKey(selectedDefense, defenseOptions);
 
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [facultiesLoading, setFacultiesLoading] = useState(false);
+  const [facultiesError, setFacultiesError] = useState<string | null>(null);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
   // keep selectedDefense valid when defenseOptions (degreeTab) changes
   useEffect(() => {
     const apiOptions = defenseOptions.map((d) => getStageKey(d));
@@ -176,15 +185,6 @@ const StudentSessionManagement = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defenseOptions, isProvost]);
-
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [facultiesLoading, setFacultiesLoading] = useState(false);
-  const [facultiesError, setFacultiesError] = useState<string | null>(null);
-  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
-
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [departmentsLoading, setDepartmentsLoading] = useState(false);
-  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
   // provost faculty/department fetch
   useEffect(() => {

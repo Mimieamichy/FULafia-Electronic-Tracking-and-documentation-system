@@ -1,17 +1,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Download, CheckCircle, X } from "lucide-react";
 import ScoreSheetPanel from "./ScoreSheetDefense";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import StudentsPanel from "./StudentsPanel";
+import AssessmentPanel from "./AssessmentPanel";
+import StudentCommentModal from "./StudentCommentModal";
 
 // --- Types ---
 interface Criterion {
@@ -39,6 +32,7 @@ interface DefenseDay {
   level: "MSC" | "PHD";
   sessionActive?: boolean;
   students: Student[];
+  currentStage: string;
 }
 
 // --- Mock Data ---
@@ -59,7 +53,7 @@ const makeStudent = (
   matNo,
   topic,
   fileUrl: "https://example.com/sample.pdf",
-  currentStage: "proposal_defense",
+  currentStage: "proposal defense",
   comments: [],
   scores: { Presentation: null, Content: null, "Defense Handling": null },
 });
@@ -67,7 +61,7 @@ const makeStudent = (
 const mockDefenseDays: DefenseDay[] = [
   {
     id: "d1",
-    title: "Defense 1",
+    title: "Defense Day 1",
     // today
     date: new Date().toISOString(),
     durationMinutes: 120,
@@ -77,15 +71,17 @@ const mockDefenseDays: DefenseDay[] = [
       makeStudent("s1", "Alice Johnson", "220976780", "AI in Healthcare"),
       makeStudent("s2", "Bob Smith", "220976781", "Blockchain Security"),
     ],
+    currentStage: "proposal defense",
   },
   {
     id: "d2",
-    title: "Defense 2",
+    title: "Defense Day 2",
     // two days from now
     date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     durationMinutes: 90,
     level: "PHD",
     sessionActive: false,
+    currentStage: "external defense",
     students: [makeStudent("s3", "Cecilia Wang", "220976782", "Edge AI")],
   },
 ];
@@ -108,12 +104,12 @@ export default function DefenseDayPage() {
     "major_supervisor",
   ];
 
-  // true if any role matches a panel keyword (exact match or startsWith)
+  // true if any role matches a panel keyword (exact match or startsWith/includes)
   const isPanel = normalizedRoles.some((r) =>
-    PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k))
+    PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
   );
 
-  // HOD / Provost membership checks
+  // HOD / Provost membership checks (be forgiving to variants)
   const isHodOrProvost = normalizedRoles.some(
     (r) =>
       r === "hod" ||
@@ -127,7 +123,7 @@ export default function DefenseDayPage() {
   // optional single-role string you can use elsewhere (falls back to first role)
   const role = (user?.role ?? normalizedRoles[0] ?? "").toUpperCase();
 
-  // --- Hooks: MUST be declared unconditionally at the top of the component ---
+  // --- Hooks
   const [defenseDays, setDefenseDays] = useState<DefenseDay[]>(mockDefenseDays);
   const [activeDefenseIdx, setActiveDefenseIdx] = useState(0);
   const [criteria, setCriteria] = useState<Criterion[]>(defaultCriteria);
@@ -137,17 +133,15 @@ export default function DefenseDayPage() {
     "students" | "scores" | "assessment"
   >("students");
 
-  // Modal state
+  // Modal state (open student)
   const [selectedStudent, setSelectedStudent] = useState<{
     student: Student;
     defenseId: string;
   } | null>(null);
-  const [newComment, setNewComment] = useState("");
 
   // Countdown 'now'
   const [now, setNow] = useState(Date.now());
 
-  // Always register effects after hooks
   useEffect(() => {
     setCriteria(defaultCriteria);
   }, []);
@@ -190,21 +184,21 @@ export default function DefenseDayPage() {
     );
   };
 
-  const isDefenseDay = (def: DefenseDay) => {
-    return isSameDay(def.date);
-  };
-
   const formatCountdown = (ms: number) => {
     if (ms <= 0) return "00:00:00";
     const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600)
+    const days = Math.floor(totalSeconds / (24 * 3600));
+    const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600)
       .toString()
       .padStart(2, "0");
     const minutes = Math.floor((totalSeconds % 3600) / 60)
       .toString()
       .padStart(2, "0");
     const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-    return `${hours}:${minutes}:${seconds}`;
+    // show days when > 0, otherwise hh:mm:ss
+    return days > 0
+      ? `${days}d ${hours}:${minutes}:${seconds}`
+      : `${hours}:${minutes}:${seconds}`;
   };
 
   const getCountdownFor = (def: DefenseDay) => {
@@ -257,15 +251,14 @@ export default function DefenseDayPage() {
     }));
   };
 
-  const handleAddComment = () => {
-    if (!selectedStudent || !newComment.trim()) return;
+  const handleAddCommentFromModal = (text: string) => {
+    if (!selectedStudent || !text.trim()) return;
     const { defenseId, student } = selectedStudent;
     updateStudentNested(defenseId, student.id, (s) => ({
       ...s,
-      comments: [...s.comments, { by: userName, text: newComment.trim() }],
+      comments: [...s.comments, { by: userName, text: text.trim() }],
     }));
-    setNewComment("");
-    // refresh local selectedStudent
+    // update the open modal's student comments too
     setSelectedStudent((prev) =>
       prev
         ? {
@@ -274,7 +267,7 @@ export default function DefenseDayPage() {
               ...prev.student,
               comments: [
                 ...prev.student.comments,
-                { by: userName, text: newComment.trim() },
+                { by: userName, text: text.trim() },
               ],
             },
           }
@@ -330,40 +323,71 @@ export default function DefenseDayPage() {
       {/* Active defense header */}
       {activeDefense && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">{activeDefense.title}</h2>
-            <p className="text-sm text-gray-600">
-              {new Date(activeDefense.date).toLocaleString()} — Level:{" "}
-              <strong>{activeDefense.level}</strong>
-            </p>
-            <p className="text-sm text-gray-700 mt-2">
-              Countdown:{" "}
-              <strong>{formatCountdown(getCountdownFor(activeDefense))}</strong>
-              {activeDefense.sessionActive
-                ? " (Session active)"
-                : " (Not started)"}
-            </p>
+          <div className="bg-white border border-amber-100 rounded-lg p-6 w-full flex sm:flex-1 items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-3xl font-extrabold text-gray-900">
+                Defense Day Details
+              </h2>
+              <p className="text-sm text-amber-700/90 mt-1">
+                {new Date(activeDefense.date).toLocaleString()} | Level:{" "}
+                <strong>{activeDefense.level}</strong> | Defense:{" "}
+                <strong className="capitalize">{activeDefense.currentStage}</strong>
+              </p>
+              <p className="text-sm text-gray-700 mt-3">
+                Countdown:{" "}
+                <strong className="text-amber-700">
+                  {formatCountdown(getCountdownFor(activeDefense))}
+                </strong>{" "}
+                {activeDefense.sessionActive
+                  ? " (Session active)"
+                  : " (Not started)"}
+              </p>
+            </div>
+
+            {isHodOrProvost && (
+              <div className="flex-shrink-0">
+                <Button
+                  className={`flex items-center px-4 py-2 rounded-full shadow-sm ${
+                    activeDefense.sessionActive
+                      ? "bg-amber-50 border border-amber-100 text-amber-700 hover:bg-amber-700 hover:text-white"
+                      : "bg-amber-700 text-white hover:bg-amber-50 hover:text-amber-700 border hover:border-amber-700"
+                  }`}
+                  onClick={() => toggleSession(activeDefense.id)}
+                >
+                  {activeDefense.sessionActive
+                    ? "End Session"
+                    : "Start Session"}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* HOD / Provost controls */}
-          {isHodOrProvost && (
-            <div className="flex gap-2">
-              <Button
-                className={`flex items-center ${
-                  activeDefense.sessionActive
-                    ? "bg-red-600 text-white"
-                    : "bg-green-600 text-white"
-                }`}
-                onClick={() => toggleSession(activeDefense.id)}
-              >
-                {activeDefense.sessionActive
-                  ? "End Defense Session"
-                  : "Start Defense Session"}
-              </Button>
-            </div>
-          )}
         </div>
       )}
+
+      {/* Countdown summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
+          <div className="text-3xl font-bold text-gray-900">2</div>
+          <div className="text-sm text-amber-700 mt-1">Days</div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
+          <div className="text-3xl font-bold text-gray-900">14</div>
+          <div className="text-sm text-amber-700 mt-1">Hours</div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
+          <div className="text-3xl font-bold text-gray-900">30</div>
+          <div className="text-sm text-amber-700 mt-1">Minutes</div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
+          <div className="text-3xl font-bold text-gray-900">15</div>
+          <div className="text-sm text-amber-700 mt-1">Seconds</div>
+        </div>
+      </div>
 
       {/* Secondary controlled tabs: Students, Score Sheet, Assessment */}
       <div className="flex border-b border-gray-200">
@@ -406,46 +430,12 @@ export default function DefenseDayPage() {
       {/* Panels (only the active tab renders) */}
       <div>
         {activeTab === "students" && (
-          <div className="overflow-x-auto bg-white rounded-lg shadow">
-            <table className="w-full min-w-[700px] text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3 border">Matric No</th>
-                  <th className="p-3 border">Full Name</th>
-                  <th className="p-3 border">Topic</th>
-                  <th className="p-3 border">Current Stage</th>
-                  <th className="p-3 border">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeDefense.students.map((s, idx) => (
-                  <tr
-                    key={s.id}
-                    className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
-                  >
-                    <td className="p-3 border">{s.matNo}</td>
-                    <td className="p-3 border">{s.name}</td>
-                    <td className="p-3 border">{s.topic}</td>
-                    <td className="p-3 border">{s.currentStage}</td>
-                    <td className="p-3 border">
-                      <button
-                        className="inline-flex items-center text-amber-700 hover:underline"
-                        onClick={() =>
-                          setSelectedStudent({
-                            student: s,
-                            defenseId: activeDefense.id,
-                          })
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        View & Comment
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <StudentsPanel
+            students={activeDefense.students}
+            onOpen={(s) =>
+              setSelectedStudent({ student: s, defenseId: activeDefense.id })
+            }
+          />
         )}
 
         {activeTab === "scores" && (
@@ -461,132 +451,23 @@ export default function DefenseDayPage() {
         )}
 
         {activeTab === "assessment" && isHodOrProvost && (
-          <div className="space-y-3">
-            <h3 className="text-md font-semibold">
-              Assessment (Approve to next stage)
-            </h3>
-            <div className="overflow-x-auto bg-white rounded-lg shadow">
-              <table className="w-full min-w-[600px] text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="p-3 border">Matric No</th>
-                    <th className="p-3 border">Full Name</th>
-                    <th className="p-3 border">Current Stage</th>
-                    <th className="p-3 border">Score</th>
-                    <th className="p-3 border">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeDefense.students.map((s, idx) => (
-                    <tr
-                      key={s.id}
-                      className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
-                    >
-                      <td className="p-3 border">{s.matNo}</td>
-                      <td className="p-3 border">{s.name}</td>
-                      <td className="p-3 border">{s.currentStage}</td>
-                      <td className="p-3 border">
-                        {computeScore(s, criteria)}
-                      </td>
-                      <td className="p-3 border">
-                        <Button
-                          onClick={() => handleApprove(activeDefense.id, s.id)}
-                          disabled={!!s.approved}
-                          className={`px-3 py-1 ${
-                            s.approved
-                              ? "bg-gray-300"
-                              : "bg-green-600 text-white"
-                          }`}
-                        >
-                          {s.approved ? "Approved" : "Approve"}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <AssessmentPanel
+            students={activeDefense.students}
+            criteria={criteria}
+            onApprove={(studentId) =>
+              handleApprove(activeDefense.id, studentId)
+            }
+          />
         )}
       </div>
 
-      {/* Comments & PDF Modal */}
-      <Dialog
-        open={selectedStudent !== null}
-        onOpenChange={() => {
-          setSelectedStudent(null);
-          setNewComment("");
-        }}
-      >
-        <DialogContent className="max-w-lg w-full">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedStudent?.student.name}’s Submission & Comments
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedStudent && (
-            <div className="space-y-4">
-              {/* Download */}
-              <div className="p-4 border rounded bg-gray-50">
-                <a
-                  href={selectedStudent.student.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-amber-700 hover:underline"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Download PDF
-                </a>
-              </div>
-
-              {/* Comments */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-700">Comments</h3>
-                {selectedStudent.student.comments.length === 0 ? (
-                  <p className="text-gray-500 italic text-sm">
-                    No comments yet.
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {selectedStudent.student.comments.map((c, i) => (
-                      <li key={i} className="bg-gray-100 p-2 rounded text-sm">
-                        <strong className="text-amber-700">{c.by}:</strong>{" "}
-                        {c.text}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Add Comment */}
-              {canScoreOrComment && (
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Write your comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                  />
-                  <Button
-                    className="bg-amber-700 text-white flex items-center"
-                    onClick={handleAddComment}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Save Comment
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedStudent(null)}>
-              <X className="w-4 h-4 mr-1" /> Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Student Modal (separate file) */}
+      <StudentCommentModal
+        openItem={selectedStudent}
+        onClose={() => setSelectedStudent(null)}
+        onAddComment={handleAddCommentFromModal}
+        canComment={canScoreOrComment}
+      />
     </div>
   );
 }
