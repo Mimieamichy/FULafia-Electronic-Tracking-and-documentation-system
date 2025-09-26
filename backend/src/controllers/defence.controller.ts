@@ -113,6 +113,7 @@ export default class DefenceController {
       const defence = await DefenceService.getDefenceForPanelMember(level, userId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({success: false,error: 'Failed to get most recent defence',message: err.message});
     }
   }

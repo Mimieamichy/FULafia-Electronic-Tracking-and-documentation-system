@@ -451,18 +451,21 @@ export default class DefenceService {
   static async getDefenceForPanelMember(program: string, userId: string) {
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer) throw new Error("Lecturer profile not found");
+    const lecturerIds = lecturer._id;
     
     const department = lecturer.department;
 
     const defence = await Defence.findOne({ 
         program, 
         department,
-        panelMembers: userId, 
+        panelMembers: lecturerIds, 
         ended: false,
     })
     .sort({ createdAt: -1 })
-    .select('_id stage program session date time department createdAt panelMembers')
-    .populate('panelMembers', 'firstName lastName'); 
+    .select('_id department')
+   
+
+    defence
 
     if (!defence) {
         throw new Error(`No ${program} defences found for your department where you are a panel member`);
