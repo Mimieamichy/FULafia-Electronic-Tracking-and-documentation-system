@@ -451,22 +451,25 @@ export default class DefenceService {
   static async getLatestDefence(program: string, userId: string) {
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer) throw new Error("Lecturer profile not found");
+    
     const department = lecturer.department;
 
-    const defence = await Defence.findOne({ program, department })
-      .sort({ createdAt: -1 }).select('_id stage program session date time department createdAt')
+    const defence = await Defence.findOne({ 
+        program, 
+        department,
+        panelMembers: userId, 
+        ended: false,
+    })
+    .sort({ createdAt: -1 })
+    .select('_id stage program session date time department createdAt panelMembers')
+    .populate('panelMembers', 'firstName lastName'); 
 
     if (!defence) {
-      const message = program
-        ? `No ${program} defences found`
-        : "No defences found";
-      throw new Error(message);
+        throw new Error(`No ${program} defences found for your department where you are a panel member`);
     }
 
     return defence;
-  }
-
-
+}
 
 
 
