@@ -455,17 +455,14 @@ export default class DefenceService {
     
     const department = lecturer.department;
 
-    const defence = await Defence.findOne({ 
+    const defence = await Defence.find({ 
         program, 
         department,
         panelMembers: lecturerIds, 
         ended: false,
     })
-    .sort({ createdAt: -1 })
     .select('_id department')
    
-
-    defence
 
     if (!defence) {
         throw new Error(`No ${program} defences found for your department where you are a panel member`);
