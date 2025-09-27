@@ -249,7 +249,7 @@ export default class ProjectService {
 
 
   // Add a comment on defnce day
-  static async commentOnDefenceDay(defenceId: string, studentId: string, authorId: string, text: string): Promise<IDefenceComment> {
+  static async commentOnDefenceDay(studentId: string, defenceId: string, authorId: string, text: string): Promise<IDefenceComment> {
 
     let defenceComment = await DefenceComment.findOne({
       defence: new Types.ObjectId(defenceId),
@@ -274,13 +274,10 @@ export default class ProjectService {
   }
 
   static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string){
-  const trimmedDefenceId = defenceId.trim();
-  const trimmedStudentId = studentId.trim();
-  const trimmedAuthorId = authorId.trim();
 
   const defenceComment = await DefenceComment.findOne({
-    defence: trimmedDefenceId,
-    student: trimmedStudentId,
+    defence: defenceId,
+    student: studentId,
   })
   .populate('comments.author', 'firstName lastName email');
 
@@ -293,7 +290,7 @@ export default class ProjectService {
 
   // Filter comments by the specific author
   const userComments = defenceComment.comments.filter(comment => 
-    comment.author._id.toString() === trimmedAuthorId.toString()
+    comment.author._id.toString() === authorId.toString()
   );
 
   console.log('comments', userComments)
