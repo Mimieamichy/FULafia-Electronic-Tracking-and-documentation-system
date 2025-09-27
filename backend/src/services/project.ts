@@ -273,5 +273,37 @@ export default class ProjectService {
     return await defenceComment.save();
   }
 
+  static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string){
+  const defenceComment = await DefenceComment.findOne({
+    defence: new Types.ObjectId(defenceId),
+    student: new Types.ObjectId(studentId),
+  })
+  .populate('comments.author', 'firstName lastName email roles');
+
+  if (!defenceComment) {
+    return [];
+  }
+
+  // Filter comments by the specific author
+  const userComments = defenceComment.comments.filter(comment => 
+    comment.author._id.toString() === authorId.toString()
+  );
+
+  return userComments;
+}
+
+
+static async getCommentsForStudent(defenceId: string, studentId: string): Promise<IDefenceComment | null> {
+  const defenceComment = await DefenceComment.findOne({
+    defence: new Types.ObjectId(defenceId),
+    student: new Types.ObjectId(studentId),
+  })
+  .populate('comments.author', 'firstName lastName email roles') // Populate author details 
+
+  return defenceComment;
+}
+
+
+
 
 }

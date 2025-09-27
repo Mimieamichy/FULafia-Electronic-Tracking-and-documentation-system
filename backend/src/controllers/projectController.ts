@@ -160,4 +160,29 @@ export default class ProjectController {
     }
   } 
 
+  static async getCommentsByUserForStudent(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { studentId, defenceId } = req.params;
+      const authorId = req.user?.id || ''
+
+      const comments = await ProjectService.getCommentsByUserForStudent(defenceId, studentId, authorId);
+      res.status(200).json({ success: true, message: 'Comments retrieved', data: comments });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to load comments ffrom defence day', message: err.message });
+    }
+  }
+
+
+  static async getDefenceDayComments(req: Request, res: Response) {
+    try {
+      const { studentId, defenceId } = req.params;
+
+      const comments = await ProjectService.getCommentsForStudent(defenceId, studentId);
+      res.status(200).json({ success: true, message: 'Comments retrieved', data: comments });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to load comments for defence day', message: err.message });
+    }
+  }
 }

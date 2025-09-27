@@ -16,6 +16,8 @@ router.get('/download/:studentId/:versionNumber', authenticate, checkPermission(
 router.get('/download/:studentId', authenticate, checkPermission(Permission.DOWNLOAD_PROJECT), ProjectController.downloadLatestProject);
 router.post('/comment/:studentId/:versionNumber', authenticate, checkPermission(Permission.COMMENT), ProjectController.commentOnProject);
 router.post('/defence-comments/:studentId/:defenceId', authenticate, checkPermission(Permission.COMMENT), ProjectController.commentOnDefenceDay);   
+router.get('/defence-comments/:studentId/:defenceId', authenticate, checkPermission(Permission.COMMENT), ProjectController.getCommentsByUserForStudent); 
+router.get('/student/defence-comments/:studentId/:defenceId', authenticate, checkPermission(Permission.COMMENT), ProjectController.getDefenceDayComments); 
 router.post('/approve/:studentId', authenticate, checkPermission(Permission.APPROVE_STUDENT_PROJECT), ProjectController.approveProject);
 
 
