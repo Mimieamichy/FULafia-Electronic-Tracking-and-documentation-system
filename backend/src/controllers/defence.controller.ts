@@ -57,7 +57,7 @@ export default class DefenceController {
       const sheet = await DefenceService.submitScore(
         defenceId,
         panelMemberId,
-        studentId,4
+        studentId,
         scores
       );
       res.json({ success: true, data: sheet });
