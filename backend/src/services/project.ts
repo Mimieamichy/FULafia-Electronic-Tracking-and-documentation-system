@@ -250,16 +250,16 @@ export default class ProjectService {
 
   // Add a comment on defnce day
   static async commentOnDefenceDay(defenceId: string, studentId: string, authorId: string, text: string): Promise<IDefenceComment> {
-    
+
     let defenceComment = await DefenceComment.findOne({
-      defenceId: new Types.ObjectId(defenceId),
-      studentId: new Types.ObjectId(studentId),
+      defence: new Types.ObjectId(defenceId),
+      student: new Types.ObjectId(studentId),
     });
 
     if (!defenceComment) {
       defenceComment = new DefenceComment({
-        defenceId,
-        studentId,
+        defence: new Types.ObjectId(defenceId),
+        student: studentId,
         comments: [],
       });
     }
