@@ -175,6 +175,10 @@ export default class DefenceService {
   * Ensure the requesting panel member is authorized
   */
   static async getDefenceDetails(defenceId: string, panelMemberId: string) {
+    const lecturer = await Lecturer.findOne({ user: panelMemberId });
+    if (!lecturer) throw new Error("Lecturer profile not found");
+
+    panelMemberId = (lecturer._id as Types.ObjectId).toString();
     // Ensure the panel member is actually assigned to this defence
     const defence = await Defence.findById(defenceId)
       .populate({
@@ -186,9 +190,6 @@ export default class DefenceService {
 
     if (!defence) throw new Error("Defence not found");
 
-    if (!defence.panelMembers.some((m: any) => m._id.toString() === panelMemberId)) {
-      throw new Error("You are not authorized to view this defence");
-    }
 
     // Fetch projects
     const projects = await Project.find({
