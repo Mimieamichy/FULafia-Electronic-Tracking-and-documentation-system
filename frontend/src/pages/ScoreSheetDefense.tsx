@@ -41,13 +41,12 @@ export default function ScoreSheetPanel({
   onSubmit,
 }: Props) {
   // same-day check
- // visible starting from defense date onwards
-const canShow = (() => {
-  const defenseDate = new Date(defense.date);
-  const now = new Date();
-  return now >= defenseDate;
-})();
-
+  // visible starting from defense date onwards
+  const canShow = (() => {
+    const defenseDate = new Date(defense.date);
+    const now = new Date();
+    return now >= defenseDate;
+  })();
 
   if (!canShow) {
     return (
@@ -79,8 +78,9 @@ const canShow = (() => {
                   <th className="px-6 py-4 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600 text-left rounded-tl-lg">
                     Student Name
                   </th>
-                  
-                 
+                  <th className="px-6 py-4 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600 text-left">
+                    Matric Number
+                  </th>
 
                   {criteria.map((c) => (
                     <th
@@ -107,10 +107,11 @@ const canShow = (() => {
                         {s.name}
                       </div>
                     </td>
-
-                    
-
-                    
+                    <td className="px-6 py-6 align-middle border-b border-gray-100">
+                      <div className="text-sm font-medium text-gray-900 capitalize">
+                        {s.matNo}
+                      </div>
+                    </td>
 
                     {criteria.map((c) => (
                       <td
@@ -129,9 +130,12 @@ const canShow = (() => {
                                   ? ""
                                   : String(s.scores[c.title])
                               }
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                              onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>
+                              ) => {
                                 const raw = e.target.value;
-                                const parsed = raw === "" ? NaN : parseInt(raw, 10);
+                                const parsed =
+                                  raw === "" ? NaN : parseInt(raw, 10);
                                 // clamp and fall back to 0 when invalid (match original prop type expecting number)
                                 const safe =
                                   Number.isNaN(parsed) === true
