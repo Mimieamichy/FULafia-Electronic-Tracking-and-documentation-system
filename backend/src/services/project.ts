@@ -227,5 +227,25 @@ export default class ProjectService {
     return { student, project };
   }
 
+  static async downloadLatestProject(studentId: string) {
+    const project = await Project.findOne({ student: studentId });
+
+    if (!project) throw new Error("Project not found");
+
+    // Get the latest version (last element in the versions array)
+    const latestVersion = project.versions[project.versions.length - 1];
+    
+    if (!latestVersion) throw new Error("No project versions found");
+
+    // Get student info
+    const student = await Student.findById(studentId);
+    if (!student) throw new Error("Student not found");
+
+    return {
+        fileUrl: latestVersion.fileUrl,
+        topic: latestVersion.topic, 
+        }
+    }
+
 
 }

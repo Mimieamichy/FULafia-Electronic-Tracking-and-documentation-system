@@ -78,6 +78,25 @@ export default class ProjectController {
     }
   }
 
+  static async downloadLatestProject(req: Request, res: Response) {
+    try {
+      const { studentId } = req.params;
+      const project = await ProjectService.downloadLatestProject(studentId);
+      if (!project || !project.fileUrl) {
+      res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    const fileName = path.basename(project.fileUrl);
+    //construct the full file path
+    const absolutePath = path.join('uploads', 'projects', fileName);
+
+      return res.download(absolutePath);
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });
+    }
+  }
+
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || ''
