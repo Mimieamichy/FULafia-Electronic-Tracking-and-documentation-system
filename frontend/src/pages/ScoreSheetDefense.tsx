@@ -41,17 +41,15 @@ export default function ScoreSheetPanel({
   onSubmit,
 }: Props) {
   // same-day check
-  const isToday = (() => {
-    const d = new Date(defense.date);
-    const n = new Date();
-    return (
-      d.getFullYear() === n.getFullYear() &&
-      d.getMonth() === n.getMonth() &&
-      d.getDate() === n.getDate()
-    );
-  })();
+ // visible starting from defense date onwards
+const canShow = (() => {
+  const defenseDate = new Date(defense.date);
+  const now = new Date();
+  return now >= defenseDate;
+})();
 
-  if (!isToday) {
+
+  if (!canShow) {
     return (
       <div className="p-6 bg-white rounded shadow text-gray-600">
         Score sheet will be available on the day of the defense.
@@ -81,12 +79,8 @@ export default function ScoreSheetPanel({
                   <th className="px-6 py-4 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600 text-left rounded-tl-lg">
                     Student Name
                   </th>
-                  <th className="px-6 py-4 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600 text-left">
-                    Matric No
-                  </th>
-                  <th className="px-6 py-4 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600 text-left">
-                    Topic
-                  </th>
+                  
+                 
 
                   {criteria.map((c) => (
                     <th
@@ -109,18 +103,14 @@ export default function ScoreSheetPanel({
                     className={idx % 2 === 0 ? "bg-white" : "bg-amber-50"}
                   >
                     <td className="px-6 py-6 align-middle border-b border-gray-100">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 capitalize">
                         {s.name}
                       </div>
                     </td>
 
-                    <td className="px-6 py-6 align-middle border-b border-gray-100">
-                      <div className="text-sm text-gray-700">{s.matNo}</div>
-                    </td>
+                    
 
-                    <td className="px-6 py-6 align-middle border-b border-gray-100 max-w-xs truncate">
-                      <div className="text-sm text-gray-700">{s.topic}</div>
-                    </td>
+                    
 
                     {criteria.map((c) => (
                       <td

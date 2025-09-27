@@ -1,3 +1,4 @@
+// DefenseDayPage.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,8 @@ import AssessmentPanel from "./AssessmentPanel";
 import StudentCommentModal from "./StudentCommentModal";
 import { useToast } from "@/hooks/use-toast";
 
-// --- Types ---
+type Level = "MSC" | "PHD";
+
 interface Criterion {
   title: string;
   percentage: number;
@@ -30,88 +32,32 @@ interface DefenseDay {
   title: string;
   date: string; // ISO string
   durationMinutes: number;
-  level: "MSC" | "PHD";
+  level: Level;
   sessionActive?: boolean;
   students: Student[];
   currentStage: string;
+  criteria?: Criterion[];
 }
 
-// --- Mock Data ---
-const defaultCriteria: Criterion[] = [
-  { title: "Presentation", percentage: 20 },
-  { title: "Content", percentage: 40 },
-  { title: "Defense Handling", percentage: 40 },
-];
-
-const makeStudent = (
-  id: string,
-  name: string,
-  matNo: string,
-  topic: string
-): Student => ({
-  id,
-  name,
-  matNo,
-  topic,
-  fileUrl: "https://example.com/sample.pdf",
-  currentStage: "proposal defense",
-  comments: [],
-  scores: { Presentation: null, Content: null, "Defense Handling": null },
-});
-
-const mockDefenseDays: DefenseDay[] = [
-  {
-    id: "d1",
-    title: "Defense Day 1",
-    // today
-    date: new Date().toISOString(),
-    durationMinutes: 120,
-    level: "MSC",
-    sessionActive: false,
-    students: [
-      makeStudent("s1", "Alice Johnson", "220976780", "AI in Healthcare"),
-      makeStudent("s2", "Bob Smith", "220976781", "Blockchain Security"),
-    ],
-    currentStage: "proposal defense",
-  },
-  {
-    id: "d2",
-    title: "Defense Day 2",
-    // two days from now
-    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    durationMinutes: 90,
-    level: "PHD",
-    sessionActive: false,
-    currentStage: "external defense",
-    students: [makeStudent("s3", "Cecilia Wang", "220976782", "Edge AI")],
-  },
-];
+const baseUrl = import.meta.env.VITE_BACKEND_URL ?? "";
 
 export default function DefenseDayPage() {
-  // --- auth & roles
-  const { user, roles = [] } = useAuth();
-  const userName = user?.userName ?? "User";
+  const { user, token, roles = [] } = useAuth();
   const { toast } = useToast();
+  const userName = user?.userName ?? "User";
 
-  // normalize roles to a predictable lowercase array
   const normalizedRoles: string[] = Array.isArray(roles)
     ? roles.map((r) => String(r).toLowerCase())
     : [];
-
-  // panel role keywords
   const PANEL_KEYWORDS = [
     "panel_member",
     "internal_examiner",
     "supervisor",
     "major_supervisor",
   ];
-
-  // true if any role matches a panel keyword (exact match or startsWith/includes)
   const isPanel = normalizedRoles.some((r) =>
     PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
   );
-
-  // HOD / Provost membership checks (be forgiving to variants)
   const isHodOrProvost = normalizedRoles.some(
     (r) =>
       r === "hod" ||
@@ -122,41 +68,379 @@ export default function DefenseDayPage() {
       r.startsWith("provost")
   );
 
-  // optional single-role string you can use elsewhere (falls back to first role)
-  const role = (user?.role ?? normalizedRoles[0] ?? "").toUpperCase();
-
-  // --- Hooks
-  const [defenseDays, setDefenseDays] = useState<DefenseDay[]>(mockDefenseDays);
+  // --- hooks (always declared, never conditional) ---
+  const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
+    {
+      MSC: [],
+      PHD: [],
+    }
+  );
+  const [defenseDays, setDefenseDays] = useState<DefenseDay[]>([]);
   const [activeDefenseIdx, setActiveDefenseIdx] = useState(0);
-  const [criteria, setCriteria] = useState<Criterion[]>(defaultCriteria);
-
-  // tab control: students | scores | assessment
+  const [criteria, setCriteria] = useState<Criterion[]>([]);
+  const [level, setLevel] = useState<Level>("MSC"); // controls which level to fetch
   const [activeTab, setActiveTab] = useState<
     "students" | "scores" | "assessment"
   >("students");
-
-  // Modal state (open student)
   const [selectedStudent, setSelectedStudent] = useState<{
     student: Student;
     defenseId: string;
   } | null>(null);
-
-  // Countdown 'now'
   const [now, setNow] = useState(Date.now());
-
-  // toggling state for Start/End API request
   const [toggling, setToggling] = useState(false);
-
-  useEffect(() => {
-    setCriteria(defaultCriteria);
-  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Early return AFTER hooks
+  // ------- helpers to map API shapes to our UI model -------
+  const mapRawStudent = (s: any, fallbackStage = ""): Student => {
+    const sid = s?.id ?? s?._id ?? s?.studentId ?? s?.matricId ?? "s_unknown";
+    const name =
+      s?.name ??
+      (s?.user
+        ? `${s.user.firstName ?? ""} ${s.user.lastName ?? ""}`.trim()
+        : "") ??
+      s?.fullName ??
+      "";
+    const matNo = s?.matricNo ?? s?.matNo ?? s?.registration ?? s?.regNo ?? "";
+    const topic =
+      s?.projectTopic ?? s?.topic ?? s?.title ?? s?.researchTopic ?? "";
+    const fileUrl = s?.latestFile ?? s?.fileUrl ?? s?.file ?? "";
+    const currentStageStudent =
+      s?.currentStage ?? s?.stage ?? s?.status ?? fallbackStage ?? "";
+    const comments = Array.isArray(s?.comments) ? s.comments : [];
+    const scores = s?.scores ?? s?.stageScores ?? {};
+    const approved = Boolean(s?.approved ?? s?.isApproved ?? false);
+    return {
+      id: String(sid),
+      name: String(name),
+      matNo: String(matNo),
+      topic: String(topic),
+      fileUrl: String(fileUrl),
+      currentStage: String(currentStageStudent),
+      comments,
+      scores,
+      approved,
+    };
+  };
+
+  const mapDefenseFromDefenceObj = (def: any, extraData?: any): DefenseDay => {
+    const id = def?._id ?? def?.id ?? "unknown";
+    const title = def?.title ?? def?.name ?? def?.label ?? `Defense ${id}`;
+    const date =
+      def?.date ??
+      def?.dateTime ??
+      def?.startTime ??
+      def?.start ??
+      def?.scheduledAt ??
+      new Date().toISOString();
+    const durationMinutes =
+      Number(
+        def?.durationMinutes ??
+          def?.duration ??
+          def?.length ??
+          def?.minutes ??
+          0
+      ) || 120;
+    const levelRaw = (def?.program ??
+      def?.level ??
+      def?.levelName ??
+      "MSC") as string;
+    const levelMapped: Level = String(levelRaw).toUpperCase().includes("PHD")
+      ? "PHD"
+      : "MSC";
+    const sessionActive = Boolean(
+      def?.started ??
+        def?.sessionActive ??
+        def?.active ??
+        def?.isActive ??
+        false
+    );
+    const currentStage =
+      def?.stage ?? def?.currentStage ?? def?.defenseStage ?? "";
+
+    // students: try def.students first, then extraData.students
+    const rawStudents = Array.isArray(def?.students)
+      ? def.students
+      : Array.isArray(extraData?.students)
+      ? extraData.students
+      : [];
+    const students = (rawStudents as any[]).map((s) =>
+      mapRawStudent(s, currentStage)
+    );
+
+    // criteria: from extraData.criteria or extraData.data.criteria or def.criteria
+    const rawCriteria =
+      extraData?.criteria ??
+      extraData?.data?.criteria ??
+      def?.criteria ??
+      extraData?.criteria?.criteria ??
+      null;
+
+    const criteriaMapped: Criterion[] = Array.isArray(rawCriteria)
+      ? rawCriteria.map((c: any) => ({
+          title: String(c?.name ?? c?.title ?? ""),
+          percentage: Number(c?.weight ?? c?.percentage ?? 0),
+        }))
+      : Array.isArray(extraData?.criteria?.criteria)
+      ? extraData.criteria.criteria.map((c: any) => ({
+          title: String(c?.name ?? c?.title ?? ""),
+          percentage: Number(c?.weight ?? c?.percentage ?? 0),
+        }))
+      : [];
+
+    return {
+      id: String(id),
+      title: String(title),
+      date: String(date),
+      durationMinutes: Number(durationMinutes),
+      level: levelMapped,
+      sessionActive: Boolean(sessionActive),
+      students,
+      currentStage: String(currentStage),
+      criteria: criteriaMapped.length ? criteriaMapped : undefined,
+    };
+  };
+
+  // --- fetch flow:
+  // 1) GET /defence/recent/:level  -> returns ids (or single object with _id)
+  // 2) GET /defence/:defenceId for each id -> returns { success:true, data: { defence, students, criteria } }
+  useEffect(() => {
+    let cancelled = false;
+
+    // show cached immediately if present (so switching levels doesn't blank UI)
+    setDefenseDays(defenseCache[level] ?? []);
+    setActiveDefenseIdx(0);
+    // set criteria from first cached if exists
+    if (
+      (defenseCache[level] ?? []).length > 0 &&
+      (defenseCache[level] ?? [])[0].criteria
+    ) {
+      setCriteria((defenseCache[level] ?? [])[0].criteria ?? []);
+    } else {
+      setCriteria([]); // clear criteria while fetching
+    }
+
+    const fetchIdsAndDetails = async () => {
+      try {
+        const recentUrl = `${baseUrl}/defence/panel-member/${encodeURIComponent(
+          level
+        )}`;
+        console.log(
+          `[DefenseDayPage] GET /defence/panel-member -> ${recentUrl}`
+        );
+        const resRecent = await fetch(recentUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
+        const textRecent = await resRecent.text();
+        console.log("[DefenseDayPage] /defence/recent raw text:", textRecent);
+
+        let parsedRecent: any = null;
+        try {
+          parsedRecent = textRecent ? JSON.parse(textRecent) : null;
+        } catch {
+          parsedRecent = textRecent;
+        }
+        console.log("[DefenseDayPage] /defence/recent parsed:", parsedRecent);
+
+        if (cancelled) return;
+
+        // robust extraction of ids:
+        let ids: string[] = [];
+        if (!parsedRecent) {
+          ids = [];
+        } else if (Array.isArray(parsedRecent)) {
+          if (
+            parsedRecent.every(
+              (it) => typeof it === "string" || typeof it === "number"
+            )
+          ) {
+            ids = parsedRecent.map(String);
+          } else {
+            ids = parsedRecent
+              .map(
+                (it: any) =>
+                  it?.id ?? it?._id ?? it?.defenceId ?? it?.defenseId ?? null
+              )
+              .filter(Boolean)
+              .map(String);
+          }
+        } else if (typeof parsedRecent === "object") {
+          // single-object case like: { _id: "68d5b548...", department: "Computer Science" }
+          if (
+            parsedRecent._id ||
+            parsedRecent.id ||
+            parsedRecent.defenceId ||
+            parsedRecent.defenseId
+          ) {
+            ids = [
+              String(
+                parsedRecent._id ??
+                  parsedRecent.id ??
+                  parsedRecent.defenceId ??
+                  parsedRecent.defenseId
+              ),
+            ];
+          } else {
+            const cand =
+              parsedRecent?.data ??
+              parsedRecent?.ids ??
+              parsedRecent?.defenseIds ??
+              parsedRecent?.result ??
+              parsedRecent?.items ??
+              null;
+
+            if (Array.isArray(cand)) {
+              if (
+                cand.every(
+                  (it: any) => typeof it === "string" || typeof it === "number"
+                )
+              ) {
+                ids = cand.map(String);
+              } else {
+                ids = cand
+                  .map(
+                    (it: any) =>
+                      it?.id ??
+                      it?._id ??
+                      it?.defenceId ??
+                      it?.defenseId ??
+                      null
+                  )
+                  .filter(Boolean)
+                  .map(String);
+              }
+            } else {
+              const maybeArray = Object.values(parsedRecent).find((v: any) =>
+                Array.isArray(v)
+              );
+              if (Array.isArray(maybeArray)) {
+                ids = maybeArray
+                  .map((it: any) =>
+                    typeof it === "string" || typeof it === "number"
+                      ? String(it)
+                      : it?.id ?? it?._id ?? null
+                  )
+                  .filter(Boolean);
+              }
+            }
+          }
+        }
+
+        console.log("[DefenseDayPage] extracted defence IDs:", ids);
+
+        if (cancelled) return;
+
+        if (!ids || ids.length === 0) {
+          console.warn(
+            "[DefenseDayPage] no defence IDs returned for level",
+            level
+          );
+          // leave cache as-is (don't clear other level); nothing to set
+          return;
+        }
+
+        // fetch details for each id in parallel
+        const fetchDetailForId = async (did: string) => {
+          try {
+            const dUrl = `${baseUrl}/defence/${encodeURIComponent(did)}`;
+            console.log(`[DefenseDayPage] GET /defence/${did} -> ${dUrl}`);
+            const res = await fetch(dUrl, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+            });
+
+            const text = await res.text();
+            console.log(`[DefenseDayPage] /defence/${did} raw text:`, text);
+
+            let parsed: any = null;
+            try {
+              parsed = text ? JSON.parse(text) : null;
+            } catch {
+              parsed = text;
+            }
+            console.log(`[DefenseDayPage] /defence/${did} parsed:`, parsed);
+
+            // API returns { success: true, data: { defence, students, criteria } }
+            const defObj =
+              parsed?.data?.defence ??
+              parsed?.defence ??
+              parsed?.data ??
+              parsed;
+            const extra = parsed?.data ?? parsed;
+            // map using the defence object and extra data (students + criteria)
+            const mapped = mapDefenseFromDefenceObj(defObj, extra);
+            return mapped;
+          } catch (err) {
+            console.error(
+              `[DefenseDayPage] failed to fetch details for ${did}:`,
+              err
+            );
+            return null;
+          }
+        };
+
+        const detailPromises = ids.map((id) => fetchDetailForId(id));
+        const results = await Promise.all(detailPromises);
+        const normalizedDefs = results.filter(Boolean) as DefenseDay[];
+
+        if (cancelled) return;
+
+        if (normalizedDefs.length === 0) {
+          console.warn(
+            "[DefenseDayPage] could not normalize any defence details for ids:",
+            ids
+          );
+          return;
+        }
+
+        // update cache for this level and immediately show
+        setDefenseCache((prev) => {
+          const next = { ...prev, [level]: normalizedDefs };
+          return next;
+        });
+        setDefenseDays(normalizedDefs);
+        setActiveDefenseIdx(0);
+
+        // seed criteria from first defense if available
+        if (normalizedDefs[0]?.criteria) {
+          setCriteria(normalizedDefs[0].criteria ?? []);
+        } else {
+          setCriteria([]);
+        }
+
+        console.log(
+          "[DefenseDayPage] normalized defenseDays for level",
+          level,
+          normalizedDefs
+        );
+      } catch (err) {
+        console.error(
+          "[DefenseDayPage] error fetching recent ids or details:",
+          err
+        );
+      }
+    };
+
+    void fetchIdsAndDetails();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, token]); // token included so fetch re-runs when auth changes
+
+  // --- ACCESS CHECK (after hooks) ---
   if (!isPanel) {
     return (
       <div className="p-6 text-center text-red-600">
@@ -165,29 +449,8 @@ export default function DefenseDayPage() {
     );
   }
 
-  // safety: if no defense days
-  if (!defenseDays || defenseDays.length === 0) {
-    return (
-      <div className="p-6 text-center text-gray-600">
-        No defense days scheduled.
-      </div>
-    );
-  }
-
-  const canScoreOrComment = isPanel; // any panel member can score/comment
-
+  // --- UI helpers & actions ---
   const activeDefense = defenseDays[activeDefenseIdx];
-
-  // Helpers
-  const isSameDay = (iso: string) => {
-    const d = new Date(iso);
-    const n = new Date();
-    return (
-      d.getFullYear() === n.getFullYear() &&
-      d.getMonth() === n.getMonth() &&
-      d.getDate() === n.getDate()
-    );
-  };
 
   const formatCountdown = (ms: number) => {
     if (ms <= 0) return "00:00:00";
@@ -200,7 +463,6 @@ export default function DefenseDayPage() {
       .toString()
       .padStart(2, "0");
     const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-    // show days when > 0, otherwise hh:mm:ss
     return days > 0
       ? `${days}d ${hours}:${minutes}:${seconds}`
       : `${hours}:${minutes}:${seconds}`;
@@ -212,18 +474,17 @@ export default function DefenseDayPage() {
     if (def.sessionActive) {
       return Math.max(0, end - now);
     }
-    // not active yet: countdown to start
     return Math.max(0, start - now);
   };
 
-  // Update helpers for nested student modifications
   const updateStudentNested = (
     defenseId: string,
     studentId: string,
     updater: (s: Student) => Student
   ) => {
-    setDefenseDays((prev) =>
-      prev.map((d) =>
+    setDefenseCache((prev) => {
+      const updatedCache = { ...prev };
+      const list = (updatedCache[level] ?? []).map((d) =>
         d.id !== defenseId
           ? d
           : {
@@ -232,64 +493,54 @@ export default function DefenseDayPage() {
                 s.id === studentId ? updater(s) : s
               ),
             }
-      )
-    );
+      );
+      updatedCache[level] = list;
+      setDefenseDays(list);
+      return updatedCache;
+    });
   };
 
-  // API-backed toggling for session start/end
   const handleToggleSession = async (defenseId: string) => {
-    // find defense current state
     const def = defenseDays.find((d) => d.id === defenseId);
     if (!def) return;
-
     const currentlyActive = !!def.sessionActive;
-
-    // confirm before ending
     if (currentlyActive) {
-      const ok = confirm("Are you sure you want to end this defense session?");
+      
+      const ok = toast({
+        title: "Confirm End Session",
+        description: "Are you sure you want to end this defense session?",
+      });
       if (!ok) return;
     }
-
-    if (toggling) return; // guard double-clicks
+    if (toggling) return;
     setToggling(true);
-
     const action = currentlyActive ? "end" : "start";
-    const url = `/defence/${action}/${encodeURIComponent(defenseId)}`;
-
+    const url = `${baseUrl}/defence/${action}/${encodeURIComponent(defenseId)}`;
     try {
-      // If your API needs auth headers, add them here.
-      // e.g. headers: { Authorization: `Bearer ${user?.token}` }
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // "Authorization": `Bearer ${token}`, // <-- add if required
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        // body: JSON.stringify({}), // include payload if your API expects one
       });
-
       if (!res.ok) {
-        // try to parse server error
         let errText = `Failed to ${action} session (${res.status})`;
         try {
-          const json = await res.json();
-          if (json?.message) errText = json.message;
-        } catch {
-          // ignore parse error
-        }
+          const j = await res.json();
+          if (j?.message) errText = j.message;
+        } catch {}
         throw new Error(errText);
       }
-
-      // optionally parse response to get updated sessionActive value from server
-      // const payload = await res.json();
-      // const newActive = payload?.sessionActive ?? !currentlyActive;
-
-      // update UI state after success
-      setDefenseDays((prev) =>
-        prev.map((d) =>
+      // update cache + UI
+      setDefenseCache((prev) => {
+        const updated = { ...prev };
+        updated[level] = (updated[level] ?? []).map((d) =>
           d.id === defenseId ? { ...d, sessionActive: !currentlyActive } : d
-        )
-      );
+        );
+        setDefenseDays(updated[level] ?? []);
+        return updated;
+      });
 
       toast({
         title: `Session ${action === "start" ? "Started" : "Ended"}`,
@@ -300,7 +551,6 @@ export default function DefenseDayPage() {
       });
     } catch (err: any) {
       console.error("Failed to toggle session:", err);
-     
       toast({
         title: "Session Toggle Failed",
         description: err?.message ?? "Network error while toggling session.",
@@ -309,11 +559,6 @@ export default function DefenseDayPage() {
     } finally {
       setToggling(false);
     }
-  };
-
-  const toggleSession = (defenseId: string) => {
-    // kept for compatibility; call the API-backed handler
-    void handleToggleSession(defenseId);
   };
 
   const handleScoreChange = (
@@ -335,7 +580,6 @@ export default function DefenseDayPage() {
       ...s,
       comments: [...s.comments, { by: userName, text: text.trim() }],
     }));
-    // update the open modal's student comments too
     setSelectedStudent((prev) =>
       prev
         ? {
@@ -356,9 +600,8 @@ export default function DefenseDayPage() {
     let total = 0;
     crit.forEach((c) => {
       const sc = s.scores[c.title];
-      if (typeof sc === "number" && !isNaN(sc)) {
+      if (typeof sc === "number" && !isNaN(sc))
         total += (sc * c.percentage) / 100;
-      }
     });
     return Math.round(total * 100) / 100;
   };
@@ -371,8 +614,6 @@ export default function DefenseDayPage() {
   };
 
   const handleSubmitScores = (defenseId: string) => {
-    // In a real app you'd call an API here. We'll just show a tiny UI effect.
-    
     toast({
       title: "Scores Submitted",
       description: "The scores have been submitted successfully.",
@@ -382,22 +623,55 @@ export default function DefenseDayPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
-      {/* Defense Days Tabs */}
+      {/* Level toggle */}
+      <div className="flex gap-2 items-center justify-end">
+        <div className="text-sm text-gray-600 mr-2">Level:</div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setLevel("MSC")}
+            className={`px-3 py-1 rounded-md text-sm font-medium ${
+              level === "MSC"
+                ? "bg-amber-700 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            MSc
+          </button>
+          <button
+            onClick={() => setLevel("PHD")}
+            className={`px-3 py-1 rounded-md text-sm font-medium ${
+              level === "PHD"
+                ? "bg-amber-700 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            PhD
+          </button>
+        </div>
+      </div>
+
+      {/* Defence day tabs */}
+      {/* Defence day tabs — show simple sequential labels (Defense 1, Defense 2, ...) */}
       <div className="flex gap-2 items-center overflow-x-auto">
         {defenseDays.map((d, i) => (
           <button
             key={d.id}
             onClick={() => {
               setActiveDefenseIdx(i);
-              setActiveTab("students"); // reset to students when switching defense day
+              setActiveTab("students");
+              setCriteria(d.criteria ?? []);
             }}
+            title={`${d.title ?? `Defense ${i + 1}`} • ${new Date(
+              d.date
+            ).toLocaleString()}`}
+            aria-label={`Defense ${i + 1}`}
             className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
               i === activeDefenseIdx
                 ? "bg-amber-700 text-white"
                 : "bg-gray-100 text-gray-700"
             }`}
           >
-            {d.title}
+            {`Defense ${i + 1}`}
           </button>
         ))}
       </div>
@@ -431,13 +705,13 @@ export default function DefenseDayPage() {
             {isHodOrProvost && (
               <div className="flex-shrink-0">
                 <Button
-                  className={`flex items-center px-4 py-2 rounded-full shadow-sm ${
-                    activeDefense.sessionActive
-                      ? "bg-amber-50 border border-amber-100 text-amber-700 hover:bg-amber-700 hover:text-white"
-                      : "bg-amber-700 text-white hover:bg-amber-50 hover:text-amber-700 border hover:border-amber-700"
-                  }`}
                   onClick={() => handleToggleSession(activeDefense.id)}
                   disabled={toggling}
+                  className={`flex items-center px-4 py-2 rounded-full shadow-sm ${
+                    activeDefense.sessionActive
+                      ? "bg-amber-50 border border-amber-100 text-amber-700"
+                      : "bg-amber-700 text-white"
+                  }`}
                 >
                   {toggling
                     ? activeDefense.sessionActive
@@ -453,30 +727,7 @@ export default function DefenseDayPage() {
         </div>
       )}
 
-      {/* Countdown summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
-          <div className="text-3xl font-bold text-gray-900">2</div>
-          <div className="text-sm text-amber-700 mt-1">Days</div>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
-          <div className="text-3xl font-bold text-gray-900">14</div>
-          <div className="text-sm text-amber-700 mt-1">Hours</div>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
-          <div className="text-3xl font-bold text-gray-900">30</div>
-          <div className="text-sm text-amber-700 mt-1">Minutes</div>
-        </div>
-
-        <div className="bg-amber-50 border border-amber-100 rounded-lg p-6 text-center">
-          <div className="text-3xl font-bold text-gray-900">15</div>
-          <div className="text-sm text-amber-700 mt-1">Seconds</div>
-        </div>
-      </div>
-
-      {/* Secondary controlled tabs: Students, Score Sheet, Assessment */}
+      {/* Secondary controlled tabs */}
       <div className="flex border-b border-gray-200">
         <button
           onClick={() => setActiveTab("students")}
@@ -488,7 +739,6 @@ export default function DefenseDayPage() {
         >
           Students
         </button>
-
         <button
           onClick={() => setActiveTab("scores")}
           className={`px-4 py-2 -mb-px font-medium text-sm ${
@@ -499,7 +749,6 @@ export default function DefenseDayPage() {
         >
           Score Sheet
         </button>
-
         {isHodOrProvost && (
           <button
             onClick={() => setActiveTab("assessment")}
@@ -514,46 +763,47 @@ export default function DefenseDayPage() {
         )}
       </div>
 
-      {/* Panels (only the active tab renders) */}
       <div>
         {activeTab === "students" && (
           <StudentsPanel
-            students={activeDefense.students}
+            students={activeDefense?.students ?? []}
             onOpen={(s) =>
-              setSelectedStudent({ student: s, defenseId: activeDefense.id })
+              setSelectedStudent({
+                student: s,
+                defenseId: activeDefense?.id ?? "",
+              })
             }
           />
         )}
 
         {activeTab === "scores" && (
           <ScoreSheetPanel
-            defense={activeDefense}
-            criteria={criteria}
-            canScore={canScoreOrComment}
+            defense={activeDefense ?? ({} as any)}
+            criteria={activeDefense?.criteria ?? criteria}
+            canScore={isPanel}
             onScoreChange={(studentId, crit, value) =>
-              handleScoreChange(activeDefense.id, studentId, crit, value)
+              handleScoreChange(activeDefense?.id ?? "", studentId, crit, value)
             }
-            onSubmit={() => handleSubmitScores(activeDefense.id)}
+            onSubmit={() => handleSubmitScores(activeDefense?.id ?? "")}
           />
         )}
 
         {activeTab === "assessment" && isHodOrProvost && (
           <AssessmentPanel
-            students={activeDefense.students}
-            criteria={criteria}
+            students={activeDefense?.students ?? []}
+            criteria={activeDefense?.criteria ?? criteria}
             onApprove={(studentId) =>
-              handleApprove(activeDefense.id, studentId)
+              handleApprove(activeDefense?.id ?? "", studentId)
             }
           />
         )}
       </div>
 
-      {/* Student Modal (separate file) */}
       <StudentCommentModal
         openItem={selectedStudent}
         onClose={() => setSelectedStudent(null)}
         onAddComment={handleAddCommentFromModal}
-        canComment={canScoreOrComment}
+        canComment={isPanel}
       />
     </div>
   );

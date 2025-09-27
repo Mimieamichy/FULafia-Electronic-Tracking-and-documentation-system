@@ -98,10 +98,10 @@ export default function StudentsPanel({ students, onOpen }: Props) {
                   </td>
 
                   <td className="p-4 align-top border-b">
-                    <div className="text-sm font-medium text-gray-800">{s.name}</div>
+                    <div className="text-sm font-medium text-gray-800 capitalize">{s.name}</div>
                   </td>
                   <td className="p-4 align-top border-b">
-                    <div className="text-sm font-medium text-gray-800">{s.topic}</div>
+                    <div className="text-sm font-medium text-gray-800 capitalize">{s.topic}</div>
                   </td>
 
 

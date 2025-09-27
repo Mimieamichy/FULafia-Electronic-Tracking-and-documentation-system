@@ -83,7 +83,7 @@ export default function AssessmentPanel({ students, criteria, onApprove }: Props
                       {s.matNo}
                     </td>
 
-                    <td className="px-6 py-6 align-middle border-b border-amber-50 text-sm text-gray-800">
+                    <td className="px-6 py-6 align-middle border-b border-amber-50 text-sm text-gray-800 capitalize">
                       {s.name}
                     </td>
 
