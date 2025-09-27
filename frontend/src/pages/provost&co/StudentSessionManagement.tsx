@@ -338,6 +338,7 @@ const StudentSessionManagement = () => {
 
         const json = await res.json();
         if (cancelled) return;
+console.log("Fetched students:", json);
 
         const dataArr = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
         setStudents(dataArr);

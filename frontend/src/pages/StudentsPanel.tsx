@@ -87,7 +87,7 @@ export default function StudentsPanel({ students, onOpen }: Props) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-6 text-center text-sm text-gray-500">
-                  No students found.
+                  No Defense Scheduled.
                 </td>
               </tr>
             ) : (

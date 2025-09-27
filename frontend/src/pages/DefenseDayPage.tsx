@@ -505,11 +505,7 @@ export default function DefenseDayPage() {
     if (!def) return;
     const currentlyActive = !!def.sessionActive;
     if (currentlyActive) {
-      
-      const ok = toast({
-        title: "Confirm End Session",
-        description: "Are you sure you want to end this defense session?",
-      });
+      const ok = confirm("Are you sure you want to end this defense session?");
       if (!ok) return;
     }
     if (toggling) return;
@@ -804,6 +800,9 @@ export default function DefenseDayPage() {
         onClose={() => setSelectedStudent(null)}
         onAddComment={handleAddCommentFromModal}
         canComment={isPanel}
+        baseUrl={baseUrl}
+          token={token}
+
       />
     </div>
   );
