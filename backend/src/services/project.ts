@@ -274,29 +274,37 @@ export default class ProjectService {
   }
 
   static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string){
+  const trimmedDefenceId = defenceId.trim();
+  const trimmedStudentId = studentId.trim();
+  const trimmedAuthorId = authorId.trim();
+
   const defenceComment = await DefenceComment.findOne({
-    defence: new Types.ObjectId(defenceId),
-    student: new Types.ObjectId(studentId),
+    defence: trimmedDefenceId,
+    student: trimmedStudentId,
   })
   .populate('comments.author', 'firstName lastName email');
 
+  console.log('defenceComment', defenceComment)
+
   if (!defenceComment) {
+    console.log("No comments found")
     return [];
   }
 
   // Filter comments by the specific author
   const userComments = defenceComment.comments.filter(comment => 
-    comment.author._id.toString() === authorId.toString()
+    comment.author._id.toString() === trimmedAuthorId.toString()
   );
 
+  console.log('comments', userComments)
   return userComments;
 }
 
 
-static async getCommentsForStudent(defenceId: string, studentId: string): Promise<IDefenceComment | null> {
+static async getCommentsForStudent(defenceId: string, studentId: string) {
   const defenceComment = await DefenceComment.findOne({
-    defence: new Types.ObjectId(defenceId),
-    student: new Types.ObjectId(studentId),
+    defence: defenceId,
+    student: studentId,
   })
   .populate('comments.author', 'firstName lastName email') // Populate author details 
 

@@ -174,76 +174,83 @@ export default class DefenceService {
   * Get associated student details (and projects)
   * Ensure the requesting panel member is authorized
   */
-  
   static async getDefenceDetails(defenceId: string, panelMemberId: string) {
-    const lecturer = await Lecturer.findOne({ user: panelMemberId });
-    if (!lecturer) throw new Error("Lecturer profile not found");
+  const lecturer = await Lecturer.findOne({ user: panelMemberId });
+  if (!lecturer) throw new Error("Lecturer profile not found");
+  const lecturerId = (lecturer._id as Types.ObjectId).toString();
 
-    const lecturerId = (lecturer._id as Types.ObjectId).toString();
-    
-    const defence = await Defence.findById(defenceId)
-      .populate({
-        path: "students",
-        populate: { path: "user", select: "firstName lastName email" }
-      })
-      .lean();
-
-    if (!defence) throw new Error("Defence not found");
-
-    // Check panel member authorization
-    if (!defence.panelMembers.some((member: any) => member.toString() === lecturerId)) {
-        throw new Error("You are not authorized to view this defence");
-    }
-
-    // Fetch projects and populate student data
-    const projects = await Project.find({
-        student: { $in: defence.students.map((s: any) => s._id) }
-    })
+  // load defence and populate students.user
+  const defence = await Defence.findById(defenceId)
     .populate({
-        path: 'student',
-        populate: { path: 'user', select: 'firstName lastName email' }
+      path: "students",
+      populate: { path: "user", select: "firstName lastName email" }
     })
     .lean();
 
-    const scoreSheet = await ScoreSheet.findOne({
-        department: defence.department
-    }).lean();
+  if (!defence) throw new Error("Defence not found");
 
-    // Create a map of studentId -> project for easy lookup
-    const projectMap = new Map();
-    projects.forEach(project => {
-        projectMap.set(project.student._id.toString(), project);
-    });
+  // authorization
+  if (!defence.panelMembers.some((m: any) => m.toString() === lecturerId)) {
+    throw new Error("You are not authorized to view this defence");
+  }
 
-    // Combine data
-    const combinedData = {
-        defence: {
-            _id: defence._id,
-            stage: defence.stage,
-            program: defence.program,
-            department: defence.department,
-            date: defence.date,
-            time: defence.time,
-            started: defence.started,
-            ended: defence.ended
-        },
-        students: defence.students.map((student: any) => {
-            const project = projectMap.get(student._id.toString());
-            const latestVersion = project?.versions?.[project.versions.length - 1];
+  // student IDs (canonical order)
+  const studentIds = (defence.students || []).map((s: any) => s._id.toString());
 
-            return {
-                // Student info
-                ...student,
-                // Project info merged
-                projectTopic: latestVersion?.topic || student.projectTopic,
-                latestFile: latestVersion?.fileUrl || null,
-            };
-        }),
-        criteria: scoreSheet?.criteria || []
+  // load projects for students in this defence
+  const projects = await Project.find({
+    student: { $in: studentIds }
+  })
+    .populate({
+      path: "student",
+      populate: { path: "user", select: "firstName lastName email" }
+    })
+    .lean();
+
+  // map studentId -> project
+  const projectMap = new Map<string, any>();
+  for (const proj of projects) {
+    const sid = proj.student && proj.student._id ? proj.student._id.toString() : String(proj.student);
+    projectMap.set(sid, proj);
+  }
+
+  // load scoresheet criteria for this defence's department (optional)
+  const scoreSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
+  const criteria = scoreSheet?.criteria || [];
+
+  // build students array with only requested fields
+  const students = (defence.students || []).map((student: any) => {
+    const sid = student._id.toString();
+    const project = projectMap.get(sid);
+    const latestVersion = project?.versions?.length ? project.versions[project.versions.length - 1] : null;
+
+    return {
+      id: sid,
+      name: student.user ? `${student.user.firstName} ${student.user.lastName}` : (student.name || ""),
+      matNo: student.matricNo || student.matNo || "",
+      topic: student.projectTopic || latestVersion?.topic || "",
+      fileUrl: latestVersion?.fileUrl || student.latestFile || "",
+      currentStage: student.currentStage || "",
+      approved: !!student.approved
     };
+  });
 
-    return combinedData;
+  const combinedData = {
+    id: defence._id.toString(),
+    stage: defence.stage,
+    program: defence.program,
+    department: defence.department,
+    date: defence.date,
+    time: defence.time,
+    started: defence.started,
+    ended: defence.ended,
+    students,
+    criteria
+  };
+
+  return combinedData;
 }
+
 
   /**
    * Panel member submits score for a student
