@@ -1,4 +1,4 @@
-import { Project, Student,Session } from '../models/index';
+import { Project, Student,Session, DefenceComment, IDefenceComment } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
@@ -79,7 +79,7 @@ export default class ProjectService {
     });
 
     return await project.save();
-  }
+  } 
 
   static async getComments(studentId: string, versionNumber: number) {
     const project = await Project.findOne({ student: studentId }).populate(
@@ -245,7 +245,33 @@ export default class ProjectService {
         fileUrl: latestVersion.fileUrl,
         topic: latestVersion.topic, 
         }
+  }
+
+
+  // Add a comment on defnce day
+  static async commentOnDefenceDay(defenceId: string, studentId: string, authorId: string, text: string): Promise<IDefenceComment> {
+    
+    let defenceComment = await DefenceComment.findOne({
+      defenceId: new Types.ObjectId(defenceId),
+      studentId: new Types.ObjectId(studentId),
+    });
+
+    if (!defenceComment) {
+      defenceComment = new DefenceComment({
+        defenceId,
+        studentId,
+        comments: [],
+      });
     }
+
+    defenceComment.comments.push({
+      author: new Types.ObjectId(authorId),
+      text,
+      createdAt: new Date(),
+    });
+
+    return await defenceComment.save();
+  }
 
 
 }

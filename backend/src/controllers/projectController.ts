@@ -45,7 +45,7 @@ export default class ProjectController {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to comment on project', message: err.message });
     }
-  }
+  } 
 
   static async viewComments(req: Request, res: Response) {
     try {
@@ -140,5 +140,24 @@ export default class ProjectController {
     }
   }
 
+  static async commentOnDefenceDay(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { studentId, defenceId } = req.params;
+      const { text } = req.body;
+      const author = req.user?.id || ''
+
+      const comments = await ProjectService.commentOnDefenceDay(
+        studentId,
+        defenceId,
+        author,
+        text
+      );
+
+      res.status(200).json({ success: true, message: 'Comment added', data: comments });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to comment on project on defence day', message: err.message });
+    }
+  } 
 
 }

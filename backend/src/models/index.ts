@@ -49,3 +49,7 @@ export type { IFaculty } from './faculty';
 // Department
 export { default as Department } from './department';
 export type { IDepartment } from './department';
+
+// Defence Comments
+export { default as DefenceComment } from './defenceComments';
+export type { IDefenceComment } from './defenceComments';
