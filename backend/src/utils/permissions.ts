@@ -230,6 +230,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GET_ALL_FACULTY_DEPT,
     Permission.GET_ALL_DEPARTMENTS,
     Permission.VIEW_FACULTY_REP,
+    Permission.APPROVE_DEFENSE,
+    Permission.START_DEFENSE,
+    Permission.END_DEFENSE,
   ],
   [Role.EXTERNAL_EXAMINER]: [
     Permission.APPROVE_LAST_DEFENSE,

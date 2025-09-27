@@ -326,73 +326,82 @@ export default class DefenceService {
    * Notifies students that scores are available
    */
   static async endDefence(defenceId: string) {
-    const defence = await Defence.findById(defenceId);
-    if (!defence) throw new Error("Defence not found");
-    if (!defence.started) throw new Error("Defence has not started");
-    if (defence.ended) throw new Error("Defence already ended");
+  const defence = await Defence.findById(defenceId);
+  if (!defence) throw new Error("Defence not found");
+  if (!defence.started) throw new Error("Defence has not started");
+  if (defence.ended) throw new Error("Defence already ended");
 
-    const sheet = await ScoreSheet.findOne({ defence: defenceId });
-    if (!sheet) throw new Error("ScoreSheet not found");
+  const sheet = await ScoreSheet.findOne({ defence: defenceId });
+  if (!sheet) throw new Error("ScoreSheet not found");
 
-    // === Compute averages ===
-    const studentScores: Record<string, number[]> = {};
+  // === Compute weighted scores per student ===
+  const studentScores: Record<string, number[]> = {};
 
-    for (const entry of sheet.entries) {
-      const weightedTotal = entry.scores.reduce((sum, s) => {
-        const crit = sheet.criteria.find((c) => c.name === s.criterion);
-        if (!crit) return sum;
-        return sum + (s.score * crit.weight) / 100;
-      }, 0);
+  for (const entry of sheet.entries) {
+    const weightedTotal = entry.scores.reduce((sum, s) => {
+      const crit = sheet.criteria.find((c) => c.name === s.criterion);
+      if (!crit) return sum;
+      return sum + (s.score * crit.weight) / 100;
+    }, 0);
 
-      if (!studentScores[entry.student.toString()]) {
-        studentScores[entry.student.toString()] = [];
-      }
-      studentScores[entry.student.toString()].push(weightedTotal);
+    if (!studentScores[entry.student.toString()]) {
+      studentScores[entry.student.toString()] = [];
     }
-
-    // === Stage → IStageScores key map ===
-    const MSC_STAGE_MAP: Record<string, keyof IStageScores> = {
-      [STAGES.MSC.PROPOSAL]: "proposalScore",
-      [STAGES.MSC.INTERNAL]: "internalScore",
-      [STAGES.MSC.EXTERNAL]: "externalScore",
-    };
-
-    const PHD_STAGE_MAP: Record<string, keyof IStageScores> = {
-      [STAGES.PHD.PROPOSAL_DEFENSE]: "firstSeminarScore",
-      [STAGES.PHD.SECOND_SEMINAR]: "secondSeminarScore",
-      [STAGES.PHD.INTERNAL_DEFENSE]: "thirdSeminarScore",
-      [STAGES.PHD.EXTERNAL_SEMINAR]: "externalDefenseScore",
-    };
-
-    // === Update student.stageScores ===
-    for (const [studentId, arr] of Object.entries(studentScores)) {
-      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
-
-      const student = await Student.findById(studentId);
-      if (!student) continue;
-
-      let key: keyof IStageScores;
-
-      if (defence.program === "MSC") {
-        key = MSC_STAGE_MAP[defence.stage];
-        if (!key) throw new Error(`Unknown MSC defence stage: ${defence.stage}`);
-      } else if (defence.program === "PHD") {
-        key = PHD_STAGE_MAP[defence.stage];
-        if (!key) throw new Error(`Unknown PHD defence stage: ${defence.stage}`);
-      } else {
-        throw new Error(`Unknown program: ${defence.program}`);
-      }
-
-      student.stageScores[key] = avg;
-      await student.save();
-    }
-
-    // === Mark defence as ended ===
-    defence.ended = true;
-    await defence.save();
-
-    return defence
+    studentScores[entry.student.toString()].push(weightedTotal);
   }
+
+  // === Stage → IStageScores key map ===
+  const MSC_STAGE_MAP: Record<string, keyof IStageScores> = {
+    [STAGES.MSC.PROPOSAL]: "proposalScore",
+    [STAGES.MSC.INTERNAL]: "internalScore",
+    [STAGES.MSC.EXTERNAL]: "externalScore",
+  };
+
+  const PHD_STAGE_MAP: Record<string, keyof IStageScores> = {
+    [STAGES.PHD.PROPOSAL_DEFENSE]: "firstSeminarScore",
+    [STAGES.PHD.SECOND_SEMINAR]: "secondSeminarScore",
+    [STAGES.PHD.INTERNAL_DEFENSE]: "thirdSeminarScore",
+    [STAGES.PHD.EXTERNAL_SEMINAR]: "externalDefenseScore",
+  };
+
+  // === Update student.stageScores ===
+  for (const studentId of defence.students) {
+    const scores = studentScores[studentId.toString()] || [];
+    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+    const student = await Student.findById(studentId);
+    if (!student) continue;
+
+    let key: keyof IStageScores;
+
+    if (defence.program === "MSC") {
+      key = MSC_STAGE_MAP[defence.stage];
+      if (!key) throw new Error(`Unknown MSC defence stage: ${defence.stage}`);
+    } else if (defence.program === "PHD") {
+      key = PHD_STAGE_MAP[defence.stage];
+      if (!key) throw new Error(`Unknown PHD defence stage: ${defence.stage}`);
+    } else {
+      throw new Error(`Unknown program: ${defence.program}`);
+    }
+
+    student.stageScores[key] = avg;
+    await student.save();
+
+    // === Notify student ===
+    const message = `Your defence for stage ${defence.stage} has ended. Check your Dashboard for panel Members comments.`;
+    await NotificationService.createNotifications({
+      studentIds: [studentId],
+      role: "student",
+      message,
+    });
+  }
+
+  // === Mark defence as ended ===
+  defence.ended = true;
+  await defence.save();
+
+  return defence;
+}
 
   /**Finds students and move student to next stage in the proram type  */
   static async approveStudentDefence(studentId: string) {
@@ -456,25 +465,63 @@ export default class DefenceService {
 
   /**Rejects a student’s defence and keeps them in the same stage */
   static async rejectStudentDefence(studentId: string) {
-    const student = await Student.findById(studentId);
-    if (!student) throw new Error("Student not found");
+  const student = await Student.findById(studentId);
+  if (!student) throw new Error("Student not found");
 
-    const defence = await Defence.findOne({ students: studentId, ended: true });
-    if (!defence) throw new Error("No ended defence found for this student");
+  const defence = await Defence.findOne({ students: studentId, ended: true });
+  if (!defence) throw new Error("No ended defence found for this student");
 
-    const message = `Your project was not approved, you need to rejoin defence for ${student.currentStage}.`;
-
-    await NotificationService.createNotifications({
-      studentIds: [studentId],
-      role: "student",
-      message,
-    });
-
-
-    return { student, defence };
+  // set score for the current stage = 0
+  if (student.level === "msc") {
+    switch (defence.stage) {
+      case STAGES.MSC.PROPOSAL:
+        student.stageScores.proposalScore = 0;
+        break;
+      case STAGES.MSC.INTERNAL:
+        student.stageScores.internalScore = 0;
+        break;
+      case STAGES.MSC.EXTERNAL:
+        student.stageScores.externalScore = 0;
+        break;
+      default:
+        throw new Error(`Invalid MSc stage: ${defence.stage}`);
+    }
+  } else if (student.level === "phd") {
+    switch (defence.stage) {
+      case STAGES.PHD.PROPOSAL_DEFENSE:
+        student.stageScores.firstSeminarScore = 0;
+        break;
+      case STAGES.PHD.SECOND_SEMINAR:
+        student.stageScores.secondSeminarScore = 0;
+        break;
+      case STAGES.PHD.INTERNAL_DEFENSE:
+        student.stageScores.thirdSeminarScore = 0;
+        break;
+      case STAGES.PHD.EXTERNAL_SEMINAR:
+        student.stageScores.externalDefenseScore = 0;
+        break;
+      default:
+        throw new Error(`Invalid PhD stage: ${defence.stage}`);
+    }
   }
 
+  await student.save();
 
+  // notify student
+  const message = `Your project was not approved, you need to rejoin defence for ${student.currentStage}.`;
+
+  await NotificationService.createNotifications({
+    studentIds: [studentId],
+    role: "student",
+    message,
+  });
+
+  return { student, defence };
+}
+
+
+
+  /**Get all the active defences for a panel member */
   static async getDefenceForPanelMember(program: string, userId: string) {
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer) throw new Error("Lecturer profile not found");

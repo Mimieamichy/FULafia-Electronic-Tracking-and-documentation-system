@@ -51,7 +51,8 @@ export default class DefenceController {
   /** Submit score for a student by a panel member */
   static async submitScore(req: Request, res: Response) {
     try {
-      const { defenceId, studentId, panelMemberId, scores } = req.body;
+      const { studentId, panelMemberId, scores } = req.body;
+      const { defenceId } = req.params;
       const sheet = await DefenceService.submitScore(
         defenceId,
         panelMemberId,
@@ -82,7 +83,7 @@ export default class DefenceController {
   }
 
 
-  /** Approve defence for each student */
+  /** Approve defence for a student */
   static async approveStudentDefence(req: Request, res: Response) {
     try {
       const { studentId } = req.params;
@@ -90,6 +91,18 @@ export default class DefenceController {
       res.json({ success: true, data: student });
     } catch (err: any) {
       res.status(400).json({success: false, error: 'Failed to approve defence for student', message: err.message});
+    }
+  }
+
+
+  /** Reject defence for a student */
+  static async rejectStudentDefence(req: Request, res: Response) {
+    try {
+      const { studentId } = req.params;
+      const student = await DefenceService.rejectStudentDefence(studentId);
+      res.json({ success: true, data: student });
+    } catch (err: any) {
+      res.status(400).json({success: false, error: 'Failed to reject defence for student', message: err.message});
     }
   }
 
