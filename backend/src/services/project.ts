@@ -278,7 +278,7 @@ export default class ProjectService {
     defence: new Types.ObjectId(defenceId),
     student: new Types.ObjectId(studentId),
   })
-  .populate('comments.author', 'firstName lastName email roles');
+  .populate('comments.author', 'firstName lastName email');
 
   if (!defenceComment) {
     return [];
@@ -298,7 +298,7 @@ static async getCommentsForStudent(defenceId: string, studentId: string): Promis
     defence: new Types.ObjectId(defenceId),
     student: new Types.ObjectId(studentId),
   })
-  .populate('comments.author', 'firstName lastName email roles') // Populate author details 
+  .populate('comments.author', 'firstName lastName email') // Populate author details 
 
   return defenceComment;
 }
