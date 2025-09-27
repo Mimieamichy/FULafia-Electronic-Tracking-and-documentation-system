@@ -14,6 +14,7 @@ export interface ICriterionScore {
 export interface IScoreEntry {
   student: mongoose.Types.ObjectId;
   panelMember: mongoose.Types.ObjectId;
+  defence: mongoose.Types.ObjectId;
   scores: ICriterionScore[];
 }
 
@@ -22,7 +23,6 @@ export interface IScoreEntry {
  * Holds criteria definitions and panel scoring entries.
  */
 export interface IScoreSheet extends Document {
-  defence: { type: Schema.Types.ObjectId; ref: 'Defence'; required: false; unique: true };
   department: { type: string; required: true; unique: true };
 
   criteria: {
@@ -54,6 +54,7 @@ const scoreEntrySchema = new Schema<IScoreEntry>(
   {
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
     panelMember: { type: Schema.Types.ObjectId, ref: 'Lecturer', required: true },
+    defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: true },
     scores: {
       type: [criterionScoreSchema],
       validate: {
@@ -70,7 +71,6 @@ const scoreEntrySchema = new Schema<IScoreEntry>(
 
 const scoreSheetSchema = new Schema<IScoreSheet>(
   {
-    defence: { type: Schema.Types.ObjectId, ref: 'Defence', required: false, unique: true },
     department: { type: String, required: true, unique: true },
     criteria: {
       type: [criterionSchema],

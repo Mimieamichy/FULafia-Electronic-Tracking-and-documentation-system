@@ -261,8 +261,10 @@ export default class DefenceService {
     studentId: string,
     scores: { criterion: string; score: number }[]
   ) {
+
+    const department = await Defence.findById(defenceId).then(d => d?.department);
     // Load the score sheet for this defence
-    const scoreSheet = await ScoreSheet.findOne({ defence: defenceId });
+    const scoreSheet = await ScoreSheet.findOne({department});
     if (!scoreSheet) throw new Error('ScoreSheet not found for this defence');
 
     // Basic payload checks
@@ -319,6 +321,7 @@ export default class DefenceService {
     scoreSheet.entries.push({
       student: new Types.ObjectId(studentId),
       panelMember: new Types.ObjectId(panelMemberId),
+      defence: new Types.ObjectId(defenceId),
       scores,
     });
 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import DefenceService from '../services/defence';
+import department from 'src/models/department';
 
 
 
@@ -56,7 +57,7 @@ export default class DefenceController {
       const sheet = await DefenceService.submitScore(
         defenceId,
         panelMemberId,
-        studentId,
+        studentId,4
         scores
       );
       res.json({ success: true, data: sheet });
