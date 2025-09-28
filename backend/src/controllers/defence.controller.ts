@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import DefenceService from '../services/defence';
-import department from 'src/models/department';
-
 
 
 export interface AuthenticatedRequest extends Request {

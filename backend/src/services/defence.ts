@@ -210,30 +210,53 @@ export default class DefenceService {
   // map studentId -> project
   const projectMap = new Map<string, any>();
   for (const proj of projects) {
-    const sid = proj.student && proj.student._id ? proj.student._id.toString() : String(proj.student);
-    projectMap.set(sid, proj);
+  const sid = proj.student && proj.student._id ? proj.student._id.toString() : String(proj.student);
+  projectMap.set(sid, proj);
+}
+
+// load scoresheet criteria for this defence's department (optional)
+const scoreSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
+const criteria = scoreSheet?.criteria || [];
+
+// build students array with only requested fields
+const students = (defence.students || []).map((student: any) => {
+  const sid = student._id.toString();
+  const project = projectMap.get(sid);
+  const latestVersion = project?.versions?.length ? project.versions[project.versions.length - 1] : null;
+
+  // Determine which scores to include based on student level
+  const isPhD = student.level === 'phd';
+  
+  const studentData = {
+    id: sid,
+    name: student.user ? `${student.user.firstName} ${student.user.lastName}` : (student.name || ""),
+    matNo: student.matricNo || student.matNo || "",
+    topic: student.projectTopic || latestVersion?.topic || "",
+    fileUrl: latestVersion?.fileUrl || student.latestFile || "",
+    currentStage: student.currentStage || "",
+    approved: !!student.approved,
+    level: student.level,
+    stageScores: {}
+  };
+
+  // Add relevant stage scores based on program
+  if (isPhD) {
+    studentData.stageScores = {
+      firstSeminarScore: student.stageScores?.firstSeminarScore || 0,
+      secondSeminarScore: student.stageScores?.secondSeminarScore || 0,
+      thirdSeminarScore: student.stageScores?.thirdSeminarScore || 0,
+      externalDefenseScore: student.stageScores?.externalDefenseScore || 0
+    };
+  } else {
+    studentData.stageScores = {
+      proposalScore: student.stageScores?.proposalScore || 0,
+      internalScore: student.stageScores?.internalScore || 0,
+      externalScore: student.stageScores?.externalScore || 0
+    };
   }
 
-  // load scoresheet criteria for this defence's department (optional)
-  const scoreSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
-  const criteria = scoreSheet?.criteria || [];
-
-  // build students array with only requested fields
-  const students = (defence.students || []).map((student: any) => {
-    const sid = student._id.toString();
-    const project = projectMap.get(sid);
-    const latestVersion = project?.versions?.length ? project.versions[project.versions.length - 1] : null;
-
-    return {
-      id: sid,
-      name: student.user ? `${student.user.firstName} ${student.user.lastName}` : (student.name || ""),
-      matNo: student.matricNo || student.matNo || "",
-      topic: student.projectTopic || latestVersion?.topic || "",
-      fileUrl: latestVersion?.fileUrl || student.latestFile || "",
-      currentStage: student.currentStage || "",
-      approved: !!student.approved
-    };
-  });
+  return studentData;
+});
 
   const combinedData = {
     id: defence._id.toString(),
