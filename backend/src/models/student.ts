@@ -26,6 +26,7 @@ export interface IStudent extends Document {
   internalExaminer?: mongoose.Types.ObjectId;
   collegeRep?: mongoose.Types.ObjectId;
   projectTopic?: string;
+  approved?: boolean;
   stageScores: IStageScores;
   createdAt?: Date;
   updatedAt?: Date;
@@ -62,6 +63,7 @@ const studentSchema = new Schema<IStudent>(
     internalExaminer: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     collegeRep: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     projectTopic: { type: String, default: '' },
+    approved: { type: Boolean, default: false },
     stageScores: { type: stageScoresSchema, default: () => ({}) },
   },
   { timestamps: true }

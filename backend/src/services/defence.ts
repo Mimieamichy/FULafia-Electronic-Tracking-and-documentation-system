@@ -143,8 +143,6 @@ export default class DefenceService {
   }
 
 
-
-
   /**
    * Marks defence as started
    * Notifies panel members and supervisors
@@ -467,12 +465,15 @@ const students = (defence.students || []).map((student: any) => {
       switch (stage) {
         case STAGES.MSC.PROPOSAL:
           student.currentStage = STAGES.MSC.INTERNAL;
+          student.approved = true;
           break;
         case STAGES.MSC.INTERNAL:
           student.currentStage = STAGES.MSC.EXTERNAL;
+          student.approved = true;
           break;
         case STAGES.MSC.EXTERNAL:
           student.currentStage = STAGES.MSC.COMPLETED;
+          student.approved = true;
           break;
         default:
           throw new Error(`Invalid stage for MSC student: ${stage}`);
@@ -481,15 +482,19 @@ const students = (defence.students || []).map((student: any) => {
       switch (stage) {
         case STAGES.PHD.PROPOSAL_DEFENSE:
           student.currentStage = STAGES.PHD.SECOND_SEMINAR;
+          student.approved = true;
           break;
         case STAGES.PHD.SECOND_SEMINAR:
           student.currentStage = STAGES.PHD.INTERNAL_DEFENSE;
+          student.approved = true;
           break;
         case STAGES.PHD.INTERNAL_DEFENSE:
           student.currentStage = STAGES.PHD.EXTERNAL_SEMINAR;
+          student.approved = true;
           break;
         case STAGES.PHD.EXTERNAL_SEMINAR:
           student.currentStage = STAGES.PHD.COMPLETED;
+          student.approved = true;
           break;
         default:
           throw new Error(`Invalid stage for PHD student: ${stage}`);
