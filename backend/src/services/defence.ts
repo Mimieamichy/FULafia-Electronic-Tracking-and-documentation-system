@@ -341,23 +341,39 @@ export default class DefenceService {
   if (!defence.started) throw new Error("Defence has not started");
   if (defence.ended) throw new Error("Defence already ended");
 
-  const sheet = await ScoreSheet.findOne({ defence: defenceId });
-  if (!sheet) throw new Error("ScoreSheet not found");
+  // Find score sheet by department and filter entries by defenceId
+  const sheet = await ScoreSheet.findOne({ department: defence.department });
+  if (!sheet) throw new Error("ScoreSheet not found for this department");
 
-  // === Compute weighted scores per student ===
-  const studentScores: Record<string, number[]> = {};
+  // Filter entries for this specific defence
+  const defenceEntries = sheet.entries.filter(entry => 
+    entry.defence.toString() === defenceId
+  );
 
-  for (const entry of sheet.entries) {
-    const weightedTotal = entry.scores.reduce((sum, s) => {
-      const crit = sheet.criteria.find((c) => c.name === s.criterion);
-      if (!crit) return sum;
-      return sum + (s.score * crit.weight) / 100;
-    }, 0);
+  if (defenceEntries.length === 0) {
+    throw new Error("No score entries found for this defence");
+  }
 
-    if (!studentScores[entry.student.toString()]) {
-      studentScores[entry.student.toString()] = [];
+  // === Compute total scores per student from all panel members ===
+  const studentTotalScores: Record<string, number[]> = {};
+
+  for (const entry of defenceEntries) {
+    // Calculate total score for this entry (sum of all criteria scores)
+    const totalScore = entry.scores.reduce((sum, s) => sum + s.score, 0);
+    
+    const studentId = entry.student.toString();
+    if (!studentTotalScores[studentId]) {
+      studentTotalScores[studentId] = [];
     }
-    studentScores[entry.student.toString()].push(weightedTotal);
+    studentTotalScores[studentId].push(totalScore);
+  }
+
+  // === Calculate average total score for each student ===
+  const studentAverages: Record<string, number> = {};
+  
+  for (const [studentId, totalScores] of Object.entries(studentTotalScores)) {
+    const average = totalScores.reduce((sum, score) => sum + score, 0) / totalScores.length;
+    studentAverages[studentId] = average;
   }
 
   // === Stage → IStageScores key map ===
@@ -376,8 +392,8 @@ export default class DefenceService {
 
   // === Update student.stageScores ===
   for (const studentId of defence.students) {
-    const scores = studentScores[studentId.toString()] || [];
-    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const studentIdStr = studentId.toString();
+    const averageScore = studentAverages[studentIdStr] || 0;
 
     const student = await Student.findById(studentId);
     if (!student) continue;
@@ -394,11 +410,11 @@ export default class DefenceService {
       throw new Error(`Unknown program: ${defence.program}`);
     }
 
-    student.stageScores[key] = avg;
+    student.stageScores[key] = averageScore;
     await student.save();
 
     // === Notify student ===
-    const message = `Your defence for stage ${defence.stage} has ended. Check your Dashboard for panel Members comments.`;
+    const message = `Your defence for stage ${defence.stage} has ended. Your average score: ${averageScore.toFixed(2)}. Check your Dashboard for panel members comments.`;
     await NotificationService.createNotifications({
       studentIds: [studentId],
       role: "student",
