@@ -101,8 +101,8 @@ export default class LecturerController {
 
   static async addExternalExaminer(req: AuthenticatedRequest, res: Response) {
     try {
-      const { email, title, firstName, lastName, role } = req.body;
-      const external_examiner = await LecturerService.addExternalExaminer({ email, title, firstName, lastName, role });
+      const { email, title, firstName, lastName, department, role } = req.body;
+      const external_examiner = await LecturerService.addExternalExaminer({ email, title, firstName, lastName, department, role });
       res.json({ success: true, data: external_examiner });
     } catch (err: any) {
       console.log('Error adding external_examiner:', err);
@@ -157,13 +157,16 @@ export default class LecturerController {
 
   static async getExternlExaminer(req: Request, res: Response) {
     try {
-      const external_examiner = await LecturerService.getExternalExaminer();
+       const { department } = req.query;
+      const external_examiner = await LecturerService.getExternalExaminer( department as string | undefined);
       res.json({ success: true, data: external_examiner });
     } catch (err: any) {
       console.log(err);
       res.status(400).json({ success: false, error: 'Failed to get External Examiner', message: err.message });
     }
   }
+
+
 
 
   static async getCollegeReps(req: AuthenticatedRequest, res: Response) {

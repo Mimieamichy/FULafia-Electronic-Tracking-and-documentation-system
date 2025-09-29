@@ -257,9 +257,9 @@ export default class LecturerService {
         title: string;
         firstName: string;
         lastName: string;
+        department: string;
         role: string;
     }) {
-
 
         const roles = [Role.EXTERNAL_EXAMINER, Role.GENERAL, Role.PANEL_MEMBER];
 
@@ -275,7 +275,7 @@ export default class LecturerService {
 
         return await Lecturer.create({
             user: user._id,
-            department: 'none',
+            department: data.department,
             faculty: 'none',
             staffId: 'none',
         });
@@ -308,15 +308,22 @@ export default class LecturerService {
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
 
-    static async getExternalExaminer() {
-        return Lecturer.find()
-            .populate({
-                path: 'user',
-                match: { roles: 'external_examiner' }, // filters users whose roles include 'provost'
-            })
-            .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
+   static async getExternalExaminer(department?: string) {
+    const query: any = {};
+    if (department) {
+        query.department = department; 
     }
 
+    return Lecturer.find(query)
+        .populate({
+            path: 'user',
+            match: { roles: 'external_examiner' },
+        })
+        .then(lecturers => lecturers.filter(l => l.user)); // keep only those with a matched user
+}
+
+
+    
     static async getLecturerByDepartment(userId: string) {
         const currentLecturer = await Lecturer.findOne({ user: userId });
         if (!currentLecturer || !currentLecturer.department) {

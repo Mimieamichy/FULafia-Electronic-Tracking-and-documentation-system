@@ -26,7 +26,7 @@ export default class DefenceController {
       const defence = await DefenceService.scheduleDefence(req.body);
       res.json({ success: true, data: defence });
     } catch (err: any) {
-      res.status(400).json({success: false,error: 'Failed to schedule defence',message: err.message});
+      res.status(400).json({ success: false, error: 'Failed to schedule defence', message: err.message });
     }
   }
 
@@ -77,7 +77,7 @@ export default class DefenceController {
       const defence = await DefenceService.endDefence(defenceId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
-      res.status(400).json({success: false, error: 'Failed to end defence', message: err.message});
+      res.status(400).json({ success: false, error: 'Failed to end defence', message: err.message });
     }
   }
 
@@ -89,7 +89,7 @@ export default class DefenceController {
       const student = await DefenceService.approveStudentDefence(studentId);
       res.json({ success: true, data: student });
     } catch (err: any) {
-      res.status(400).json({success: false, error: 'Failed to approve defence for student', message: err.message});
+      res.status(400).json({ success: false, error: 'Failed to approve defence for student', message: err.message });
     }
   }
 
@@ -101,7 +101,7 @@ export default class DefenceController {
       const student = await DefenceService.rejectStudentDefence(studentId);
       res.json({ success: true, data: student });
     } catch (err: any) {
-      res.status(400).json({success: false, error: 'Failed to reject defence for student', message: err.message});
+      res.status(400).json({ success: false, error: 'Failed to reject defence for student', message: err.message });
     }
   }
 
@@ -113,7 +113,7 @@ export default class DefenceController {
       const defence = await DefenceService.getDefenceDetails(defenceId, panelMemberId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
-      res.status(400).json({success: false,error: 'Failed to get defence details',message: err.message});
+      res.status(400).json({ success: false, error: 'Failed to get defence details', message: err.message });
     }
   }
 
@@ -121,12 +121,12 @@ export default class DefenceController {
   static async getDefenceForPanelMember(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
-      const {level} = req.params
+      const { level } = req.params
       const defence = await DefenceService.getDefenceForPanelMember(level, userId);
       res.json({ success: true, data: defence });
     } catch (err: any) {
       console.log(err)
-      res.status(400).json({success: false,error: 'Failed to get most recent defence',message: err.message});
+      res.status(400).json({ success: false, error: 'Failed to get most recent defence', message: err.message });
     }
   }
 }

@@ -8,14 +8,6 @@ import { Role } from '../utils/permissions';
 
 export default class DefenceService {
 
-  static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
-  const activeDefences = await Defence.find({
-    panelMembers: lecturerId,
-    ended: false
-  });
-
-  return activeDefences.length > 0;
-}
   /** Get all defences with student details
   */
   static async getAllDefenses() {
@@ -365,125 +357,125 @@ export default class DefenceService {
    * Notifies students that scores are available
    */
   static async endDefence(defenceId: string) {
-  const defence = await Defence.findById(defenceId);
-  if (!defence) throw new Error("Defence not found");
-  if (!defence.started) throw new Error("Defence has not started");
-  if (defence.ended) throw new Error("Defence already ended");
+    const defence = await Defence.findById(defenceId);
+    if (!defence) throw new Error("Defence not found");
+    if (!defence.started) throw new Error("Defence has not started");
+    if (defence.ended) throw new Error("Defence already ended");
 
-  // Find score sheet by department and filter entries by defenceId
-  const sheet = await ScoreSheet.findOne({ department: defence.department });
-  if (!sheet) throw new Error("ScoreSheet not found for this department");
+    // Find score sheet by department and filter entries by defenceId
+    const sheet = await ScoreSheet.findOne({ department: defence.department });
+    if (!sheet) throw new Error("ScoreSheet not found for this department");
 
-  // Filter entries for this specific defence
-  const defenceEntries = sheet.entries.filter(entry =>
-    entry.defence.toString() === defenceId
-  );
+    // Filter entries for this specific defence
+    const defenceEntries = sheet.entries.filter(entry =>
+      entry.defence.toString() === defenceId
+    );
 
-  if (defenceEntries.length === 0) {
-    throw new Error("No score entries found for this defence");
-  }
-
-  // === Compute total scores per student from all panel members ===
-  const studentTotalScores: Record<string, number[]> = {};
-
-  for (const entry of defenceEntries) {
-    // Calculate total score for this entry (sum of all criteria scores)
-    const totalScore = entry.scores.reduce((sum, s) => sum + s.score, 0);
-
-    const studentId = entry.student.toString();
-    if (!studentTotalScores[studentId]) {
-      studentTotalScores[studentId] = [];
-    }
-    studentTotalScores[studentId].push(totalScore);
-  }
-
-  // === Calculate average total score for each student ===
-  const studentAverages: Record<string, number> = {};
-
-  for (const [studentId, totalScores] of Object.entries(studentTotalScores)) {
-    const average = totalScores.reduce((sum, score) => sum + score, 0) / totalScores.length;
-    studentAverages[studentId] = average;
-  }
-
-  // === Stage → IStageScores key map ===
-  const MSC_STAGE_MAP: Record<string, keyof IStageScores> = {
-    [STAGES.MSC.PROPOSAL]: "proposalScore",
-    [STAGES.MSC.INTERNAL]: "internalScore",
-    [STAGES.MSC.EXTERNAL]: "externalScore",
-  };
-
-  const PHD_STAGE_MAP: Record<string, keyof IStageScores> = {
-    [STAGES.PHD.PROPOSAL_DEFENSE]: "firstSeminarScore",
-    [STAGES.PHD.SECOND_SEMINAR]: "secondSeminarScore",
-    [STAGES.PHD.INTERNAL_DEFENSE]: "thirdSeminarScore",
-    [STAGES.PHD.EXTERNAL_SEMINAR]: "externalDefenseScore",
-  };
-
-  // === Update student.stageScores ===
-  for (const studentId of defence.students) {
-    const studentIdStr = studentId.toString();
-    const averageScore = studentAverages[studentIdStr] || 0;
-
-    const student = await Student.findById(studentId);
-    if (!student) continue;
-
-    let key: keyof IStageScores;
-
-    if (defence.program === "MSC") {
-      key = MSC_STAGE_MAP[defence.stage];
-      if (!key) throw new Error(`Unknown MSC defence stage: ${defence.stage}`);
-    } else if (defence.program === "PHD") {
-      key = PHD_STAGE_MAP[defence.stage];
-      if (!key) throw new Error(`Unknown PHD defence stage: ${defence.stage}`);
-    } else {
-      throw new Error(`Unknown program: ${defence.program}`);
+    if (defenceEntries.length === 0) {
+      throw new Error("No score entries found for this defence");
     }
 
-    student.stageScores[key] = averageScore;
-    await student.save();
+    // === Compute total scores per student from all panel members ===
+    const studentTotalScores: Record<string, number[]> = {};
 
-    // === Notify student ===
-    const message = `Your defence for stage ${defence.stage} has ended. Your average score: ${averageScore.toFixed(2)}. Check your Dashboard for panel members comments.`;
-    await NotificationService.createNotifications({
-      studentIds: [studentId],
-      role: "student",
-      message,
-    });
-  }
+    for (const entry of defenceEntries) {
+      // Calculate total score for this entry (sum of all criteria scores)
+      const totalScore = entry.scores.reduce((sum, s) => sum + s.score, 0);
 
-  // === Mark defence as ended ===
-  defence.ended = true;
-  await defence.save();
+      const studentId = entry.student.toString();
+      if (!studentTotalScores[studentId]) {
+        studentTotalScores[studentId] = [];
+      }
+      studentTotalScores[studentId].push(totalScore);
+    }
 
-  // === Check and remove PANEL_MEMBER role if no other active defences ===
-  for (const panelMemberId of defence.panelMembers) {
-    const hasActiveDefences = await this.hasActiveDefences(panelMemberId);
-    
-    if (!hasActiveDefences) {
-      // Remove PANEL_MEMBER role
-      const lecturer = await Lecturer.findById(panelMemberId).populate('user');
-      if (lecturer && lecturer.user) {
-        (lecturer.user as any).roles = (lecturer.user as any).roles.filter(
-          (role: string) => role !== Role.PANEL_MEMBER
-        );
-        await (lecturer.user as any).save();
-        console.log(`Removed PANEL_MEMBER role from lecturer ${panelMemberId}`);
+    // === Calculate average total score for each student ===
+    const studentAverages: Record<string, number> = {};
+
+    for (const [studentId, totalScores] of Object.entries(studentTotalScores)) {
+      const average = totalScores.reduce((sum, score) => sum + score, 0) / totalScores.length;
+      studentAverages[studentId] = average;
+    }
+
+    // === Stage → IStageScores key map ===
+    const MSC_STAGE_MAP: Record<string, keyof IStageScores> = {
+      [STAGES.MSC.PROPOSAL]: "proposalScore",
+      [STAGES.MSC.INTERNAL]: "internalScore",
+      [STAGES.MSC.EXTERNAL]: "externalScore",
+    };
+
+    const PHD_STAGE_MAP: Record<string, keyof IStageScores> = {
+      [STAGES.PHD.PROPOSAL_DEFENSE]: "firstSeminarScore",
+      [STAGES.PHD.SECOND_SEMINAR]: "secondSeminarScore",
+      [STAGES.PHD.INTERNAL_DEFENSE]: "thirdSeminarScore",
+      [STAGES.PHD.EXTERNAL_SEMINAR]: "externalDefenseScore",
+    };
+
+    // === Update student.stageScores ===
+    for (const studentId of defence.students) {
+      const studentIdStr = studentId.toString();
+      const averageScore = studentAverages[studentIdStr] || 0;
+
+      const student = await Student.findById(studentId);
+      if (!student) continue;
+
+      let key: keyof IStageScores;
+
+      if (defence.program === "MSC") {
+        key = MSC_STAGE_MAP[defence.stage];
+        if (!key) throw new Error(`Unknown MSC defence stage: ${defence.stage}`);
+      } else if (defence.program === "PHD") {
+        key = PHD_STAGE_MAP[defence.stage];
+        if (!key) throw new Error(`Unknown PHD defence stage: ${defence.stage}`);
+      } else {
+        throw new Error(`Unknown program: ${defence.program}`);
+      }
+
+      student.stageScores[key] = averageScore;
+      await student.save();
+
+      // === Notify student ===
+      const message = `Your defence for stage ${defence.stage} has ended. Your average score: ${averageScore.toFixed(2)}. Check your Dashboard for panel members comments.`;
+      await NotificationService.createNotifications({
+        studentIds: [studentId],
+        role: "student",
+        message,
+      });
+    }
+
+    // === Mark defence as ended ===
+    defence.ended = true;
+    await defence.save();
+
+    // === Check and remove PANEL_MEMBER role if no other active defences ===
+    for (const panelMemberId of defence.panelMembers) {
+      const hasActiveDefences = await this.hasActiveDefences(panelMemberId);
+
+      if (!hasActiveDefences) {
+        // Remove PANEL_MEMBER role
+        const lecturer = await Lecturer.findById(panelMemberId).populate('user');
+        if (lecturer && lecturer.user) {
+          (lecturer.user as any).roles = (lecturer.user as any).roles.filter(
+            (role: string) => role !== Role.PANEL_MEMBER
+          );
+          await (lecturer.user as any).save();
+          console.log(`Removed PANEL_MEMBER role from lecturer ${panelMemberId}`);
+        }
       }
     }
+
+    return defence;
   }
 
-  return defence;
-}
+  // Helper method to check if lecturer has any active defences
+  static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
+    const activeDefences = await Defence.find({
+      panelMembers: lecturerId,
+      ended: false
+    });
 
-// Helper method to check if lecturer has any active defences
-static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
-  const activeDefences = await Defence.find({
-    panelMembers: lecturerId,
-    ended: false
-  });
-
-  return activeDefences.length > 0;
-}
+    return activeDefences.length > 0;
+  }
 
   /**Finds students and move student to next stage in the proram type  */
   static async approveStudentDefence(studentId: string) {

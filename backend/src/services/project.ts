@@ -1,4 +1,4 @@
-import { Project, Student,Session, DefenceComment, IDefenceComment } from '../models/index';
+import { Project, Student, Session, DefenceComment, IDefenceComment } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
@@ -79,7 +79,7 @@ export default class ProjectService {
     });
 
     return await project.save();
-  } 
+  }
 
   static async getComments(studentId: string, versionNumber: number) {
     const project = await Project.findOne({ student: studentId }).populate(
@@ -179,15 +179,15 @@ export default class ProjectService {
 
     await Promise.all([project.save(), student.save()]);
 
-     function isDefined<T>(value: T | undefined | null): value is T {
+    function isDefined<T>(value: T | undefined | null): value is T {
       return value !== undefined && value !== null;
     }
     const correctStudentId = [studentId].filter(isDefined)
     await NotificationService.createNotifications({
-        studentIds: correctStudentId,
-        role: "student",
-        message: `Your project has been approved by your supervisor you are now moved to ${nextStage}`,
-      });
+      studentIds: correctStudentId,
+      role: "student",
+      message: `Your project has been approved by your supervisor you are now moved to ${nextStage}`,
+    });
 
     return { project, student };
   }
@@ -234,7 +234,7 @@ export default class ProjectService {
 
     // Get the latest version (last element in the versions array)
     const latestVersion = project.versions[project.versions.length - 1];
-    
+
     if (!latestVersion) throw new Error("No project versions found");
 
     // Get student info
@@ -242,9 +242,9 @@ export default class ProjectService {
     if (!student) throw new Error("Student not found");
 
     return {
-        fileUrl: latestVersion.fileUrl,
-        topic: latestVersion.topic, 
-        }
+      fileUrl: latestVersion.fileUrl,
+      topic: latestVersion.topic,
+    }
   }
 
 
@@ -273,40 +273,40 @@ export default class ProjectService {
     return await defenceComment.save();
   }
 
-  static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string){
+  static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string) {
 
-  const defenceComment = await DefenceComment.findOne({
-    defence: defenceId,
-    student: studentId,
-  })
-  .populate('comments.author', 'firstName lastName email');
+    const defenceComment = await DefenceComment.findOne({
+      defence: defenceId,
+      student: studentId,
+    })
+      .populate('comments.author', 'firstName lastName email');
 
-  console.log('defenceComment', defenceComment)
+    console.log('defenceComment', defenceComment)
 
-  if (!defenceComment) {
-    console.log("No comments found")
-    return [];
+    if (!defenceComment) {
+      console.log("No comments found")
+      return [];
+    }
+
+    // Filter comments by the specific author
+    const userComments = defenceComment.comments.filter(comment =>
+      comment.author._id.toString() === authorId.toString()
+    );
+
+    console.log('comments', userComments)
+    return userComments;
   }
 
-  // Filter comments by the specific author
-  const userComments = defenceComment.comments.filter(comment => 
-    comment.author._id.toString() === authorId.toString()
-  );
 
-  console.log('comments', userComments)
-  return userComments;
-}
+  static async getCommentsForStudent(defenceId: string, studentId: string) {
+    const defenceComment = await DefenceComment.findOne({
+      defence: defenceId,
+      student: studentId,
+    })
+      .populate('comments.author', 'firstName lastName email') // Populate author details 
 
-
-static async getCommentsForStudent(defenceId: string, studentId: string) {
-  const defenceComment = await DefenceComment.findOne({
-    defence: defenceId,
-    student: studentId,
-  })
-  .populate('comments.author', 'firstName lastName email') // Populate author details 
-
-  return defenceComment;
-}
+    return defenceComment;
+  }
 
 
 
