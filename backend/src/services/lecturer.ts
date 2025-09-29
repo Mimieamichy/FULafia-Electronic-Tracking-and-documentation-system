@@ -260,7 +260,6 @@ export default class LecturerService {
         department: string;
         role: string;
     }) {
-
         const roles = [Role.EXTERNAL_EXAMINER, Role.GENERAL, Role.PANEL_MEMBER];
 
         // Create User with dynamic roles
@@ -323,7 +322,6 @@ export default class LecturerService {
 }
 
 
-    
     static async getLecturerByDepartment(userId: string) {
         const currentLecturer = await Lecturer.findOne({ user: userId });
         if (!currentLecturer || !currentLecturer.department) {

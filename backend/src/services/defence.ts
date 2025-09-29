@@ -143,7 +143,6 @@ export default class DefenceService {
     return defence; // Return only defence, not details
   }
 
-
   /**
    * Marks defence as started
    * Notifies panel members and supervisors
@@ -178,6 +177,8 @@ export default class DefenceService {
     if (!lecturer) throw new Error("Lecturer profile not found");
     const lecturerId = (lecturer._id as Types.ObjectId).toString();
 
+    console.log("Lecturer ID:", lecturerId);
+
     // load defence and populate students.user
     const defence = await Defence.findById(defenceId)
       .populate({
@@ -189,7 +190,13 @@ export default class DefenceService {
     if (!defence) throw new Error("Defence not found");
 
     // authorization
-    if (!defence.panelMembers.some((m: any) => m.toString() === lecturerId)) {
+    const isPanelMember = defence.panelMembers.some((m: any) => {
+      // Handle both ObjectId and string types
+      const memberId = m instanceof Types.ObjectId ? m.toString() : String(m);
+      return memberId === lecturerId;
+    });
+
+    if (!isPanelMember) {
       throw new Error("You are not authorized to view this defence");
     }
 
@@ -213,7 +220,7 @@ export default class DefenceService {
       projectMap.set(sid, proj);
     }
 
-    // load scoresheet criteria for this defence's department (optional)
+    // load scoresheet criteria for this defence's department 
     const scoreSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
     const criteria = scoreSheet?.criteria || [];
 
@@ -233,7 +240,6 @@ export default class DefenceService {
         topic: student.projectTopic || latestVersion?.topic || "",
         fileUrl: latestVersion?.fileUrl || student.latestFile || "",
         currentStage: student.currentStage || "",
-        approved: !!student.approved,
         level: student.level,
         stageScores: {}
       };
@@ -492,15 +498,12 @@ export default class DefenceService {
       switch (stage) {
         case STAGES.MSC.PROPOSAL:
           student.currentStage = STAGES.MSC.INTERNAL;
-          student.approved = true;
           break;
         case STAGES.MSC.INTERNAL:
           student.currentStage = STAGES.MSC.EXTERNAL;
-          student.approved = true;
           break;
         case STAGES.MSC.EXTERNAL:
           student.currentStage = STAGES.MSC.COMPLETED;
-          student.approved = true;
           break;
         default:
           throw new Error(`Invalid stage for MSC student: ${stage}`);
@@ -509,19 +512,15 @@ export default class DefenceService {
       switch (stage) {
         case STAGES.PHD.PROPOSAL_DEFENSE:
           student.currentStage = STAGES.PHD.SECOND_SEMINAR;
-          student.approved = true;
           break;
         case STAGES.PHD.SECOND_SEMINAR:
           student.currentStage = STAGES.PHD.INTERNAL_DEFENSE;
-          student.approved = true;
           break;
         case STAGES.PHD.INTERNAL_DEFENSE:
           student.currentStage = STAGES.PHD.EXTERNAL_SEMINAR;
-          student.approved = true;
           break;
         case STAGES.PHD.EXTERNAL_SEMINAR:
           student.currentStage = STAGES.PHD.COMPLETED;
-          student.approved = true;
           break;
         default:
           throw new Error(`Invalid stage for PHD student: ${stage}`);
@@ -606,26 +605,32 @@ export default class DefenceService {
   static async getDefenceForPanelMember(program: string, userId: string) {
     const lecturer = await Lecturer.findOne({ user: userId });
     if (!lecturer) throw new Error("Lecturer profile not found");
-    const lecturerIds = lecturer._id;
+    const lecturerId = lecturer._id;
 
-    const department = lecturer.department;
-
-    const defence = await Defence.find({
+    // Find defences where the lecturer is a panel member, regardless of department
+    const defences = await Defence.find({
       program,
-      department,
-      panelMembers: lecturerIds,
+      panelMembers: lecturerId, // Check if lecturer ID is in panelMembers array
       ended: false,
     })
-      .select('_id department')
+    .select('_id stage program department date time started ended')
+    .populate('students', 'name matricNo') // Optional: include student details
+    .lean();
 
+    console.log('🔍 Defences found for panel member:', {
+      userId,
+      lecturerId,
+      program,
+      defenceCount: defences.length,
+      defences: defences.map(d => ({ id: d._id, stage: d.stage, department: d.department }))
+    });
 
-    if (!defence) {
-      throw new Error(`No ${program} defences found for your department where you are a panel member`);
+    if (!defences || defences.length === 0) {
+      throw new Error(`No ${program} defences found where you are a panel member`);
     }
 
-    return defence;
-  }
-
+    return defences;
+}
 
 
 

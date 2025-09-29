@@ -53,7 +53,7 @@ router.get('/get-college-rep', LecturerController.getCollegeReps);
 router.get('/get-provost', authenticate, checkPermission(Permission.GET_PROVOST), LecturerController.getProvost);
 router.post('/add-hod', authenticate, checkPermission(Permission.ADD_HOD), validateBody(addHodSchema), LecturerController.addHOD);
 router.post('/add-external-examiner', authenticate, checkPermission(Permission.ADD_EXTERNAL_EXAMINER), LecturerController.addExternalExaminer);
-router.get('/get-external-examiner', authenticate, checkPermission(Permission.VIEW_ALL_LECTURERS), LecturerController.getExternlExaminer);
+router.get('/get-external-examiner', authenticate, LecturerController.getExternlExaminer);
 router.post('/add-dean', authenticate, checkPermission(Permission.ADD_DEAN), validateBody(addDeanSchema), LecturerController.addDean);
 router.post('/add-provost', authenticate, checkPermission(Permission.ADD_PROVOST), validateBody(addLectuerSchema), LecturerController.addProvost);
 router.get('/department', authenticate, checkPermission(Permission.VIEW_LECTURERS_BY_DEPARTMENT), LecturerController.getLecturerByDepartment);
