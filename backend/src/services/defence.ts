@@ -132,7 +132,7 @@ export default class DefenceService {
     });
 
     // Simplified message without student details
-    const message = `You have been assigned to be part of the panel members for ${stage} defence scheduled on ${date.toDateString()}, Time: ${time}, Department: ${departmentName}, Program: ${program}`;
+    const message = `You have been assigned to be part of the panel members for ${stage} defence scheduled on ${date}, Time: ${time}, Department: ${departmentName}, Program: ${program}`;
 
     await NotificationService.createNotifications({
       lecturerIds: finalPanelMemberIds,
