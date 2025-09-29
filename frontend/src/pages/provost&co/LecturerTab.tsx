@@ -21,6 +21,7 @@ interface Lecturer {
   staffId?: string;
   email: string;
   role: string;
+  department?: string; // optional, for external examiners
 }
 
 interface Option {
@@ -80,6 +81,7 @@ export default function LecturerTab() {
     staffId: "",
     email: "",
     role: "",
+    department: "",
   });
 
   // provost-specific: faculties & departments
@@ -151,7 +153,7 @@ export default function LecturerTab() {
         );
         const arr = res.data?.data ?? [];
         console.log("Loaded lecturers:", arr);
-        
+
         setLecturers(
           arr.map((r: any) => ({
             id: r._id ?? r.id,
@@ -245,6 +247,7 @@ export default function LecturerTab() {
       staffId: "",
       email: "",
       role: isProvost ? "external_examiner" : "",
+      department: "",
     });
     setSelectedFacultyId("");
     setSelectedDepartmentId("");
@@ -260,6 +263,7 @@ export default function LecturerTab() {
       staffId: l.staffId ?? "",
       email: l.email ?? "",
       role: l.role ?? "",
+      department: l.department ?? "",
     });
     setEditId(l.id);
     setModalOpen(true);
@@ -333,27 +337,29 @@ export default function LecturerTab() {
       if (isProvost) {
         // Provost adds external examiner
         // Payload must have email, title, firstName, lastName and role
+         const departmentId = selectedDepartmentId || form.department;
+        const departmentName =
+          departments.find((d) => d.value === departmentId)?.label ??
+          departmentId;
         const payload = {
           email: form.email,
           title: form.title,
           firstName: form.firstName,
           lastName: form.lastName,
           role: form.role || "external_examiner",
+          department: departmentName,
         };
 
-        // append selected department as query param
-        const deptQuery = selectedDepartmentId
-          ? `?department=${selectedDepartmentId}`
-          : "";
-
         const res = await axios.post(
-          `${baseUrl}/lecturer/add-external-examiner${deptQuery}`,
+          `${baseUrl}/lecturer/add-external-examiner`,
           payload,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
         const raw = res.data?.data ?? res.data;
+        console.log("External examiner added:", res.status);
+
         // Map created object defensively
         const created: Lecturer = {
           id: raw._id ?? raw.id,
@@ -623,13 +629,18 @@ export default function LecturerTab() {
                     </Select>
                   </div>
 
+                  {/* Department */}
                   <div>
                     <label className="block text-gray-700 mb-1">
                       Department
                     </label>
                     <Select
                       value={selectedDepartmentId}
-                      onValueChange={(v) => setSelectedDepartmentId(v)}
+                      onValueChange={(v) => {
+                        setSelectedDepartmentId(v);
+                        // keep form.department in sync (stores the id)
+                        setForm((f) => ({ ...f, department: v }));
+                      }}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select Department" />
