@@ -6,6 +6,14 @@ import ScoreSheetPanel from "./ScoreSheetDefense";
 import StudentsPanel from "./StudentsPanel";
 import AssessmentPanel from "./AssessmentPanel";
 import StudentCommentModal from "./StudentCommentModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
 import { useToast } from "@/hooks/use-toast";
 
 type Level = "MSC" | "PHD";
@@ -44,7 +52,15 @@ const baseUrl = import.meta.env.VITE_BACKEND_URL ?? "";
 export default function DefenseDayPage() {
   const { user, token, roles = [] } = useAuth();
   const { toast } = useToast();
-  const userName = user?.userName ?? "User";
+  const userName = user?.userName;
+
+  // state for the confirm dialog
+  const [confirmingSession, setConfirmingSession] = useState<{
+    defenseId: string;
+    action: "start" | "end";
+    title?: string;
+  } | null>(null);
+  const [confirmProcessing, setConfirmProcessing] = useState(false);
 
   const normalizedRoles: string[] = Array.isArray(roles)
     ? roles.map((r) => String(r).toLowerCase())
@@ -88,6 +104,12 @@ export default function DefenseDayPage() {
   } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [toggling, setToggling] = useState(false);
+  // add near other hooks at top of the component
+  const [submittingScores, setSubmittingScores] = useState(false);
+  // add near other useState hooks
+  const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
+    {}
+  );
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -204,9 +226,6 @@ export default function DefenseDayPage() {
     };
   };
 
-  // --- fetch flow:
-  // 1) GET /defence/recent/:level  -> returns ids (or single object with _id)
-  // 2) GET /defence/:defenceId for each id -> returns { success:true, data: { defence, students, criteria } }
   useEffect(() => {
     let cancelled = false;
 
@@ -500,19 +519,27 @@ export default function DefenseDayPage() {
     });
   };
 
-  const handleToggleSession = async (defenseId: string) => {
+  // open the confirm dialog (no network call here)
+  const handleToggleSession = (defenseId: string) => {
     const def = defenseDays.find((d) => d.id === defenseId);
     if (!def) return;
+    if (toggling) return; // global throttle
     const currentlyActive = !!def.sessionActive;
-    if (currentlyActive) {
-      const ok = confirm("Are you sure you want to end this defense session?");
-      if (!ok) return;
-    }
-    if (toggling) return;
-    setToggling(true);
     const action = currentlyActive ? "end" : "start";
-    const url = `${baseUrl}/defence/${action}/${encodeURIComponent(defenseId)}`;
+    setConfirmingSession({ defenseId, action, title: def.title });
+  };
+
+  // called when user confirms in the dialog
+  const performToggleSession = async () => {
+    if (!confirmingSession) return;
+    const { defenseId, action } = confirmingSession;
+
+    setConfirmProcessing(true);
+    setToggling(true); // reuse existing toggling flag
     try {
+      const url = `${baseUrl}/defence/${action}/${encodeURIComponent(
+        defenseId
+      )}`;
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -520,6 +547,7 @@ export default function DefenseDayPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
+
       if (!res.ok) {
         let errText = `Failed to ${action} session (${res.status})`;
         try {
@@ -528,11 +556,14 @@ export default function DefenseDayPage() {
         } catch {}
         throw new Error(errText);
       }
-      // update cache + UI
+
+      // update cache + UI (toggle sessionActive)
       setDefenseCache((prev) => {
         const updated = { ...prev };
         updated[level] = (updated[level] ?? []).map((d) =>
-          d.id === defenseId ? { ...d, sessionActive: !currentlyActive } : d
+          d.id === defenseId
+            ? { ...d, sessionActive: !(d.sessionActive ?? false) }
+            : d
         );
         setDefenseDays(updated[level] ?? []);
         return updated;
@@ -545,6 +576,9 @@ export default function DefenseDayPage() {
         } successfully.`,
         variant: "default",
       });
+
+      // close the dialog
+      setConfirmingSession(null);
     } catch (err: any) {
       console.error("Failed to toggle session:", err);
       toast({
@@ -553,6 +587,7 @@ export default function DefenseDayPage() {
         variant: "destructive",
       });
     } finally {
+      setConfirmProcessing(false);
       setToggling(false);
     }
   };
@@ -592,29 +627,265 @@ export default function DefenseDayPage() {
     );
   };
 
-  const computeScore = (s: Student, crit: Criterion[]) => {
-    let total = 0;
-    crit.forEach((c) => {
-      const sc = s.scores[c.title];
-      if (typeof sc === "number" && !isNaN(sc))
-        total += (sc * c.percentage) / 100;
-    });
-    return Math.round(total * 100) / 100;
+  // replace or add these handlers in DefenseDayPage.tsx
+
+  const setProcessing = (studentId: string, v: boolean) =>
+    setProcessingIds((p) => ({ ...p, [studentId]: v }));
+
+  const handleApprove = async (studentId: string) => {
+    if (!studentId) return;
+    setProcessing(studentId, true);
+    try {
+      const url = `${baseUrl}/defence/approve/${encodeURIComponent(studentId)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) {
+        let txt = await res.text().catch(() => "");
+        try {
+          const parsed = txt ? JSON.parse(txt) : null;
+          txt = parsed?.message ?? parsed?.error ?? txt;
+        } catch {}
+        throw new Error(txt || `Server ${res.status}`);
+      }
+
+      // update UI cache: mark approved true
+      // we don't need to know defenseId here; update all defenses in current level where student exists
+      setDefenseCache((prev) => {
+        const updated = { ...prev };
+        updated[level] = (updated[level] ?? []).map((d) => ({
+          ...d,
+          students: d.students.map((s) =>
+            s.id === studentId ? { ...s, approved: true } : s
+          ),
+        }));
+        setDefenseDays(updated[level] ?? []);
+        return updated;
+      });
+
+      toast({
+        title: "Student approved",
+        description: "The student has been approved.",
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error("approve error", err);
+      toast({
+        title: "Approve failed",
+        description: err?.message ?? "Network error while approving student.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(studentId, false);
+    }
   };
 
-  const handleApprove = (defenseId: string, studentId: string) => {
-    updateStudentNested(defenseId, studentId, (s) => ({
-      ...s,
-      approved: true,
-    }));
+  const handleReject = async (studentId: string) => {
+    if (!studentId) return;
+    setProcessing(studentId, true);
+    try {
+      const url = `${baseUrl}/defence/reject/${encodeURIComponent(studentId)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) {
+        let txt = await res.text().catch(() => "");
+        try {
+          const parsed = txt ? JSON.parse(txt) : null;
+          txt = parsed?.message ?? parsed?.error ?? txt;
+        } catch {}
+        throw new Error(txt || `Server ${res.status}`);
+      }
+
+      // update UI cache: mark approved false (rejected)
+      setDefenseCache((prev) => {
+        const updated = { ...prev };
+        updated[level] = (updated[level] ?? []).map((d) => ({
+          ...d,
+          students: d.students.map((s) =>
+            s.id === studentId ? { ...s, approved: false } : s
+          ),
+        }));
+        setDefenseDays(updated[level] ?? []);
+        return updated;
+      });
+
+      toast({
+        title: "Student rejected",
+        description: "The student has been rejected.",
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error("reject error", err);
+      toast({
+        title: "Reject failed",
+        description: err?.message ?? "Network error while rejecting student.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(studentId, false);
+    }
   };
 
-  const handleSubmitScores = (defenseId: string) => {
-    toast({
-      title: "Scores Submitted",
-      description: "The scores have been submitted successfully.",
-      variant: "default",
-    });
+  const handleSubmitScores = async (defenseId: string) => {
+    if (!defenseId) {
+      toast({
+        title: "No defense selected",
+        description: "Cannot submit scores: no defense ID provided.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const def = defenseDays.find((d) => d.id === defenseId);
+    if (!def) {
+      toast({
+        title: "Defense not found",
+        description: "Could not find the selected defense.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const panelMemberId = String(user?.id ?? user?._id ?? "");
+    if (!panelMemberId) {
+      toast({
+        title: "No panel member id",
+        description: "You must be signed in to submit scores.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Build payloads: for each student create both an object and an array representation
+    const payloads = def.students
+      .map((s) => {
+        const scoresObj: Record<string, number> = {};
+        const scoresArray: Array<{ criterion: string; score: number }> = [];
+
+        Object.entries(s.scores ?? {}).forEach(([k, v]) => {
+          const n = Number(v);
+          if (v !== null && v !== undefined && !Number.isNaN(n)) {
+            scoresObj[k] = n;
+            scoresArray.push({ criterion: k, score: n });
+          }
+        });
+
+        return {
+          studentId: s.id,
+          panelMemberId,
+          // primary payload shape uses an array (server appears to expect this)
+          scores: scoresArray,
+          // include object variant too in case backend accepts it
+        };
+      })
+      .filter((p) => Array.isArray(p.scores) && p.scores.length > 0);
+
+    if (payloads.length === 0) {
+      toast({
+        title: "No scores to submit",
+        description: "There are no entered scores to submit for this defense.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingScores(true);
+
+    try {
+      const results = await Promise.all(
+        payloads.map(async (pl) => {
+          const url = `${baseUrl}/defence/submit-score/${encodeURIComponent(
+            defenseId
+          )}`;
+
+          // LOG payload so you can inspect in console
+          console.log("Submitting score payload:", url, pl);
+
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(pl),
+          });
+
+          const raw = await res.text().catch(() => "");
+          let parsed: any = null;
+          try {
+            parsed = raw ? JSON.parse(raw) : null;
+          } catch {
+            parsed = raw;
+          }
+
+          console.log("submit result", { status: res.status, parsed, raw });
+
+          if (!res.ok) {
+            const msg =
+              (parsed && (parsed.message || parsed.error)) ||
+              `HTTP ${res.status}`;
+            return { ok: false, studentId: pl.studentId, msg };
+          }
+          return { ok: true, studentId: pl.studentId, data: parsed };
+        })
+      );
+
+      // inside handleSubmitScores after `const results = await Promise.all(...)` and after you compute `failed` / `results`
+      const failed = results.filter((r) => !r.ok);
+      const succeeded = results.filter((r) => r.ok).map((r) => r.studentId);
+
+      // Clear scores for only the succeeded students
+      if (succeeded.length > 0) {
+        succeeded.forEach((studentId) => {
+          updateStudentNested(defenseId, studentId, (s) => ({
+            ...s,
+            // remove all scores so inputs become blank
+            scores: {},
+          }));
+        });
+      }
+
+      if (failed.length === 0) {
+        toast({
+          title: "Scores Submitted",
+          description: `Submitted scores for ${results.length} student(s).`,
+          variant: "default",
+        });
+      } else {
+        const failSummary = failed
+          .map((f) => `${f.studentId}${f.msg ? ` (${f.msg})` : ""}`)
+          .slice(0, 6)
+          .join(", ");
+        toast({
+          title: "Partial failure",
+          description: `Failed for ${failed.length} student(s): ${failSummary}${
+            failed.length > 6 ? ", ..." : ""
+          }`,
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error("submit scores error", err);
+      toast({
+        title: "Submit failed",
+        description:
+          err?.message || "Network or server error while submitting scores.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingScores(false);
+    }
   };
 
   return (
@@ -647,7 +918,7 @@ export default function DefenseDayPage() {
       </div>
 
       {/* Defence day tabs */}
-      {/* Defence day tabs — show simple sequential labels (Defense 1, Defense 2, ...) */}
+
       <div className="flex gap-2 items-center overflow-x-auto">
         {defenseDays.map((d, i) => (
           <button
@@ -788,12 +1059,80 @@ export default function DefenseDayPage() {
           <AssessmentPanel
             students={activeDefense?.students ?? []}
             criteria={activeDefense?.criteria ?? criteria}
-            onApprove={(studentId) =>
-              handleApprove(activeDefense?.id ?? "", studentId)
-            }
+            onApprove={(studentId) => handleApprove(studentId)}
+            onReject={(studentId) => handleReject(studentId)}
+            processingIds={processingIds}
           />
         )}
       </div>
+
+      {/* Confirm dialog for starting/ending session */}
+      <Dialog
+        open={!!confirmingSession}
+        onOpenChange={() => {
+          // close dialog when user clicks outside / presses ESC
+          if (!confirmProcessing) setConfirmingSession(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmingSession?.action === "start"
+                ? "Start Defense Session"
+                : "End Defense Session"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-sm text-gray-700">
+              {confirmingSession?.action === "start" ? (
+                <>
+                  You are about to <strong>start</strong> the session for{" "}
+                  <span className="font-medium">
+                    {confirmingSession?.title ?? ""}
+                  </span>
+                  . Panel members will be able to submit scores.
+                </>
+              ) : (
+                <>
+                  You are about to <strong>end</strong> the session for{" "}
+                  <span className="font-medium">
+                    {confirmingSession?.title ?? ""}
+                  </span>
+                  . Ending will stop further submissions.
+                </>
+              )}
+            </p>
+          </div>
+
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button
+              onClick={() => {
+                if (confirmProcessing) return;
+                setConfirmingSession(null);
+              }}
+              variant="secondary"
+              className="px-4 py-2"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              onClick={performToggleSession}
+              disabled={confirmProcessing}
+              className="bg-amber-700 text-white px-4 py-2"
+            >
+              {confirmProcessing
+                ? confirmingSession?.action === "start"
+                  ? "Starting..."
+                  : "Ending..."
+                : confirmingSession?.action === "start"
+                ? "Start Session"
+                : "End Session"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <StudentCommentModal
         openItem={selectedStudent}
@@ -801,8 +1140,8 @@ export default function DefenseDayPage() {
         onAddComment={handleAddCommentFromModal}
         canComment={isPanel}
         baseUrl={baseUrl}
-          token={token}
-
+        token={token}
+        currentUserName={userName}
       />
     </div>
   );

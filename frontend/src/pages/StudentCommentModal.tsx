@@ -17,6 +17,8 @@ interface CommentItem {
   by: string;
   text: string;
   createdAt?: string; // ISO timestamp
+  // optional raw flag for optimistic items
+  _optimistic?: boolean;
 }
 
 interface Student {
@@ -41,7 +43,7 @@ interface StudentModalProps {
   canComment?: boolean;
   baseUrl: string;
   token?: string | null;
-  currentUserName?: string;
+  currentUserName: string;
 }
 
 export default function StudentCommentModal({
@@ -63,6 +65,7 @@ export default function StudentCommentModal({
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
   // clear state when modal changes
   useEffect(() => {
@@ -80,53 +83,111 @@ export default function StudentCommentModal({
     return () => clearTimeout(t);
   }, [comments]);
 
-  // fetch comments when openItem changes
-  useEffect(() => {
-    if (!openItem) return;
-    void fetchComments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openItem?.student?.id, openItem?.defenseId]);
+  // === Helper: normalize API response to CommentItem[]
+  const normalizeFromApi = (raw: any): CommentItem[] => {
+    if (!raw) return [];
+    // common shape: { success: true, message: "...", data: [ { author: {...}, text, createdAt, _id } ] }
+    let arr: any[] = [];
+    if (Array.isArray(raw)) arr = raw;
+    else if (Array.isArray(raw.data)) arr = raw.data;
+    else if (Array.isArray(raw.comments)) arr = raw.comments;
+    else return [];
 
-  // early return guard (hooks above — no hooks after this)
-  if (!openItem) return null;
-  const { student } = openItem;
+    const mapped = arr.map((it: any) => {
+      const author = it?.author;
+      const by =
+        (author && `${author.firstName ?? ""} ${author.lastName ?? ""}`.trim()) ||
+        author?.email ||
+        it?.by ||
+        "Unknown";
+      return {
+        id: it?._id ?? it?.id ?? `${by}-${it?.createdAt ?? Math.random()}`,
+        by,
+        text: it?.text ?? it?.message ?? "",
+        createdAt: it?.createdAt ?? it?.created_at ?? undefined,
+      } as CommentItem;
+    });
 
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+    // dedupe by id, keeping order
+    const seen = new Set<string>();
+    return mapped.filter((m) => {
+      if (!m.id) return true;
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+  };
 
+  // fetch comments (robust to multiple shapes)
   async function fetchComments() {
-    if (!student?.id) return;
+    if (!openItem?.student?.id) return;
     setLoadingComments(true);
+
     try {
       const url = `${baseUrl}/project/defence-comments/${encodeURIComponent(
-        student.id
+        openItem.student.id
       )}/${encodeURIComponent(openItem.defenseId)}`;
+
+      console.log("fetching comments from", url);
 
       const res = await fetch(url, { headers: { ...authHeaders } });
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
         console.warn("GET comments failed", res.status, txt);
-        setComments(Array.isArray(student.comments) ? student.comments! : []);
+        // fallback to existing student.comments if available
+        setComments(
+          Array.isArray(openItem.student.comments)
+            ? openItem.student.comments
+            : []
+        );
         return;
       }
 
-      const parsed = await res.json().catch(() => null);
-      console.log("fetched comments",  parsed);
+      let parsed: any = null;
+      try {
+        parsed = await res.json();
+      } catch {
+        parsed = null;
+      }
+      console.log("fetched comments (raw):", parsed);
 
-      
-      
-      if (Array.isArray(parsed)) setComments(parsed);
-      else if (parsed && Array.isArray(parsed.comments))
-        setComments(parsed.comments);
-      else
-        setComments(Array.isArray(student.comments) ? student.comments! : []);
+      const normalized = normalizeFromApi(parsed);
+      // merge with any optimistic local comments (keep optimistic ones that server hasn't returned yet)
+      setComments((prev) => {
+        const optimistic = prev.filter((c) => c._optimistic);
+        // dedupe server list against optimistic by text+createdAt if no id
+        const serverIds = new Set(normalized.map((n) => n.id));
+        const remainingOptimistic = optimistic.filter(
+          (o) => ![...serverIds].some((id) => id === o.id)
+        );
+        return [...normalized, ...remainingOptimistic].sort((a, b) => {
+          // sort by createdAt ascending; fallback keep original order
+          const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return ta - tb;
+        });
+      });
     } catch (err) {
       console.error("fetchComments error", err);
-      setComments(Array.isArray(student.comments) ? student.comments! : []);
+      setComments(
+        Array.isArray(openItem.student.comments) ? openItem.student.comments! : []
+      );
     } finally {
       setLoadingComments(false);
     }
   }
 
+  // Polling: start immediate fetch and poll every 3s while modal open
+  useEffect(() => {
+    if (!openItem) return;
+    // immediately fetch once
+    void fetchComments();
+    const id = window.setInterval(() => {
+      void fetchComments();
+    }, 3000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openItem?.student?.id, openItem?.defenseId, token, baseUrl]);
 
   async function handleDownload(studentId: string) {
     try {
@@ -171,7 +232,7 @@ export default function StudentCommentModal({
       });
       return;
     }
-    if (!student?.id) {
+    if (!openItem?.student?.id) {
       toast({
         title: "No student",
         description: "No student selected.",
@@ -180,10 +241,28 @@ export default function StudentCommentModal({
       return;
     }
 
+    // optimistic update: show immediately
+    const optimisticId = `tmp-${Date.now()}`;
+    const optimistic: CommentItem = {
+      id: optimisticId,
+      by: currentUserName ?? "You",
+      text,
+      createdAt: new Date().toISOString(),
+      _optimistic: true,
+    };
+    console.log("by:", currentUserName);
+    
+    setComments((c) => [...c, optimistic]);
+    setLocalComment("");
+    // keep parent callback backward compatible
+    try {
+      onAddComment(text);
+    } catch {}
+
     setPosting(true);
     try {
       const url = `${baseUrl}/project/defence-comments/${encodeURIComponent(
-        student.id
+        openItem.student.id
       )}/${encodeURIComponent(openItem.defenseId)}`;
 
       const res = await fetch(url, {
@@ -194,13 +273,13 @@ export default function StudentCommentModal({
 
       const raw = await res.text();
       let parsed: any = null;
-      console.log("post comment response", res.status, raw);
-      
       try {
         parsed = raw ? JSON.parse(raw) : null;
       } catch {
         parsed = raw;
       }
+
+      console.log("post comment response", res.status, raw);
 
       if (!res.ok) {
         const msg =
@@ -209,14 +288,9 @@ export default function StudentCommentModal({
         throw new Error(msg);
       }
 
-      // keep parent callback for backwards compatibility
-      try {
-        onAddComment(text);
-      } catch {}
-
-      // re-fetch comments to get server timestamps and ordering
+      // On success re-fetch to get server timestamps / ids and replace optimistic
       await fetchComments();
-      setLocalComment("");
+
       toast({
         title: "Comment added",
         description: "Your comment was submitted.",
@@ -224,6 +298,8 @@ export default function StudentCommentModal({
       });
     } catch (err: any) {
       console.error("post comment error", err);
+      // remove optimistic comment on failure
+      setComments((prev) => prev.filter((c) => c.id !== optimisticId));
       toast({
         title: "Post failed",
         description: err?.message || "Could not submit comment.",
@@ -234,7 +310,10 @@ export default function StudentCommentModal({
     }
   }
 
-  // ===== Render - match screenshot exactly as close as Tailwind allows =====
+  // ===== Render - match screenshot exactly as Tailwind allows =====
+  if (!openItem) return null;
+  const { student } = openItem;
+
   return (
     <Dialog open={!!openItem} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -252,20 +331,14 @@ export default function StudentCommentModal({
             <p className="text-sm text-gray-600 mb-2">Project File:</p>
             {student.fileUrl ? (
               <>
-                {(() => {
-                  return (
-                    <>
-                      <Button
-                        className="bg-amber-700 text-white"
-                        onClick={() => handleDownload(student.id)}
-                        disabled={downloading || !student.fileUrl}
-                      >
-                        <Download className="mr-1 h-4 w-4" />
-                        {downloading ? "Downloading..." : "Download"}
-                      </Button>
-                    </>
-                  );
-                })()}
+                <Button
+                  className="bg-amber-700 text-white"
+                  onClick={() => handleDownload(student.id)}
+                  disabled={downloading || !student.fileUrl}
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  {downloading ? "Downloading..." : "Download"}
+                </Button>
               </>
             ) : (
               <div className="text-sm text-gray-500">
@@ -279,20 +352,27 @@ export default function StudentCommentModal({
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-700">Comments :</p>
 
-              <div className="h-64 overflow-y-auto border rounded p-3 bg-gray-50 flex flex-col gap-2">
-                {!comments || comments.length === 0 ? (
+              <div
+                ref={scrollRef}
+                className="h-64 overflow-y-auto border rounded p-3 bg-gray-50 flex flex-col gap-2"
+              >
+                {loadingComments && comments.length === 0 ? (
+                  <p className="text-gray-500 italic text-sm self-center">
+                    Loading comments...
+                  </p>
+                ) : !comments || comments.length === 0 ? (
                   <p className="text-gray-500 italic text-sm self-center">
                     No comments yet.
                   </p>
                 ) : (
                   comments.map((c, i) => (
                     <div
-                      key={i}
+                      key={c.id ?? i}
                       className={`relative p-2 capitalize rounded-lg max-w-[80%] text-sm ${
                         c.by === currentUserName
                           ? "bg-amber-200 self-end text-right"
                           : "bg-white self-start text-left border"
-                      }`}
+                      } ${c._optimistic ? "opacity-80" : ""}`}
                     >
                       <div className="font-medium text-xs text-gray-600 mb-1">
                         {c.by}
@@ -319,27 +399,26 @@ export default function StudentCommentModal({
 
             {/* bottom input area */}
             {canComment && (
-                <div className="space-y-2 m-4">
-                  <Textarea
-                    value={localComment}
-                    onChange={(e) => setLocalComment(e.target.value)}
-                    placeholder="Write your comment..."
-                    rows={3}
-                    className="w-full"
-                  />
+              <div className="space-y-2 m-4">
+                <Textarea
+                  value={localComment}
+                  onChange={(e) => setLocalComment(e.target.value)}
+                  placeholder="Write your comment..."
+                  rows={3}
+                  className="w-full"
+                />
 
-                  <div className="flex items-end">
-                    <Button
-                      onClick={handleSubmitComment}
-                      disabled={posting}
-                      className="bg-amber-700 text-white px-4 py-2 rounded-md flex items-center"
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      {posting ? "Sending..." : "Send"}
-                    </Button>
-                  </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={handleSubmitComment}
+                    disabled={posting}
+                    className="bg-amber-700 text-white px-4 py-2 rounded-md flex items-center"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {posting ? "Sending..." : "Send"}
+                  </Button>
                 </div>
-              
+              </div>
             )}
           </div>
         </div>

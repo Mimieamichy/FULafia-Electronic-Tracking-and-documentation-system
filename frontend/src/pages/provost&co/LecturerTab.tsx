@@ -28,13 +28,12 @@ interface Option {
   value: string;
 }
 
-
 // human-readable labels for role values
 const ROLE_LABELS: Record<string, string> = {
   lecturer: "Lecturer",
   pgcord: "PG Coordinator",
   external_examiner: "External Examiner",
-  hod: "HOD"
+  hod: "HOD",
   // add other known roles here
 };
 
@@ -47,7 +46,6 @@ function roleLabel(role?: string) {
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
-
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -84,6 +82,12 @@ export default function LecturerTab() {
     role: "",
   });
 
+  // provost-specific: faculties & departments
+  const [faculties, setFaculties] = useState<Option[]>([]);
+  const [departments, setDepartments] = useState<Option[]>([]);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
@@ -95,9 +99,7 @@ export default function LecturerTab() {
   const roleOptions: Option[] = [
     ...(!isProvost ? baseRoleOptions : []),
     ...(isHod && !isProvost
-      ? [
-          { label: "PG Coordinator", value: "pgcord" },
-        ]
+      ? [{ label: "PG Coordinator", value: "pgcord" }]
       : []),
     ...(isProvost
       ? [{ label: "External Examiner", value: "external_examiner" }]
@@ -111,6 +113,9 @@ export default function LecturerTab() {
     }
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     loadLecturers();
+
+    // if provost, also load faculties
+    if (isProvost) loadFaculties();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -126,6 +131,7 @@ export default function LecturerTab() {
         );
         // defensive mapping
         const arr = res.data?.data ?? [];
+        console.log("Loaded lecturers:", arr);
         setLecturers(
           arr.map((r: any) => ({
             id: r._id ?? r.id,
@@ -144,6 +150,8 @@ export default function LecturerTab() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const arr = res.data?.data ?? [];
+        console.log("Loaded lecturers:", arr);
+        
         setLecturers(
           arr.map((r: any) => ({
             id: r._id ?? r.id,
@@ -170,6 +178,64 @@ export default function LecturerTab() {
     }
   }
 
+  // Provost: load faculties
+  async function loadFaculties() {
+    try {
+      if (!token) return;
+      const res = await axios.get(`${baseUrl}/faculty/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const arr = res.data?.data ?? res.data ?? [];
+      setFaculties(
+        arr.map((f: any) => ({
+          label: f.name ?? f.facultyName ?? f.title ?? "",
+          value: f._id ?? f.id,
+        }))
+      );
+    } catch (err) {
+      console.error("Load faculties failed", err);
+      toast({
+        title: "Error",
+        description: "Failed to load faculties.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  // Provost: load departments for selected faculty
+  useEffect(() => {
+    if (!selectedFacultyId) {
+      setDepartments([]);
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await axios.get(
+          `${baseUrl}/department/${selectedFacultyId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const arr = res.data?.data ?? res.data ?? [];
+        setDepartments(
+          arr.map((d: any) => ({
+            label: d.name ?? d.departmentName ?? d.title ?? "",
+            value: d._id ?? d.id,
+          }))
+        );
+      } catch (err) {
+        console.error("Load departments failed", err);
+        toast({
+          title: "Error",
+          description: "Failed to load departments for selected faculty.",
+          variant: "destructive",
+        });
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFacultyId]);
+
   function openAdd() {
     // For provost, open add external examiner only
     setForm({
@@ -180,6 +246,8 @@ export default function LecturerTab() {
       email: "",
       role: isProvost ? "external_examiner" : "",
     });
+    setSelectedFacultyId("");
+    setSelectedDepartmentId("");
     setEditId(null);
     setModalOpen(true);
   }
@@ -199,7 +267,13 @@ export default function LecturerTab() {
 
   async function handleSubmit() {
     // Validate common fields
-    for (const key of ["title", "firstName", "lastName", "email", "role"] as const) {
+    for (const key of [
+      "title",
+      "firstName",
+      "lastName",
+      "email",
+      "role",
+    ] as const) {
       if (!form[key]) {
         toast({
           title: "Validation Error",
@@ -208,6 +282,17 @@ export default function LecturerTab() {
         });
         return;
       }
+    }
+
+    // Provost must select a department to assign external examiner
+    if (isProvost && !selectedDepartmentId) {
+      toast({
+        title: "Validation Error",
+        description:
+          "Please choose a department to assign the external examiner to.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setLoading(true);
@@ -232,7 +317,9 @@ export default function LecturerTab() {
 
         // optimistic update locally
         setLecturers((prev) =>
-          prev.map((p) => (p.id === editId ? { ...p, ...form } as Lecturer : p))
+          prev.map((p) =>
+            p.id === editId ? ({ ...p, ...form } as Lecturer) : p
+          )
         );
 
         console.log("Lecturer updated:", editId, payload);
@@ -253,9 +340,19 @@ export default function LecturerTab() {
           lastName: form.lastName,
           role: form.role || "external_examiner",
         };
-        const res = await axios.post(`${baseUrl}/lecturer/add-external-examiner`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+
+        // append selected department as query param
+        const deptQuery = selectedDepartmentId
+          ? `?department=${selectedDepartmentId}`
+          : "";
+
+        const res = await axios.post(
+          `${baseUrl}/lecturer/add-external-examiner${deptQuery}`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         const raw = res.data?.data ?? res.data;
         // Map created object defensively
         const created: Lecturer = {
@@ -268,7 +365,10 @@ export default function LecturerTab() {
           role: raw.role ?? payload.role,
         };
         setLecturers((prev) => [...prev, created]);
-        toast({ title: "Added", description: "External Examiner added." });
+        toast({
+          title: "Added",
+          description: "External Examiner added and assigned to department.",
+        });
         setModalOpen(false);
         return;
       } else {
@@ -295,7 +395,9 @@ export default function LecturerTab() {
       console.error("Submit failed", err);
       toast({
         title: "Error",
-        description: editId ? "Failed to update lecturer." : "Failed to add lecturer.",
+        description: editId
+          ? "Failed to update lecturer."
+          : "Failed to add lecturer.",
         variant: "destructive",
       });
     } finally {
@@ -420,7 +522,11 @@ export default function LecturerTab() {
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl p-6 overflow-y-auto max-h-[90vh]">
             <h3 className="text-lg font-medium mb-4">
-              {editId ? "Edit Lecturer" : isProvost ? "Add External Examiner" : "Add Lecturer"}
+              {editId
+                ? "Edit Lecturer"
+                : isProvost
+                ? "Add External Examiner"
+                : "Add Lecturer"}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -480,9 +586,71 @@ export default function LecturerTab() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, staffId: e.target.value }))
                   }
-                  placeholder={isProvost ? "(optional for external examiners)" : ""}
+                  placeholder={
+                    isProvost ? "(optional for external examiners)" : ""
+                  }
                 />
               </div>
+
+              {/* If provost: Faculty & Department selectors */}
+              {isProvost && (
+                <>
+                  <div>
+                    <label className="block text-gray-700 mb-1">Faculty</label>
+                    <Select
+                      value={selectedFacultyId}
+                      onValueChange={(v) => {
+                        setSelectedFacultyId(v);
+                        setSelectedDepartmentId("");
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Faculty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {faculties.length ? (
+                          faculties.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>
+                              {f.label}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-faculties" disabled>
+                            No faculties available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-700 mb-1">
+                      Department
+                    </label>
+                    <Select
+                      value={selectedDepartmentId}
+                      onValueChange={(v) => setSelectedDepartmentId(v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.length ? (
+                          departments.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>
+                              {d.label}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="select-faculty-first" disabled>
+                            Select a faculty first
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               {/* Email */}
               <div>
@@ -540,7 +708,6 @@ export default function LecturerTab() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

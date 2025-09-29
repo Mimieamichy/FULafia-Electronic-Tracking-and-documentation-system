@@ -1,3 +1,4 @@
+// src/defense/AssessmentPanel.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
 
@@ -20,22 +21,65 @@ interface Student {
 
 type Props = {
   students: Student[];
-  criteria: Criterion[];
+  criteria: Criterion[]; // kept for compatibility but not used
   onApprove: (studentId: string) => void;
+  onReject?: (studentId: string) => void;
+  processingIds?: Record<string, boolean>;
 };
 
-export default function AssessmentPanel({ students, criteria, onApprove }: Props) {
-  const computeScore = (s: Student) => {
-    let total = 0;
-    criteria.forEach((c) => {
-      const sc = s.scores[c.title];
-      if (typeof sc === "number" && !isNaN(sc)) {
-        total += (sc * c.percentage) / 100;
+export default function AssessmentPanel({
+  students,
+  criteria,
+  onApprove,
+  onReject,
+  processingIds = {},
+}: Props) {
+  // Simple stage -> score lookup (no weighted computation)
+  const getStageScore = (s: Student): { value: number; label: string } => {
+    const stage = (s.currentStage ?? "").toLowerCase();
+
+    const mapping: Array<{ re: RegExp; key: string; label: string }> = [
+      { re: /proposal/, key: "proposalScore", label: "Proposal" },
+      { re: /internal/, key: "internalScore", label: "Internal" },
+      { re: /external/, key: "externalScore", label: "External" },
+      { re: /defense|defence|final/, key: "internalScore", label: "Defense" },
+    ];
+
+    const found = mapping.find((m) => m.re.test(stage));
+    let chosenKey = found?.key;
+    let chosenLabel = found?.label ?? "Score";
+
+    if (!chosenKey) {
+      // prefer common keys if present
+      const prefer = ["internalScore", "proposalScore", "externalScore"];
+      chosenKey = prefer.find((k) => k in (s.scores || {}));
+      if (chosenKey) {
+        chosenLabel =
+          chosenKey === "proposalScore"
+            ? "Proposal"
+            : chosenKey === "internalScore"
+            ? "Internal"
+            : chosenKey === "externalScore"
+            ? "External"
+            : "Score";
+      } else {
+        // fallback to first numeric key in s.scores
+        const firstNumericKey = Object.entries(s.scores || {}).find(
+          ([, v]) => typeof v === "number" && !isNaN(v)
+        )?.[0];
+        chosenKey = firstNumericKey;
+        chosenLabel = firstNumericKey ?? "Score";
       }
-    });
-    // round to nearest integer like screenshot
-    return Math.round(total);
+    }
+
+    const rawVal = chosenKey ? (s.scores?.[chosenKey] as any) : undefined;
+    const numeric =
+      typeof rawVal === "number" && !isNaN(rawVal) ? Math.round(rawVal) : 0;
+
+    return { value: numeric, label: chosenLabel };
   };
+
+  
 
   return (
     <div className="space-y-4">
@@ -43,7 +87,7 @@ export default function AssessmentPanel({ students, criteria, onApprove }: Props
       <div>
         <h1 className="text-3xl font-extrabold text-gray-900">Assessment</h1>
         <p className="mt-1 text-sm text-amber-700/80">
-          Approve student assessments for the current defense stage.
+          Approve or reject student assessments for the current defense stage.
         </p>
       </div>
 
@@ -73,7 +117,8 @@ export default function AssessmentPanel({ students, criteria, onApprove }: Props
 
             <tbody>
               {students.map((s, idx) => {
-                const score = computeScore(s);
+                const { value: score, } = getStageScore(s);
+                const processing = !!processingIds[s.id];
                 return (
                   <tr
                     key={s.id}
@@ -92,21 +137,39 @@ export default function AssessmentPanel({ students, criteria, onApprove }: Props
                     </td>
 
                     <td className="px-6 py-6 align-middle border-b border-amber-50 text-sm font-medium text-gray-900 text-center">
-                      {score}
+                      <div>{score}</div>
+                      
                     </td>
 
                     <td className="px-6 py-6 align-middle border-b border-amber-50 text-right">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
                         <Button
                           onClick={() => onApprove(s.id)}
-                          disabled={!!s.approved}
+                          disabled={!!s.approved || processing}
                           className={`px-4 py-2 rounded-xl font-medium shadow-sm ${
                             s.approved
                               ? "bg-gray-100 text-gray-500 cursor-default"
                               : "bg-amber-700 hover:bg-amber-900 text-white"
                           }`}
                         >
-                          {s.approved ? "Approved" : "Approve"}
+                          {processing ? "Working..." : s.approved ? "Approved" : "Approve"}
+                        </Button>
+
+                        <Button
+                          onClick={() => {
+                            if (!onReject) return;
+                            const ok = confirm(
+                              `Are you sure you want to reject ${s.name}'s assessment?`
+                            );
+                            if (!ok) return;
+                            onReject(s.id);
+                          }}
+                          disabled={processing}
+                          className={`px-4 py-2 rounded-xl font-medium shadow-sm border ${
+                            processing ? "bg-gray-50 text-gray-400" : "bg-white text-amber-700 hover:bg-red-50"
+                          }`}
+                        >
+                          Reject
                         </Button>
                       </div>
                     </td>
@@ -115,7 +178,6 @@ export default function AssessmentPanel({ students, criteria, onApprove }: Props
               })}
             </tbody>
 
-            {/* bottom rounded corner spacer */}
             <tfoot>
               <tr>
                 <td colSpan={5} className="h-2 bg-transparent" />

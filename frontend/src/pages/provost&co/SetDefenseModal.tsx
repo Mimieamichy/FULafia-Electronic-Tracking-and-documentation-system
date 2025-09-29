@@ -87,9 +87,13 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     initialLecturers ?? []
   );
   const [loadingLecturers, setLoadingLecturers] = useState(false);
+  const departmentName = String(department).trim();
 
   const facultyRepEndpoint = `${baseUrl}/lecturer/get-faculty-rep`;
-  const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner`;
+  const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner?department=${encodeURIComponent(
+    departmentName
+  )}`;
+
   const collegeRepEndpoint = `${baseUrl}/lecturer/get-college-rep`;
   const provostEndpoint = `${baseUrl}/lecturer/get-provost`; // new
 
@@ -331,7 +335,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       session,
       date,
       time,
-      // use the computed filtered IDs (studentIdsToSchedule)
       studentIds: studentIdsToSchedule,
       program: programForApi,
       // include panelMemberIds only when there are selected panel members
