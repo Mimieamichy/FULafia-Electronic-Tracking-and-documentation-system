@@ -56,7 +56,19 @@ export interface PaginatedResult<T> {
 
 }
 
-
+/**
+ * Helper to format session object to return both ID and name
+ */
+function formatSessionField(session: any): { id: string; sessionName: string } | null {
+  if (!session) {
+    return null;
+  }
+  
+  return {
+    id: session._id?.toString() || session.id,
+    sessionName: session.sessionName || ''
+  };
+}
 
 
 /**
@@ -142,6 +154,7 @@ export async function findOneFormatted<T extends object>(
       minorSupervisor: formatSupervisorField((doc as any).minorSupervisor),
       internalExaminer: formatSupervisorField((doc as any).internalExaminer),
       collegeRep: formatSupervisorField((doc as any).collegeRep),
+      session: formatSessionField((doc as any).session),
     } as unknown as T;
   }
 

@@ -6,6 +6,7 @@ import { IStageScores } from '../models/student';
 import { Role } from '../utils/permissions';
 
 
+
 export default class DefenceService {
 
   /** Get all defences with student details
@@ -139,6 +140,7 @@ export default class DefenceService {
       role: "panel",
       message,
     });
+
 
     return defence; // Return only defence, not details
   }

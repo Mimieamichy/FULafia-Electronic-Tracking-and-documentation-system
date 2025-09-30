@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import ProjectService from '../services/project';
+import ActivityLogService from '../services/activity_log';
 import path from 'path';
 
 
@@ -17,8 +18,12 @@ export default class ProjectController {
     try {
       const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
       const studentId = req.user?.id || ''
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
 
       const project = await ProjectService.uploadProject(studentId, fileUrl);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Uploaded', 'a new Project version');
       res.status(201).json({ success: true, message: 'Project uploaded successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -32,6 +37,8 @@ export default class ProjectController {
       const { studentId, versionNumber } = req.params;
       const { text } = req.body;
       const author = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
 
       const updatedProject = await ProjectService.commentOnVersion(
         studentId,
@@ -39,7 +46,7 @@ export default class ProjectController {
         author,
         text
       );
-
+      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Commented on', `Project version ${versionNumber} of student  with ${studentId}`);
       res.status(200).json({ success: true, message: 'Comment added', data: updatedProject });
     } catch (err: any) {
       console.log(err)
@@ -59,9 +66,12 @@ export default class ProjectController {
     }
   }
 
-  static async downloadProject(req: Request, res: Response) {
+  static async downloadProject(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId, versionNumber } = req.params;
+      const author = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
@@ -70,7 +80,7 @@ export default class ProjectController {
     const fileName = path.basename(project.fileUrl);
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-
+      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Downloaded', `Project version ${versionNumber} of student`);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -78,9 +88,12 @@ export default class ProjectController {
     }
   }
 
-  static async downloadLatestProject(req: Request, res: Response) {
+  static async downloadLatestProject(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId } = req.params;
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       const project = await ProjectService.downloadLatestProject(studentId);
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
@@ -89,7 +102,7 @@ export default class ProjectController {
     const fileName = path.basename(project.fileUrl);
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Downloaded', `Latest Project version of student`);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -120,7 +133,11 @@ export default class ProjectController {
   static async approveProject(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId } = req.params;
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       const project = await ProjectService.approveProject(studentId);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Approved', `Project of student`);
       res.status(200).json({ success: true, message: 'Project approved successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -145,6 +162,9 @@ export default class ProjectController {
       const { studentId, defenceId } = req.params;
       const { text } = req.body;
       const author = req.user?.id || ''
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
 
       const comments = await ProjectService.commentOnDefenceDay(
         studentId,
@@ -152,7 +172,7 @@ export default class ProjectController {
         author,
         text
       );
-
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Commented on', `Student project on Defence day`);
       res.status(200).json({ success: true, message: 'Comment added', data: comments });
     } catch (err: any) {
       console.log(err)

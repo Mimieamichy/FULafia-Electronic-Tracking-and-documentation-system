@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISession extends Document {
   sessionName: string;
-  department: string;
+  department: string; //remove later
   faculty: string; 
   isActive: boolean;
   startDate: Date;

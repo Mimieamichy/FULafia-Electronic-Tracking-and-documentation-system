@@ -1,31 +1,22 @@
-// src/models/ActivityLog.ts
-import mongoose, { Document, Schema } from 'mongoose';
+// shared/models/ActivityLog.ts
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IActivityLog extends Document {
-  user: mongoose.Types.ObjectId;      // ref User
-  role: string;                       // e.g. 'hod'
-  department?: string;                // e.g. 'History'
-  action: string;                     // e.g. 'approved'
-  target: string;                     // e.g. "student's project"
-  message: string;                    // full sentence
-  createdAt: Date;
+  actor: mongoose.Types.ObjectId;   // User who performed the action
+  name: string;                     // Their name (Dr. Ibah Ibah, Prof. Mercy Amaefule, Hannah Musa etc.)
+  role: string;                     // Their role (Admin, Supervisor, Student etc.)
+  action: string;                   // What they did
+  entity: string;                   // Affected entity e.g. "Student", "Defence"
+  timestamp: Date;                  // When it happened
 }
 
-const activityLogSchema = new Schema<IActivityLog>(
-  {
-    user:       { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    role:       { type: String, required: true },
-    department: { type: String }, 
-    action:     { type: String, required: true },
-    target:     { type: String, required: true },
-    message:    { type: String, required: true },
-  },
-  { timestamps: { createdAt: true, updatedAt: false } }
-);
+const ActivityLogSchema = new Schema<IActivityLog>({
+  actor: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  name: { type: String, required: true },
+  role: { type: String, required: true },
+  action: { type: String, required: true },
+  entity: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+});
 
-activityLogSchema.index({ createdAt: -1 }); 
-
-export default mongoose.model<IActivityLog>(
-  'ActivityLog',
-  activityLogSchema
-);
+export default mongoose.model<IActivityLog>("ActivityLog", ActivityLogSchema);

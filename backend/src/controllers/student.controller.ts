@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import StudentService from "../services/students";
+import ActivityLogService from '../services/activity_log';
 import { Types } from "mongoose";
 
 
@@ -17,6 +18,8 @@ export default class StudentController {
     try {
       const { firstName, lastName, email, degree: level, matNo: matricNo, session, projectTopic } = req.body;
       const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
 
       const newStudent = await StudentService.addStudent({
         firstName,
@@ -28,20 +31,16 @@ export default class StudentController {
         session,
         projectTopic,
       });
-
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'added', `student ${firstName} ${lastName} with Matric No: (${matricNo})`);
       res.status(201).json({ success: true, data: newStudent });
     } catch (err: any) {
       console.log(err)
-      res.status(400).json({
-        success: false,
-        error: 'Failed to add student',
-        message: err.message,
-      });
+      res.status(400).json({success: false, error: 'Failed to add student', message: err.message});
     }
   }
 
 
-   static async getOneStudent(req: AuthenticatedRequest, res: Response) {
+  static async getOneStudent(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId } = req.params
       const student = await StudentService.getOneStudent(studentId);
@@ -177,19 +176,19 @@ export default class StudentController {
   }
 
 
-  static async assignSupervisor(req: Request, res: Response) {
+  static async assignSupervisor(req: AuthenticatedRequest, res: Response) {
     try {
       const { staffId, staffName, type } = req.body
       const { matricNo } = req.params;
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       const assignedStudent = await StudentService.assignSupervisor(staffId, staffName, type, matricNo)
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `${type} supervisor ${staffName} to student with Matric No: (${matricNo})`);
       res.status(201).json({ success: true, data: assignedStudent });
     } catch (err: any) {
       console.log(err)
-      res.status(400).json({
-        success: false,
-        error: 'Failed to assign supervisors',
-        message: err.message,
-      });
+      res.status(400).json({success: false, error: 'Failed to assign supervisors', message: err.message});
     }
   }
 
@@ -228,52 +227,45 @@ export default class StudentController {
     try {
       const { studentId } = req.params;
       const { matricNo, firstName, lastName, projectTopic } = req.body;
-      console.log(firstName, lastName)
-      const updatedStudent = await StudentService.editStudent(studentId, {
-        matricNo,
-        firstName,
-        lastName,
-        projectTopic
-
-      });
+     const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
+      const updatedStudent = await StudentService.editStudent(studentId, {matricNo,firstName,lastName,projectTopic });
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'updated', `student ${firstName} ${lastName} with Matric No: (${matricNo})`);
       res.status(200).json({ success: true, data: updatedStudent });
     } catch (err: any) {
       console.error(err);
-      res.status(400).json({
-        success: false,
-        error: 'Failed to update student',
-        message: err.message,
-      });
+      res.status(400).json({success: false, error: 'Failed to update student', message: err.message});
     }
   }
 
   static async deleteStudent(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId } = req.params;
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       const { deletedStudent, deletedUser } = await StudentService.deleteStudent(studentId);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'deleted', `a student`);
       res.status(200).json({ success: true, data: deletedStudent, deletedUser });
     } catch (err: any) {
       console.error(err);
-      res.status(400).json({
-        success: false,
-        error: 'Failed to delete student',
-        message: err.message,
-      });
+      res.status(400).json({success: false, error: 'Failed to delete student', message: err.message});
     }
   }
 
   static async assignCollegeRep(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId, staffId } = req.params;
+      const userId = req.user?.id || ''
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       const { updatedLecturer, updatedStudent } = await StudentService.assignCollegeRep(staffId, studentId)
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `college rep to student with ID: (${studentId})`);
       res.status(200).json({ success: true, data: updatedStudent, updatedLecturer });
     } catch (err: any) {
       console.error(err);
-      res.status(400).json({
-        success: false,
-        error: 'Failed to assign college rep',
-        message: err.message,
-      });
+      res.status(400).json({success: false, error: 'Failed to assign college rep',message: err.message});
     }
   }
 

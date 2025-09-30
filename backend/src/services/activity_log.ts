@@ -1,57 +1,39 @@
-// src/services/ActivityLogService.ts
-import { ActivityLog, User } from '../models/index';
+import { ActivityLog } from '../models/index';
+
 
 export default class ActivityLogService {
-    /**
-     * Records an activity with a human‑friendly message.
-     *
-     * @param userId    – Mongo ID of the actor
-     * @param role      – actor’s role (e.g. 'hod')
-     * @param department – actor’s department (optional)
-     * @param action    – verb (e.g. 'approved')
-     * @param target    – what was acted upon (e.g. "student's project")
-     */
-    static async record(
-        userId: string,
-        role: string,
-        department: string | undefined,
-        action: string,
-        target: string
-    ) {
-        // Load user name for the message
-        const user = await User.findById(userId);
-        const name = user ? `${user.firstName} ${user.lastName}` : 'Someone';
+    static async getAllLogs() {
+        const logs = await ActivityLog.find()
+            .populate("actor", "firstName lastName email") // include actor details
+            .sort({ timestamp: -1 });
 
-        // Build the sentence
-        const deptText = department ? ` from the ${department} department` : '';
-        const timeStamp = new Date().toLocaleString('en-GB', {
-            timeZone: 'Africa/Lagos',
-            hour12: false,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
+        return logs.map(log => {
+            const actor = log.actor as any;
+            const name = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim();
+            const time = log.timestamp
+
+            return {
+                message: `${name} ${log.action} ${log.entity} on ${time}`,
+                actor: {
+                    name,
+                    email: actor?.email,
+                },
+                time
+            };
         });
+    }
 
-        const message = `${name}, an ${role.toUpperCase()}${deptText} ${action} ${target} on ${timeStamp}`;
 
-        // Save to DB
-        return ActivityLog.create({
-            user: userId,
+
+    static async logActivity(userId: string, name: string, role: string, action: string, entity: string) {
+        await ActivityLog.create({
+            actor: userId,
+            name,
             role,
-            department,
             action,
-            target,
-            message,
+            entity,
+            timestamp: new Date(),
         });
     }
 
-    /** Fetch history for a user or globally, newest first */
-    static async getHistory(limit = 50) {
-        return ActivityLog.find()
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .lean();
-    }
 }

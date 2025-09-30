@@ -1,6 +1,7 @@
-import UserService from '../../src/services/user';
-import ActivityLogService from '../../src/services/activity_log'
+import UserService from '../services/user';
+import ActivityLogService from '../services/activity_log'
 import { Request, Response } from 'express';
+
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -27,7 +28,10 @@ export default class UserController {
     try {
       const {oldPassword, newPassword} = req.body;
       const userId = req.user?.id || ""
+      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
+      const userLastName = req.user?.lastName || '';
       await UserService.updatePassword(userId, oldPassword, newPassword);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'updated', 'their password');
       res.json({ success: true, data: newPassword });
     } catch (err: any) {
       console.log(err)
@@ -35,13 +39,4 @@ export default class UserController {
     }
   }
 
-  static async getActivityLogs(req: Request, res: Response) {
-    try {
-      const logs = await ActivityLogService.getHistory(100);
-      res.json({ success: true, data: logs });
-    } catch (err: any) {
-      console.log(err)
-      res.status(500).json({ success: false, error: 'Failed to get all activities', message: err.message });
-    }
-  }
 }
