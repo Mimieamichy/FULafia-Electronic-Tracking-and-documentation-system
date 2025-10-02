@@ -49,7 +49,7 @@ export default function DeanDashboard() {
 
     const endpoints = {
       departments: `${baseUrl}/dashboard/count/departments-faculty`,
-      students: `${baseUrl}/dashboard/count/students-dept`,
+      students: `${baseUrl}/dashboard/count/students-faculty`,
       lecturers: `${baseUrl}/dashboard/count/lecturers-faculty`,
       upcomingDefenses: `${baseUrl}/dashboard/upcoming-defences`,
     };
