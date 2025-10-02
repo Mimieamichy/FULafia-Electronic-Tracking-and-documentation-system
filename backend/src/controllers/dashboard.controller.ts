@@ -144,16 +144,37 @@ export default class DashboardController {
 
   // 9. Number of departments in faculty
   static async countDepartmentsInFaculty(req: AuthenticatedRequest, res: Response) {
-    try {
-      const userId = req.user?.id;
-      const lecturerFaculty = await Lecturer.findOne({user: userId}).select('faculty');
-      const count = await Department.countDocuments({ faculty: lecturerFaculty });
-      res.json({ success: true, count });
-    } catch (err: any) {
-      console.log(err)
-      res.status(400).json({success: false, error: 'Failed to get departments in faculty', message: err.message});
+  try {
+    const userId = req.user?.id;
+
+    // Step 1: find lecturer
+    const lecturer = await Lecturer.findOne({ user: userId }).select('faculty');
+    if (!lecturer) {
+      return res.status(404).json({ success: false, error: 'Lecturer profile not found' });
     }
+
+    // Step 2: find faculty document using lecturer.faculty (string)
+    const faculty = await Faculty.findOne({ name: lecturer.faculty }).select('_id');
+    if (!faculty) {
+      return res.status(404).json({ success: false, error: 'Faculty not found' });
+    }
+
+    console.log(faculty._id, lecturer.faculty);
+
+    // Step 3: count departments with facultyId
+    const count = await Department.countDocuments({ faculty: faculty._id });
+
+    res.json({ success: true, count });
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({
+      success: false,
+      error: 'Failed to get departments in faculty',
+      message: err.message,
+    });
   }
+}
+
 
   // 10. Number of college Reps in the school
  static async countCollegeReps(req: AuthenticatedRequest, res: Response) {
