@@ -136,4 +136,49 @@ export default class DashboardController {
       res.status(400).json({success: false, error: 'Failed to get departments in faculty', message: err.message});
     }
   }
+
+  // 10. Number of college Reps in the school
+ static async countCollegeReps(req: AuthenticatedRequest, res: Response) {
+  try {
+    // Get all lecturers with their user roles populated
+    const lecturers = await Lecturer.find()
+      .populate({ path: 'user', select: 'roles', model: 'User' });
+
+    // Filter lecturers whose user has the 'college_rep' role
+    const collegeReps = lecturers.filter(
+      lect => lect.user && typeof lect.user === 'object' && Array.isArray((lect.user as any).roles) && (lect.user as any).roles.includes('college_rep')
+    );
+
+    // Count and return
+    const count = collegeReps.length;
+    res.json({ success: true, count });
+
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({success: false, error: 'Failed to count college reps', message: err.message});
+  }
+}
+
+// 11. Number of external examiners in the school 
+static async countExternalExaminers(req: AuthenticatedRequest, res: Response) {
+  try {
+    // Get all lecturers with their user roles populated
+    const lecturers = await Lecturer.find()
+      .populate({ path: 'user', select: 'roles', model: 'User' });
+
+    // Filter lecturers whose user has the 'college_rep' role
+    const collegeReps = lecturers.filter(
+      lect => lect.user && typeof lect.user === 'object' && Array.isArray((lect.user as any).roles) && (lect.user as any).roles.includes('external_examiner')
+    );
+
+    // Count and return
+    const count = collegeReps.length;
+    res.json({ success: true, count });
+
+  } catch (err: any) {
+    console.error(err);
+    res.status(400).json({success: false, error: 'Failed to count external examiners', message: err.message});
+  }
+}
+
 }

@@ -18,5 +18,8 @@ router.get('/count/students-dept', DashboardController.countStudentsInDept);
 router.get('/count/students-faculty', DashboardController.countStudentsInFaculty);
 router.get('/count/active-sessions', DashboardController.countActiveSessions);
 router.get('/count/departments-faculty', DashboardController.countDepartmentsInFaculty);
+router.get('/count/college-reps', DashboardController.countCollegeReps);
+router.get('/count/external-examiners', DashboardController.countExternalExaminers);
+
 
 export default router;
