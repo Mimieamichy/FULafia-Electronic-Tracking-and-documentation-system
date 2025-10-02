@@ -61,7 +61,7 @@ export default class DashboardController {
   static async countLecturersInDept(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
-      const lecturerDept = await Lecturer.findById(userId).select('department');
+      const lecturerDept = await Lecturer.findOne({user: userId}).select('department');
       const dept = lecturerDept?.department;
       const count = await Lecturer.countDocuments({ department: dept });
       res.json({ success: true, count });
@@ -75,7 +75,7 @@ export default class DashboardController {
   static async countLecturersInFaculty(req: AuthenticatedRequest, res: Response) {
       try {
       const userId = req.user?.id || '';
-      const lecturerDept = await Lecturer.findById(userId).select('faculty');
+      const lecturerDept = await Lecturer.findOne({user: userId}).select('faculty');
       const faculty = lecturerDept?.faculty;
       const count = await Lecturer.countDocuments({ faculty });
       res.json({ success: true, count });
@@ -89,7 +89,7 @@ export default class DashboardController {
   static async countStudentsInDept(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
-      const lecturerDept = await Lecturer.findById(userId).select('department');
+      const lecturerDept = await Lecturer.findOne({user: userId}).select('department');
       const dept = lecturerDept?.department;
       const count = await Student.countDocuments({ department: dept });
       res.json({ success: true, count });
@@ -103,7 +103,7 @@ export default class DashboardController {
   static async countStudentsInFaculty(req: AuthenticatedRequest, res: Response) {
      try {
       const userId = req.user?.id || '';
-      const lecturerDept = await Lecturer.findById(userId).select('faculty');
+      const lecturerDept = await Lecturer.findOne({user: userId}).select('faculty');
       const faculty = lecturerDept?.faculty;
       const count = await Student.countDocuments({ faculty });
       res.json({ success: true, count });
@@ -128,7 +128,7 @@ export default class DashboardController {
   static async countDepartmentsInFaculty(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id;
-      const lecturerFaculty = await Lecturer.findById(userId).select('faculty');
+      const lecturerFaculty = await Lecturer.findOne({user: userId}).select('faculty');
       const count = await Department.countDocuments({ faculty: lecturerFaculty });
       res.json({ success: true, count });
     } catch (err: any) {
