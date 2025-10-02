@@ -36,10 +36,12 @@ const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function DashboardShell() {
   const { user, logout, token } = useAuth();
-  const role = user?.role?.toUpperCase() || "";
-  const isHod = role === "HOD";
-  const isProvost = role === "PROVOST";
-  const userName = user?.userName || "User";
+  const role = user?.role || "";
+  console.log("user role:", role);
+
+  const isHod = role?.toUpperCase() === "HOD";
+  const isProvost = role?.toUpperCase() === "PROVOST";
+  const userName = user?.userName;
 
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<DashboardView>("overview");

@@ -70,7 +70,10 @@ export default function DefenseDayPage() {
     "internal_examiner",
     "supervisor",
     "major_supervisor",
+    "provost"
   ];
+  console.log("roles:", roles, "normalized:", normalizedRoles);
+  
   const isPanel = normalizedRoles.some((r) =>
     PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
   );
@@ -83,6 +86,8 @@ export default function DefenseDayPage() {
       r.startsWith("hod") ||
       r.startsWith("provost")
   );
+  console.log("isPanel:", isPanel, "isHodOrProvost:", isHodOrProvost);
+  
 
   // --- hooks (always declared, never conditional) ---
   const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
@@ -259,6 +264,8 @@ export default function DefenseDayPage() {
         });
 
         const textRecent = await resRecent.text();
+        console.log("[DefenseDayPage] /defence/recent status:", resRecent.status);
+        
         console.log("[DefenseDayPage] /defence/recent raw text:", textRecent);
 
         let parsedRecent: any = null;
@@ -630,6 +637,7 @@ export default function DefenseDayPage() {
   // replace or add these handlers in DefenseDayPage.tsx
 
   const setProcessing = (studentId: string, v: boolean) =>
+    
     setProcessingIds((p) => ({ ...p, [studentId]: v }));
 
   const handleApprove = async (studentId: string) => {
@@ -664,6 +672,8 @@ export default function DefenseDayPage() {
             s.id === studentId ? { ...s, approved: true } : s
           ),
         }));
+
+        
         setDefenseDays(updated[level] ?? []);
         return updated;
       });

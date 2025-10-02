@@ -17,6 +17,7 @@ interface UserProfile {
   id: string;
   department: string;
   faculty?: string;
+  roles: string;
 }
 
 interface AuthContextProps {
@@ -42,7 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedToken = localStorage.getItem("token");
     const storedRoles = localStorage.getItem("roles");
 
-
     if (storedUser && storedToken) {
       try {
         setUser(JSON.parse(storedUser));
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn("Failed to parse stored user:", err);
         localStorage.removeItem("user");
         localStorage.removeItem("token");
-        localStorage.removeItem("roles")
+        localStorage.removeItem("roles");
       }
     }
   }, []);
@@ -70,27 +70,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Defensive role extraction
       let roleValue = "unknown";
+      let rolesValues: "unknown";
       let roleArray: string[] = [];
 
       if (rawUser) {
         if (Array.isArray(rawUser.roles) && rawUser.roles.length > 0) {
           roleValue = rawUser.roles[0];
-           roleArray = rawUser.roles.map((r: any) => r.toString());
-
+          rolesValues = rawUser.roles;
+          roleArray = rawUser.roles.map((r: any) => r.toString());
         } else if (typeof rawUser.roles === "string") {
           roleValue = rawUser.roles;
         } else if (rawUser.role) {
           roleValue = rawUser.role;
         }
       }
+      console.log("Determined role:", roleValue);
+      
 
       console.log("User profile created:", rawUser);
-     
+
       console.log("Roles array:", roleArray);
 
       const userProfile: UserProfile = {
         userName: `${rawUser.firstName ?? ""} ${rawUser.lastName ?? ""}`.trim(),
         role: roleValue,
+        roles: rolesValues,
         email: rawUser.email,
         id: rawUser.id,
         department: rawUser.department,
@@ -122,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
-    localStorage.removeItem("roles")
+    localStorage.removeItem("roles");
     delete axios.defaults.headers.common["Authorization"];
   };
 

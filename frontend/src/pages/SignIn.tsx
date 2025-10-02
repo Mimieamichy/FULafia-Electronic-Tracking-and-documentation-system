@@ -26,6 +26,56 @@ const SignIn = () => {
     }));
   };
 
+  // given a raw role value (array | json-string | comma-separated string | single string)
+  // return a normalized deduped array of lowercase role strings
+  function normalizeRoles(raw: any): string[] {
+    if (!raw && raw !== "") return [];
+    // if it's already an array
+    if (Array.isArray(raw)) {
+      return Array.from(new Set(raw.map((r) => String(r).trim().toLowerCase()).filter(Boolean)));
+    }
+
+    // if it's a string, try parsing JSON first (handles '["a","b"]')
+    if (typeof raw === "string") {
+      const str = raw.trim();
+      try {
+        const parsed = JSON.parse(str);
+        if (Array.isArray(parsed)) {
+          return Array.from(new Set(parsed.map((r) => String(r).trim().toLowerCase()).filter(Boolean)));
+        }
+      } catch {
+        // not JSON, fallthrough to comma split
+      }
+      // comma-separated (or single) string
+      return Array.from(new Set(str.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)));
+    }
+
+    // fallback: stringify and split
+    return Array.from(new Set(String(raw).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)));
+  }
+
+  // Choose route based on priority order. First match wins.
+  function routeForRoles(roles: string[]) {
+    // priority-ordered checks (highest first)
+    const priorityMap: Array<{ keys: string[]; route: string }> = [
+      { keys: ["admin"], route: "/admin" },
+      { keys: ["dean"], route: "/dean" },
+      { keys: ["hod", "pgcord", "provost"], route: "/dashboard" },
+      // supervisor types should take precedence over faculty pg rep
+      { keys: ["supervisor", "major_supervisor", "college_rep"], route: "/supervisor" },
+      { keys: ["student"], route: "/student" },
+      // roles that land on defense-day
+      { keys: ["external_examiner", "faculty_pg_rep", "panel_member"], route: "/defense-day" },
+      // fallback lecturer/general -> dashboard
+      
+    ];
+
+    for (const p of priorityMap) {
+      if (roles.some((r) => p.keys.includes(r))) return p.route;
+    }
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -35,42 +85,21 @@ const SignIn = () => {
         formData.password
       );
 
-      const role = (loggedInUser?.role ?? "unknown")
-        .toString()
-        .trim()
-        .toLowerCase();
+      // normalize incoming roles (supports array | JSON string | comma-separated)
+      const roles = normalizeRoles(loggedInUser?.roles ?? loggedInUser?.roles ?? []);
+      const chosenRoute = routeForRoles(roles);
 
-      switch (role) {
-        case "hod":
-        case "pgcord":
-        case "provost":
-          navigate("/dashboard");
-          break;
-        case "dean":
-          navigate("/dean");
-          break;
-        case "admin":
-          navigate("/admin");
-          break;
-        case "supervisor":
-          navigate("/supervisor");
-          break;
-        case "student":
-          navigate("/student");
-          break;
-        case "external_examiner":
-        case "college_rep":
-        case "faculty_rep":
-        case "panel_member":
-          navigate("/defense-day");
-          break;
-        default:
-          toast({
-            title: "Unknown Role",
-            description: `Cannot redirect—role "${loggedInUser?.role}" not recognized.`,
-            variant: "destructive",
-          });
+      if (chosenRoute) {
+        navigate(chosenRoute);
+        return;
       }
+
+      // if we couldn't determine a route, show the unknown role toast (keeps original behavior)
+      toast({
+        title: "Unknown Role",
+        description: `Cannot redirect—role "${JSON.stringify(loggedInUser?.role)}" not recognized.`,
+        variant: "destructive",
+      });
     } catch (err: any) {
       console.error("Login error:", err);
       toast({

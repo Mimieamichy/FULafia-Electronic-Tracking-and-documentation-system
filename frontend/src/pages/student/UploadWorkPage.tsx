@@ -52,7 +52,6 @@ export default function UploadWorkPage() {
   // ---------- helpers ----------
   const mapComment = (c: any, versionNumber?: number): CommentItem => {
     const authorName =
-      
       (c.author
         ? `${c.author.firstName ?? ""} ${c.author.lastName ?? ""}`.trim()
         : undefined) ??
@@ -81,9 +80,9 @@ export default function UploadWorkPage() {
         },
       });
 
-const payload = await res.json().catch(() => null);
-console.log("payload:", payload);
-      
+      const payload = await res.json().catch(() => null);
+      console.log("payload:", payload);
+
       if (!res.ok) {
         console.warn("fetchProject non-OK", res.status);
         setProjectId(null);
@@ -93,7 +92,6 @@ console.log("payload:", payload);
         return;
       }
 
-      
       const projectObj =
         payload?.project ?? payload?.data?.project ?? payload?.data ?? null;
       if (!projectObj) {
@@ -105,7 +103,6 @@ console.log("payload:", payload);
       }
 
       console.log("projectObj:", projectObj);
-      
 
       const versions: any[] = Array.isArray(projectObj.versions)
         ? projectObj.versions

@@ -208,7 +208,6 @@ const StudentSessionManagement = () => {
     };
   }, [isProvost, token]);
 
-
   // fetch departments if provost and faculty selected
   useEffect(() => {
     if (!isProvost) return;
@@ -258,7 +257,6 @@ const StudentSessionManagement = () => {
     };
   }, [isProvost, selectedFacultyId, token]);
 
-
   // fetch sessions
   useEffect(() => {
     const fetchSessions = async () => {
@@ -289,7 +287,6 @@ const StudentSessionManagement = () => {
     };
     fetchSessions();
   }, [token, selectedSession]);
-
 
   // fetch departments if dean
   useEffect(() => {
@@ -336,7 +333,6 @@ const StudentSessionManagement = () => {
     };
   }, [isDean, token, user]);
 
-  
   // fetch students when filters change
   useEffect(() => {
     const resolveDepartmentName = () => {
@@ -794,9 +790,21 @@ const StudentSessionManagement = () => {
       { re: /proposal/, key: "proposalScore", label: "Proposal" },
       { re: /internal/, key: "internalScore", label: "Internal" },
       { re: /external/, key: "externalScore", label: "External" },
-      { re: /second seminar|2nd seminar/, key: "secondSeminarScore", label: "2nd Seminar" },
-      { re: /third seminar|3rd seminar/, key: "thirdSeminarScore", label: "3rd Seminar" },
-      { re: /first seminar|1st seminar/, key: "firstSeminarScore", label: "1st Seminar" },
+      {
+        re: /second seminar|2nd seminar/,
+        key: "secondSeminarScore",
+        label: "2nd Seminar",
+      },
+      {
+        re: /third seminar|3rd seminar/,
+        key: "thirdSeminarScore",
+        label: "3rd Seminar",
+      },
+      {
+        re: /first seminar|1st seminar/,
+        key: "firstSeminarScore",
+        label: "1st Seminar",
+      },
       { re: /defense|defence|final/, key: "internalScore", label: "Defense" },
     ];
 
@@ -1054,6 +1062,48 @@ const StudentSessionManagement = () => {
           </div>
         )}
 
+        {isDean && (
+          <div className="mt-4">
+            <Label className="text-sm text-gray-600">Department</Label>
+            <Select
+              value={selectedDepartmentForDefense}
+              onValueChange={setSelectedDepartmentForDefense}
+              disabled={
+                departmentsLoading ||
+                departments.length === 0 ||
+                Boolean(user?.department && departments.length === 1)
+              } // optional: disable if single assigned dept
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue
+                  placeholder={
+                    departmentsLoading
+                      ? "Loading departments..."
+                      : departments.length
+                      ? "Select Department"
+                      : "No departments"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {departmentsLoading ? (
+                  <SelectItem disabled>Loading departments...</SelectItem>
+                ) : departmentsError ? (
+                  <SelectItem disabled>{departmentsError}</SelectItem>
+                ) : departments.length ? (
+                  departments.map((d) => (
+                    <SelectItem key={d._id} value={d._id}>
+                      {d.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem disabled>No departments</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Schedule buttons row */}
         <div className="mt-4 flex items-center justify-between">
           <div />
@@ -1134,9 +1184,6 @@ const StudentSessionManagement = () => {
                     <th className="p-4 text-sm text-gray-600 font-medium">
                       Department
                     </th>
-                    <th className="p-4 text-sm text-gray-600 font-medium">
-                      Faculty
-                    </th>
                   </>
                 ) : (
                   <>
@@ -1169,7 +1216,7 @@ const StudentSessionManagement = () => {
             <tbody>
               {paginated.map((s, idx) => {
                 const rowBg = idx % 2 === 0 ? "bg-white" : "bg-amber-50";
-                const { value: score, } = getStageScore(s);
+                const { value: score } = getStageScore(s);
                 if (isProvost || isDean) {
                   return (
                     <tr key={s._id} className={rowBg}>
@@ -1248,9 +1295,7 @@ const StudentSessionManagement = () => {
                     <td className="p-4 border-t capitalize">
                       {s.projectTopic}
                     </td>
-                    <td className="p-4 border-t">
-                      {score?? "—"}
-                    </td>
+                    <td className="p-4 border-t">{score ?? "—"}</td>
                     <td className="p-4 border-t">
                       {s.majorSupervisor || "Not Assigned"}
                     </td>
