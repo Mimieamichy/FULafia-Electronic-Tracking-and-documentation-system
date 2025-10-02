@@ -204,6 +204,9 @@ export default class ProjectService {
     student.session = session.sessionName as any;
 
 
+    
+
+
     const project = await Project.findOne({ student: student._id })
       .populate("versions.uploadedBy", "firstName lastName email")
       .populate("versions.comments.author", "firstName lastName email");
@@ -224,7 +227,13 @@ export default class ProjectService {
     }
 
 
-    return { student, project };
+    return { 
+      student: {
+      ...student.toObject(),
+      sessionName: (student.session as any).sessionName 
+      },
+      project 
+    };
   }
 
   static async downloadLatestProject(studentId: string) {

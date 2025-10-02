@@ -17,16 +17,26 @@ export default class DashboardController {
   // 1. Assigned students for a supervisor
   static async getAssignedStudents(req: AuthenticatedRequest, res: Response) {
     try {
-      const supervisorId = req.user?.id; 
+      const userId = req.user?.id; 
+
+      // First, find the lecturer associated with this user
+    const lecturer = await Lecturer.findOne({ user: userId }) ;
+    if (!lecturer) {
+       res.status(404).json({ 
+        success: false, 
+        error: 'Lecturer profile not found' 
+      });
+       return;
+    }
       const students = await Student.find({
   $or: [
-    { majorSupervisor: supervisorId },
-    { minorSupervisor: supervisorId },
-    { collegeRep: supervisorId },
-    { internalExaminer: supervisorId }
+    { majorSupervisor: lecturer._id },
+    { minorSupervisor: lecturer._id },
+    { collegeRep: lecturer._id },
+    { internalExaminer: lecturer._id }
   ]
 });
-      res.json({ success: true, count: students.length, students });
+      res.json({ success: true, count: students.length });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({success: false, error: 'Failed to get assigned students', message: err.message});
@@ -37,7 +47,15 @@ export default class DashboardController {
   static async getUpcomingDefences(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
-      const defences = await Defence.find({ ended: false, panelMembers: userId })
+      const lecturer = await Lecturer.findOne({ user: userId });
+    if (!lecturer) {
+       res.status(404).json({ 
+        success: false, 
+        error: 'Lecturer profile not found' 
+      }); return
+    }
+      
+      const defences = await Defence.find({ ended: false, panelMembers: lecturer._id })
       res.json({ success: true, count: defences.length, defences });
     } catch (err: any) {
       console.log(err)
