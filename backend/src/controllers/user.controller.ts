@@ -39,4 +39,14 @@ export default class UserController {
     }
   }
 
+     static async getAllLogs(req: AuthenticatedRequest, res: Response) {
+    try {
+      const logs = await ActivityLogService.getAllLogs();
+      res.json({ success: true, data: logs });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to get Actibity Logs', message: err.message });
+    }
+  }
+
 }

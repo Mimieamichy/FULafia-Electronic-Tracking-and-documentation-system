@@ -11,7 +11,7 @@ const router = Router();
 
 router.get('/profile', authenticate, UserController.getUserProfile);
 router.put('/update-password', authenticate, UserController.updatePassword);
-router.get('/activity-logs', authenticate, checkPermission(Permission.VIEW_ACTIVITY_LOGS), UserController.getActivityLogs);
+router.get('/activity-logs', authenticate, checkPermission(Permission.VIEW_ACTIVITY_LOGS), UserController.getAllLogs);
 
 
 export default router;
