@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import LecturerService from '../services/lecturer'
 import ActivityLogService from '../services/activity_log';
-import user from 'src/models/user';
+
 
 export interface AuthenticatedRequest extends Request {
   user?: {

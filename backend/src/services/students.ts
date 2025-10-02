@@ -242,7 +242,7 @@ export default class StudentService {
             Student,
             page,
             limit,
-            { department, level, session: sessionId }
+            { faculty, level, session: sessionId }
         );
     }
 

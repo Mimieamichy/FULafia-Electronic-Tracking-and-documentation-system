@@ -150,13 +150,15 @@ export default class DashboardController {
     // Step 1: find lecturer
     const lecturer = await Lecturer.findOne({ user: userId }).select('faculty');
     if (!lecturer) {
-      return res.status(404).json({ success: false, error: 'Lecturer profile not found' });
+       res.status(404).json({ success: false, error: 'Lecturer profile not found' });
+       return
     }
 
     // Step 2: find faculty document using lecturer.faculty (string)
     const faculty = await Faculty.findOne({ name: lecturer.faculty }).select('_id');
     if (!faculty) {
-      return res.status(404).json({ success: false, error: 'Faculty not found' });
+      res.status(404).json({ success: false, error: 'Faculty not found' });
+      return
     }
 
     console.log(faculty._id, lecturer.faculty);

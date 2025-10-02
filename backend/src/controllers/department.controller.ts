@@ -17,7 +17,7 @@ export default class DepartmentController {
     try {
       const facultyId = req.params.facultyId;
       const userId = req.user?.id || ''
-      const departments = await DepartmentService.getAllDepartmentsForFaculty(facultyId, userId);
+      const departments = await DepartmentService.getAllDepartmentsForFaculty(facultyId);
       res.json({ success: true, data: departments });
     } catch (err: any) {
       console.log(err)
