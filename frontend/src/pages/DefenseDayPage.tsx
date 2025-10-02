@@ -72,7 +72,7 @@ export default function DefenseDayPage() {
     "major_supervisor",
     "provost"
   ];
-  console.log("roles:", roles, "normalized:", normalizedRoles);
+  
   
   const isPanel = normalizedRoles.some((r) =>
     PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
@@ -86,7 +86,6 @@ export default function DefenseDayPage() {
       r.startsWith("hod") ||
       r.startsWith("provost")
   );
-  console.log("isPanel:", isPanel, "isHodOrProvost:", isHodOrProvost);
   
 
   // --- hooks (always declared, never conditional) ---
@@ -1072,6 +1071,7 @@ export default function DefenseDayPage() {
             onApprove={(studentId) => handleApprove(studentId)}
             onReject={(studentId) => handleReject(studentId)}
             processingIds={processingIds}
+            defenseStage={activeDefense?.currentStage }
           />
         )}
       </div>

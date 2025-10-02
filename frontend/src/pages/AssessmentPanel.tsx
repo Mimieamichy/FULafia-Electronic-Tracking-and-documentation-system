@@ -25,6 +25,7 @@ type Props = {
   onApprove: (studentId: string) => void;
   onReject?: (studentId: string) => void;
   processingIds?: Record<string, boolean>;
+  defenseStage: string; // new optional prop: current defense stage from parent
 };
 
 export default function AssessmentPanel({
@@ -33,6 +34,7 @@ export default function AssessmentPanel({
   onApprove,
   onReject,
   processingIds = {},
+  defenseStage,
 }: Props) {
   // Simple stage -> score lookup (no weighted computation)
   const getStageScore = (s: Student): { value: number; label: string } => {
@@ -79,7 +81,20 @@ export default function AssessmentPanel({
     return { value: numeric, label: chosenLabel };
   };
 
-  
+  // Normalize defenseStage for comparison
+  const normalizedDefenseStage = (defenseStage ?? "").toLowerCase().trim();
+  console.log("Current defense stage:", normalizedDefenseStage);
+
+  // Filter out students that have been approved for the current defense stage
+  const visibleStudents = students.filter((s) => {
+    if ((s.currentStage ?? "").toLowerCase().trim() !== normalizedDefenseStage)
+       {
+      return false; // hide this student
+      
+      
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -116,8 +131,8 @@ export default function AssessmentPanel({
             </thead>
 
             <tbody>
-              {students.map((s, idx) => {
-                const { value: score, } = getStageScore(s);
+              {visibleStudents.map((s, idx) => {
+                const { value: score } = getStageScore(s);
                 const processing = !!processingIds[s.id];
                 return (
                   <tr
@@ -138,7 +153,6 @@ export default function AssessmentPanel({
 
                     <td className="px-6 py-6 align-middle border-b border-amber-50 text-sm font-medium text-gray-900 text-center">
                       <div>{score}</div>
-                      
                     </td>
 
                     <td className="px-6 py-6 align-middle border-b border-amber-50 text-right">
