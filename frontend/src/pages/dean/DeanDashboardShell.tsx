@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import DeanDashboard from "./DeanDashboard";
 import MyStudentsPage from "../supervisor/MyStudentsPage";
 import NotificationCenter from "../NotificationCenter";
-import DeanActivityLog from "./DeanActivityLog";
+
 import DefenseDayPage from "../DefenseDayPage";
 import UpdatePasswordModal from "../UpdatePasswordModal";
 import DeanFacultyTab from "./DeanFacultyTab";
@@ -87,8 +87,6 @@ export default function DeanDashboardShell() {
         return <MyStudentsPage />;
       case "facultyTab":
         return <DeanFacultyTab />;
-      case "activityLog":
-        return <DeanActivityLog />;
       case "defenseDay":
         return <DefenseDayPage />;
       case "notifications":
@@ -164,17 +162,7 @@ export default function DeanDashboardShell() {
               >
                 Defense Page
               </li>
-              
-              <li
-                className="cursor-pointer hover:text-amber-700"
-                onClick={() => {
-                  setCurrentView("activityLog");
-                  setIsMenuOpen(false);
-                }}
-              >
-                Activity Log
-              </li>
-              
+
               <li
                 className="cursor-pointer hover:text-amber-700"
                 onClick={() => {

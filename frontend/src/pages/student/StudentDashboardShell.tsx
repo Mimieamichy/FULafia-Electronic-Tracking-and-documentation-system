@@ -88,9 +88,7 @@ const StudentDashboardShell = () => {
             className="w-6 h-6 text-gray-600 cursor-pointer"
             onClick={() => setIsMenuOpen((prev) => !prev)}
           />
-          <span className="text-gray-700 text-sm sm:text-base">
-            Welcome, {userName}
-          </span>
+          
         </div>
 
         {/* Side menu */}

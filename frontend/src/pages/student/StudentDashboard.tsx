@@ -54,14 +54,14 @@ export default function StudentDashboard() {
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 break-words">
+      <h1 className="text-2xl font-bold capitalize text-gray-800 break-words">
         Welcome, {userName}
       </h1>
 
       <div className="bg-white p-6 rounded-lg shadow-md space-y-6 w-full">
         <div className="space-y-1">
-          <p className="text-sm text-gray-500">Academic Session</p>
-          <p className="text-lg font-semibold text-gray-800">{currentSession}</p>
+          <p className="text-sm text-gray-500">Program</p>
+          <p className="text-lg font-semibold text-gray-800 uppercase">{project?.level}</p>
         </div>
         <div className="space-y-1">
           <p className="text-sm text-gray-500">Faculty</p>
