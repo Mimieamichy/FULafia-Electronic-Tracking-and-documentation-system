@@ -83,7 +83,13 @@ export default function AddHodModal({
     return { id, name };
   };
 
-  const handleChange = (field: keyof Omit<NewHodData, "faculty" | "department"> | "faculty" | "department", value: string) => {
+  const handleChange = (
+    field:
+      | keyof Omit<NewHodData, "faculty" | "department">
+      | "faculty"
+      | "department",
+    value: string
+  ) => {
     setFormData((f) => ({ ...f, [field]: value }));
   };
 
@@ -137,11 +143,11 @@ export default function AddHodModal({
     };
   }, [isOpen, token]);
 
-  // Fetch departments whenever faculty selection changes (only relevant for HOD)
+  // Fetch departments whenever faculty selection changes (for all roles)
   useEffect(() => {
     const facultyId = formData.faculty;
-    // clear departments if no faculty selected or role isn't HOD
-    if (!facultyId || formData.role !== "hod") {
+    // clear departments if no faculty selected
+    if (!facultyId) {
       setDepartments([]);
       setDeptError(null);
       setDeptLoading(false);
@@ -157,13 +163,16 @@ export default function AddHodModal({
 
     (async () => {
       try {
-        const res = await fetch(`${baseUrl}/department/${encodeURIComponent(facultyId)}`, {
-          signal: controller.signal,
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const res = await fetch(
+          `${baseUrl}/department/${encodeURIComponent(facultyId)}`,
+          {
+            signal: controller.signal,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
         if (!res.ok) {
           throw new Error(`Failed to load departments (${res.status})`);
         }
@@ -194,7 +203,7 @@ export default function AddHodModal({
       mounted = false;
       controller.abort();
     };
-  }, [formData.faculty, formData.role, token]);
+  }, [formData.faculty, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,6 +220,11 @@ export default function AddHodModal({
         departments.find((d) => d.id === formData.department)?.name ||
         "";
 
+      // validate required fields
+      if (!facultyName || !departmentName) {
+        throw new Error("Please select both faculty and department.");
+      }
+
       const payload: NewHodData = {
         title: formData.title,
         firstName: formData.firstName,
@@ -218,9 +232,9 @@ export default function AddHodModal({
         staffId: formData.staffId,
         email: formData.email,
         role: formData.role,
-        // IMPORTANT: send names (not ids)
-        faculty: formData.role === "hod" || formData.role === "dean" ? facultyName : "",
-        department: formData.role === "hod" ? departmentName : "",
+        // now include faculty & department for all roles
+        faculty: facultyName,
+        department: departmentName,
       };
 
       await onSubmit(payload);
@@ -239,32 +253,17 @@ export default function AddHodModal({
       setSelectedFacultyName("");
       setSelectedDepartmentName("");
       onClose();
-      
     } catch (err: any) {
       console.error("Add staff failed", err);
       setError(err.message || "Failed to add staff");
     } finally {
       setLoading(false);
-      
     }
   };
 
-  // Clear faculty/department when switching role away from hod/dean as appropriate
-  useEffect(() => {
-    if (formData.role === "provost") {
-      setFormData((f) => ({ ...f, faculty: "", department: "" }));
-      setDepartments([]);
-      setSelectedFacultyName("");
-      setSelectedDepartmentName("");
-    } else if (formData.role === "dean") {
-      // Clear department for dean
-      setFormData((f) => ({ ...f, department: "" }));
-      setDepartments([]);
-      setSelectedDepartmentName("");
-    }
-  }, [formData.role]);
-
-  const roleLabel = formData.role === "hod" ? "HOD" : formData.role === "provost" ? "Provost" : "Dean";
+  // Removed role-clearing effect so faculty/department remain available for all roles.
+  const roleLabel =
+    formData.role === "hod" ? "HOD" : formData.role === "provost" ? "Provost" : "Dean";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -295,13 +294,19 @@ export default function AddHodModal({
                   <SelectValue placeholder="Select Title" />
                 </SelectTrigger>
                 <SelectContent>
-                  {["MR.", "MRS.", "MISS.", "DR.","ASSOC. PROF.", "PROF.", "ENGR."].map(
-                    (t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    )
-                  )}
+                  {[
+                    "MR.",
+                    "MRS.",
+                    "MISS.",
+                    "DR.",
+                    "ASSOC. PROF.",
+                    "PROF.",
+                    "ENGR.",
+                  ].map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -364,76 +369,65 @@ export default function AddHodModal({
             </Select>
           </div>
 
-          {/* Faculty / Department */}
-          {(formData.role === "hod" || formData.role === "dean") && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700 mb-1">Faculty</label>
-                <Select
-                  value={formData.faculty || undefined}
-                  onValueChange={(val) => {
-                    // set the ID for fetching depts
-                    handleChange("faculty", val);
-                    // also capture the human-friendly name for submission
-                    const f = faculties.find((x) => x.id === val);
-                    setSelectedFacultyName(f?.name ?? "");
-                    // clear selected dept when faculty changes
-                    setFormData((prev) => ({ ...prev, department: "" }));
-                    setSelectedDepartmentName("");
-                  }}
-                  required={formData.role === "hod" || formData.role === "dean"}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Faculty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {faculties.map((fac) => (
-                      <SelectItem key={fac.id} value={fac.id}>
-                        {fac.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Faculty / Department - now required for ALL roles */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-1">Faculty</label>
+              <Select
+                value={formData.faculty || undefined}
+                onValueChange={(val) => {
+                  // set the ID for fetching depts
+                  handleChange("faculty", val);
+                  // also capture the human-friendly name for submission
+                  const f = faculties.find((x) => x.id === val);
+                  setSelectedFacultyName(f?.name ?? "");
+                  // clear selected dept when faculty changes
+                  setFormData((prev) => ({ ...prev, department: "" }));
+                  setSelectedDepartmentName("");
+                }}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Faculty" />
+                </SelectTrigger>
+                <SelectContent>
+                  {faculties.map((fac) => (
+                    <SelectItem key={fac.id} value={fac.id}>
+                      {fac.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                {facError && (
-                  <p className="text-sm text-red-500 mt-1">{facError}</p>
-                )}
-              </div>
-
-              {/* Department only for HOD */}
-              {formData.role === "hod" ? (
-                <div>
-                  <label className="block text-gray-700 mb-1">Department</label>
-                  <Select
-                    value={formData.department || undefined}
-                    onValueChange={(val) => {
-                      handleChange("department", val);
-                      const d = departments.find((x) => x.id === val);
-                      setSelectedDepartmentName(d?.name ?? "");
-                    }}
-                    required={formData.role === "hod"}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {deptError && (
-                    <p className="text-sm text-red-500 mt-1">{deptError}</p>
-                  )}
-                </div>
-              ) : (
-                <div />
-              )}
+              {facError && <p className="text-sm text-red-500 mt-1">{facError}</p>}
             </div>
-          )}
+
+            <div>
+              <label className="block text-gray-700 mb-1">Department</label>
+              <Select
+                value={formData.department || undefined}
+                onValueChange={(val) => {
+                  handleChange("department", val);
+                  const d = departments.find((x) => x.id === val);
+                  setSelectedDepartmentName(d?.name ?? "");
+                }}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {deptError && <p className="text-sm text-red-500 mt-1">{deptError}</p>}
+            </div>
+          </div>
 
           <DialogFooter className="flex justify-end gap-4 pt-4">
             <Button

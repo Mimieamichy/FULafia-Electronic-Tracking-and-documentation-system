@@ -104,7 +104,7 @@ export default function DashboardShell() {
       case "notifications":
         return <NotificationCenter />;
       case "activityLog":
-        return isProvost ? <ProvostActivityLog /> : null;
+        return isProvost || isHod ? <ProvostActivityLog /> : null;
       case "defenseDay":
         return <DefenseDayPage />;
       default:
@@ -171,7 +171,7 @@ export default function DashboardShell() {
               >
                 My Students
               </li>
-              {isProvost && (
+              {isProvost  || isHod && (
                 <li
                   onClick={() => {
                     setCurrentView("activityLog");

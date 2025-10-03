@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, Download, Send } from "lucide-react";
 import { useAuth } from "../AuthProvider";
 import { useToast } from "@/hooks/use-toast";
-import { log } from "console";
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -45,9 +44,18 @@ export default function UploadWorkPage() {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [loadingProject, setLoadingProject] = useState(false);
 
+  // PANEL comments (read-only)
+  const [defenceId, setDefenceId] = useState<string | null>(null);
+  const [panelComments, setPanelComments] = useState<CommentItem[]>([]);
+  const [loadingPanelComments, setLoadingPanelComments] = useState(false);
+  const [panelError, setPanelError] = useState<string | null>(null);
+
   // comment UI
   const [studentComment, setStudentComment] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+
+  // UI: which tab is active
+  const [activeTab, setActiveTab] = useState<"all" | "panel">("all");
 
   // ---------- helpers ----------
   const mapComment = (c: any, versionNumber?: number): CommentItem => {
@@ -57,14 +65,19 @@ export default function UploadWorkPage() {
         : undefined) ??
       c.author?.email ??
       c.by ??
+      c.user?.name ??
+      c.user?.email ??
       "Unknown";
     return {
       by: authorName,
       text: c.text ?? c.comment ?? c.body ?? "",
-      uploadedAt: c.date ?? c.uploadedAt ?? c.createdAt ?? undefined,
+      uploadedAt:
+        c.date ?? c.uploadedAt ?? c.createdAt ?? c.timestamp ?? undefined,
       versionNumber,
     };
   };
+
+  
 
   // Fetch canonical project and aggregate all comments across versions
   const fetchProject = async () => {
@@ -89,6 +102,7 @@ export default function UploadWorkPage() {
         setProjectVersions([]);
         setLatestVersionIndex(-1);
         setComments([]);
+        setDefenceId(null);
         return;
       }
 
@@ -99,6 +113,7 @@ export default function UploadWorkPage() {
         setProjectVersions([]);
         setLatestVersionIndex(-1);
         setComments([]);
+        setDefenceId(null);
         return;
       }
 
@@ -111,11 +126,19 @@ export default function UploadWorkPage() {
       setProjectId(projectObj._id ?? projectObj.id ?? null);
 
       // first try payload.student._id, then fallback to payload.project.student
-      const studentIdFromApi = projectObj.student;
+      const studentIdFromApi = projectObj.student ?? payload?.student ?? null;
+      setStuId(String(studentIdFromApi ?? user.id ?? ""));
 
-      setStuId(studentIdFromApi);
-
-      console.log("student _id:", studentIdFromApi);
+      // Try to find a defenceId in likely places
+      const maybeDefenceId =
+        projectObj.defenceId ??
+        projectObj.defence?._id ??
+        projectObj.defence?.id ??
+        projectObj.currentDefenceId ??
+        projectObj.currentDefence?.id ??
+        payload?.defenceId ??
+        null;
+      setDefenceId(maybeDefenceId ? String(maybeDefenceId) : null);
 
       const mappedVersions = versions.map((v: any) => {
         const verNum = v.versionNumber ?? v.version ?? 0;
@@ -143,8 +166,7 @@ export default function UploadWorkPage() {
         }
       });
 
-      // Sort comments by date (newest first). If no date, place at end.
-      // sort comments oldest -> newest, keep comments without date at the end
+      // Sort comments oldest -> newest (preserve stable ordering)
       allComments.sort((a, b) => {
         const ta = a.uploadedAt ? Date.parse(a.uploadedAt) : Infinity;
         const tb = b.uploadedAt ? Date.parse(b.uploadedAt) : Infinity;
@@ -158,8 +180,60 @@ export default function UploadWorkPage() {
       setProjectVersions([]);
       setLatestVersionIndex(-1);
       setComments([]);
+      setDefenceId(null);
     } finally {
       setLoadingProject(false);
+    }
+  };
+
+  // fetch panel comments for the specific student + defence
+  const fetchPanelComments = async (studentId: string, defId: string) => {
+    setLoadingPanelComments(true);
+    setPanelError(null);
+    try {
+      const url = `${baseUrl}/project/student/defence-comments/${encodeURIComponent(
+        studentId
+      )}/${encodeURIComponent(defId)}`;
+      const res = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      console.log("payload", res.status);
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`Failed to load panel comments: ${res.status} ${txt}`);
+      }
+
+      const payload = await res.json().catch(() => null);
+      // payload might be array or { data: [...] } or { comments: [...] }
+      const arr: any[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.comments)
+        ? payload.comments
+        : [];
+
+        
+        
+
+      const mapped = arr.map((c) => mapComment(c, undefined));
+      // sort oldest -> newest
+      mapped.sort((a, b) => {
+        const ta = a.uploadedAt ? Date.parse(a.uploadedAt) : Infinity;
+        const tb = b.uploadedAt ? Date.parse(b.uploadedAt) : Infinity;
+        return ta - tb;
+      });
+      setPanelComments(mapped);
+    } catch (err: any) {
+      console.error("fetchPanelComments error:", err);
+      setPanelComments([]);
+      setPanelError(err?.message ?? "Failed to load panel comments");
+    } finally {
+      setLoadingPanelComments(false);
     }
   };
 
@@ -181,7 +255,8 @@ export default function UploadWorkPage() {
         const txt = await res.text().catch(() => "");
         throw new Error(`Failed to post comment: ${res.status} ${txt}`);
       }
-      // refresh canonical project data (which includes versions + comments)
+      // refresh canonical projec
+      // t data (which includes versions + comments)
       await fetchProject();
     } catch (err) {
       console.error("postComment error:", err);
@@ -411,6 +486,17 @@ export default function UploadWorkPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.id]);
 
+  // whenever stuId + defenceId becomes available, fetch panel comments
+  useEffect(() => {
+    if (!stuId || !defenceId) {
+      setPanelComments([]);
+      setPanelError(null);
+      return;
+    }
+    void fetchPanelComments(stuId, defenceId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stuId, defenceId, token]);
+
   return (
     <div className="space-y-6 px-4 sm:px-6">
       <h1 className="text-2xl font-bold text-gray-800">Upload Work</h1>
@@ -490,98 +576,174 @@ export default function UploadWorkPage() {
             )}
           </div>
 
-          {/* Comments (ALL versions aggregated) */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">All Comments</p>
+          {/* Comments Tabs */}
+          <div>
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`px-3 py-1 rounded-md ${
+                  activeTab === "all"
+                    ? "bg-amber-700 text-white"
+                    : "bg-white border"
+                }`}
+              >
+                All Comments
+              </button>
 
-            <div className="h-64 overflow-y-auto border rounded p-3 bg-gray-50 flex flex-col gap-2">
-              {loadingProject ? (
-                <p className="text-sm text-gray-500 self-center">
-                  Loading comments…
-                </p>
-              ) : comments.length === 0 ? (
-                <p className="text-gray-500 italic text-sm self-center">
-                  No comments yet.
-                </p>
-              ) : (
-                comments.map((c, i) => (
-                  <div
-                    key={`${c.uploadedAt ?? i}-${i}`}
-                    className={`relative p-2 rounded-lg capitalize max-w-[100%] text-sm ${
-                      (c.by || "").toLowerCase() ===
-                      (userName || "").toLowerCase()
-                        ? "bg-amber-200 self-end text-right"
-                        : "bg-white self-start text-left border"
-                    }`}
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div className="font-medium text-xs text-gray-600">
-                        {c.by}
-                      </div>
-                    </div>
-                    <div className="mt-1 whitespace-pre-wrap">{c.text}</div>
-                    <div className="text-[10px] text-gray-500 mt-1 text-right">
-                      {c.versionNumber ? `v${c.versionNumber}` : ""}
-                      {c.uploadedAt
-                        ? ` • ${new Date(c.uploadedAt).toLocaleString()}`
-                        : ""}
-                    </div>
-                  </div>
-                ))
-              )}
+              <button
+                type="button"
+                onClick={() => setActiveTab("panel")}
+                className={`px-3 py-1 rounded-md ${
+                  activeTab === "panel"
+                    ? "bg-amber-700 text-white"
+                    : "bg-white border"
+                }`}
+              >
+                Panel Comments
+              </button>
             </div>
 
-            {/* Add new comment textarea -> posts to latest version */}
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Write your comment..."
-                value={studentComment}
-                onChange={(e) => setStudentComment(e.target.value)}
-                className="w-full"
-              />
-              <div className="flex justify-end">
-                <Button
-                  className="bg-amber-700 text-white"
-                  onClick={async () => {
-                    if (!studentComment.trim()) return;
-                    if (latestVersionIndex < 0) {
-                      toast({
-                        title: "No project version",
-                        description:
-                          "There is no uploaded project version to comment on.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    setSendingComment(true);
-                    try {
-                      const verNum =
-                        projectVersions[latestVersionIndex].versionNumber;
+            {/* Tab content */}
+            <div className="p-3 border rounded bg-gray-50">
+              {activeTab === "all" ? (
+                <>
+                  <div className="h-64 overflow-y-auto flex flex-col gap-2">
+                    {loadingProject ? (
+                      <p className="text-sm text-gray-500 self-center">
+                        Loading comments…
+                      </p>
+                    ) : comments.length === 0 ? (
+                      <p className="text-gray-500 italic text-sm self-center">
+                        No comments yet.
+                      </p>
+                    ) : (
+                      comments.map((c, i) => (
+                        <div
+                          key={`${c.uploadedAt ?? i}-${i}`}
+                          className={`relative p-2 rounded-lg capitalize max-w-[100%] text-sm ${
+                            (c.by || "").toLowerCase() ===
+                            (userName || "").toLowerCase()
+                              ? "bg-amber-200 self-end text-right"
+                              : "bg-white self-start text-left border"
+                          }`}
+                        >
+                          <div className="flex items-baseline justify-between gap-2">
+                            <div className="font-medium text-xs text-gray-600">
+                              {c.by}
+                            </div>
+                          </div>
+                          <div className="mt-1 whitespace-pre-wrap">
+                            {c.text}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1 text-right">
+                            {c.versionNumber ? `v${c.versionNumber}` : ""}
+                            {c.uploadedAt
+                              ? ` • ${new Date(c.uploadedAt).toLocaleString()}`
+                              : ""}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
 
-                      await postComment(verNum, studentComment.trim());
-                      setStudentComment("");
-                      toast({
-                        title: "Comment sent",
-                        description: "Your comment was sent.",
-                        variant: "default",
-                      });
-                    } catch (err) {
-                      console.error("Error posting comment:", err);
-                      toast({
-                        title: "Failed to send comment",
-                        description: "See console for details.",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setSendingComment(false);
-                    }
-                  }}
-                  disabled={sendingComment}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  {sendingComment ? "Sending..." : "Send"}
-                </Button>
-              </div>
+                  {/* Add new comment textarea -> posts to latest version */}
+                  <div className="space-y-2 mt-3">
+                    <Textarea
+                      placeholder="Write your comment..."
+                      value={studentComment}
+                      onChange={(e) => setStudentComment(e.target.value)}
+                      className="w-full"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        className="bg-amber-700 text-white"
+                        onClick={async () => {
+                          if (!studentComment.trim()) return;
+                          if (latestVersionIndex < 0) {
+                            toast({
+                              title: "No project version",
+                              description:
+                                "There is no uploaded project version to comment on.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setSendingComment(true);
+                          try {
+                            const verNum =
+                              projectVersions[latestVersionIndex].versionNumber;
+                            await postComment(verNum, studentComment.trim());
+                            setStudentComment("");
+                            toast({
+                              title: "Comment sent",
+                              description: "Your comment was sent.",
+                              variant: "default",
+                            });
+                          } catch (err) {
+                            console.error("Error posting comment:", err);
+                            toast({
+                              title: "Failed to send comment",
+                              description: "See console for details.",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setSendingComment(false);
+                          }
+                        }}
+                        disabled={sendingComment}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        {sendingComment ? "Sending..." : "Send"}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                // Panel comments (read-only)
+                <>
+                  {!stuId || !defenceId ? (
+                    <div className="text-sm text-gray-500 italic">
+                      Panel comments are not available — no defence selected for
+                      this project.
+                    </div>
+                  ) : loadingPanelComments ? (
+                    <div className="text-sm text-gray-500">
+                      Loading panel comments…
+                    </div>
+                  ) : panelError ? (
+                    <div className="text-sm text-red-500">
+                      Error: {panelError}
+                    </div>
+                  ) : panelComments.length === 0 ? (
+                    <div className="text-sm text-gray-500 italic">
+                      No panel comments yet.
+                    </div>
+                  ) : (
+                    <div className="h-64 overflow-y-auto flex flex-col gap-2">
+                      {panelComments.map((c, i) => (
+                        <div
+                          key={`${c.uploadedAt ?? i}-${i}`}
+                          className="relative p-2 rounded-lg bg-white border text-sm max-w-[100%]"
+                        >
+                          <div className="font-medium text-xs text-gray-600">
+                            {c.by}
+                          </div>
+                          <div className="mt-1 whitespace-pre-wrap">
+                            {c.text}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1 text-right">
+                            {c.versionNumber ? `v${c.versionNumber}` : ""}
+                            {c.uploadedAt
+                              ? ` • ${new Date(c.uploadedAt).toLocaleString()}`
+                              : ""}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
