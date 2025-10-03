@@ -143,6 +143,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_FACULTY_REP,
     Permission.GET_PROVOST,
     Permission.GET_DEAN,
+    Permission.VIEW_ACTIVITY_LOGS,
   ],
   [Role.PGCOORD]: [
     Permission.VIEW_LECTURERS_BY_DEPARTMENT,
@@ -233,6 +234,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.APPROVE_DEFENSE,
     Permission.START_DEFENSE,
     Permission.END_DEFENSE,
+    Permission.VIEW_ACTIVITY_LOGS,
   ],
   [Role.EXTERNAL_EXAMINER]: [
     Permission.APPROVE_LAST_DEFENSE,

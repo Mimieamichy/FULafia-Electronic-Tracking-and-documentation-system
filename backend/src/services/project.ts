@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
 
 
+
 export default class ProjectService {
   static async uploadProject(userId: string, fileUrl: string) {
     // Find student linked to this user
@@ -254,43 +255,29 @@ export default class ProjectService {
 
 
   // Add a comment on defnce day
-  static async commentOnDefenceDay(
-  studentId: string, 
-  authorId: string, 
-  text: string
-): Promise<IDefenceComment> {
-  
-  // Find the latest defence for this student that has ended
-  const defence = await Defence.findOne({
-    student: new Types.ObjectId(studentId),
-    ended: true,
-  }).sort({ createdAt: -1 })
-  
-  if (!defence) {
-    throw new Error('No defence found for this student');
-  }
+  static async commentOnDefenceDay(studentId: string, defenceId: string, authorId: string, text: string): Promise<IDefenceComment> {
 
-  let defenceComment = await DefenceComment.findOne({
-    defence: defence._id,
-    student: new Types.ObjectId(studentId),
-  });
-
-  if (!defenceComment) {
-    defenceComment = new DefenceComment({
-      defence: defence._id,
-      student: studentId,
-      comments: [],
+    let defenceComment = await DefenceComment.findOne({
+      defence: new Types.ObjectId(defenceId),
+      student: new Types.ObjectId(studentId),
     });
+
+    if (!defenceComment) {
+      defenceComment = new DefenceComment({
+        defence: new Types.ObjectId(defenceId),
+        student: studentId,
+        comments: [],
+      });
+    }
+
+    defenceComment.comments.push({
+      author: new Types.ObjectId(authorId),
+      text,
+      createdAt: new Date(),
+    });
+
+    return await defenceComment.save();
   }
-
-  defenceComment.comments.push({
-    author: new Types.ObjectId(authorId),
-    text,
-    createdAt: new Date(),
-  });
-
-  return await defenceComment.save();
-}
 
   static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string) {
 
@@ -317,12 +304,24 @@ export default class ProjectService {
   }
 
 
-  static async getCommentsForStudent(defenceId: string, studentId: string) {
+  static async getDefenceDayComments(studentId: string) {
+    const defence = await Defence.findOne({
+    students: studentId,
+  }).sort({ createdAt: -1 })
+
+    if (!defence) {
+    throw new Error('No defence found for this student'); 
+  }
+
+  console.log(defence)
+
     const defenceComment = await DefenceComment.findOne({
-      defence: defenceId,
+      defence: defence._id,
       student: studentId,
     })
       .populate('comments.author', 'firstName lastName email') // Populate author details 
+
+      console.log(defenceComment)
 
     return defenceComment;
   }

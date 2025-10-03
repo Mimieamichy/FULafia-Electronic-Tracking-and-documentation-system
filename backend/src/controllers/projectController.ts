@@ -199,6 +199,7 @@ export default class ProjectController {
 
       const comments = await ProjectService.commentOnDefenceDay(
         studentId,
+        defenceId,
         author,
         text
       );
@@ -226,9 +227,9 @@ export default class ProjectController {
 
   static async getDefenceDayComments(req: Request, res: Response) {
     try {
-      const { studentId, defenceId } = req.params;
+      const { studentId } = req.params;
 
-      const comments = await ProjectService.getCommentsForStudent(defenceId, studentId);
+      const comments = await ProjectService.getDefenceDayComments(studentId);
       res.status(200).json({ success: true, message: 'Comments retrieved', data: comments });
     } catch (err: any) {
       console.log(err)
