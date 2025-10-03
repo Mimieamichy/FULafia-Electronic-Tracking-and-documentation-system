@@ -7,6 +7,7 @@ export interface IActivityLog extends Document {
   role: string;                     // Their role (Admin, Supervisor, Student etc.)
   action: string;                   // What they did
   entity: string;                   // Affected entity e.g. "Student", "Defence"
+  department: string;               // Department of the actor
   timestamp: Date;                  // When it happened
 }
 
@@ -16,6 +17,7 @@ const ActivityLogSchema = new Schema<IActivityLog>({
   role: { type: String, required: true },
   action: { type: String, required: true },
   entity: { type: String, required: true },
+  department: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 

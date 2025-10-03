@@ -307,7 +307,7 @@ export default class LecturerService {
             .then(lecturers => lecturers.filter(l => l.user)); // remove lecturers with no matched user
     }
 
-   static async getExternalExaminer(department?: string) {
+    static async getExternalExaminer(department?: string) {
     const query: any = {};
     if (department) {
         query.department = department; 
@@ -319,7 +319,7 @@ export default class LecturerService {
             match: { roles: 'external_examiner' },
         })
         .then(lecturers => lecturers.filter(l => l.user)); // keep only those with a matched user
-}
+    }
 
 
     static async getLecturerByDepartment(userId: string) {
@@ -390,7 +390,6 @@ export default class LecturerService {
 
         return updatedUser;
     }
-
 
     static async getFacultyReps(userId: string) {
         // Get the lecturer making the request

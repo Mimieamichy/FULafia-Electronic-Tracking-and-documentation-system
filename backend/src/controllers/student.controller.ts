@@ -231,7 +231,7 @@ export default class StudentController {
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
       const updatedStudent = await StudentService.editStudent(studentId, {matricNo,firstName,lastName,projectTopic });
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'updated', `student ${firstName} ${lastName} with Matric No: (${matricNo})`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'updated', `${firstName} ${lastName} with Matric No: (${matricNo}) data`);
       res.status(200).json({ success: true, data: updatedStudent });
     } catch (err: any) {
       console.error(err);
@@ -245,8 +245,12 @@ export default class StudentController {
       const userId = req.user?.id || ''
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
       const { deletedStudent, deletedUser } = await StudentService.deleteStudent(studentId);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'deleted', `a student`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'deleted a student', `${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`);
       res.status(200).json({ success: true, data: deletedStudent, deletedUser });
     } catch (err: any) {
       console.error(err);
@@ -261,7 +265,11 @@ export default class StudentController {
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
       const { updatedLecturer, updatedStudent } = await StudentService.assignCollegeRep(staffId, studentId)
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `college rep to student with ID: (${studentId})`);
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `college rep to ${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`);
       res.status(200).json({ success: true, data: updatedStudent, updatedLecturer });
     } catch (err: any) {
       console.error(err);

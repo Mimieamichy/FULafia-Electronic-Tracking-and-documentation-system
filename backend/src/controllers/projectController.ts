@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import ProjectService from '../services/project';
 import ActivityLogService from '../services/activity_log';
 import path from 'path';
+import StudentService from '../services/students';
 
 
 export interface AuthenticatedRequest extends Request {
@@ -21,16 +22,19 @@ export default class ProjectController {
       const userId = req.user?.id || ''
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
 
       const project = await ProjectService.uploadProject(studentId, fileUrl);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Uploaded', 'a new Project version');
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Uploaded', 'a new Project version', studentData.departments);
       res.status(201).json({ success: true, message: 'Project uploaded successfully', data: project });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
     }
   }
-
 
   static async commentOnProject(req: AuthenticatedRequest, res: Response) {
     try {
@@ -46,7 +50,11 @@ export default class ProjectController {
         author,
         text
       );
-      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Commented on', `Project version ${versionNumber} of student  with ${studentId}`);
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
+      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version ${versionNumber}`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: updatedProject });
     } catch (err: any) {
       console.log(err)
@@ -72,7 +80,12 @@ export default class ProjectController {
       const author = req.user?.id || ''
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
+      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'downloaded project', `of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -100,9 +113,13 @@ export default class ProjectController {
     }
 
     const fileName = path.basename(project.fileUrl);
+    const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Downloaded', `Latest Project version of student`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Downloaded', `Latest Project version of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -136,8 +153,12 @@ export default class ProjectController {
       const userId = req.user?.id || ''
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
       const project = await ProjectService.approveProject(studentId);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Approved', `Project of student`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Approved', `Project of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} for defence`, studentData.department);
       res.status(200).json({ success: true, message: 'Project approved successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -165,6 +186,10 @@ export default class ProjectController {
       const userId = req.user?.id || ''
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
+      const studentData = await StudentService.getOneStudent(studentId);
+      if (!studentData) {
+        return res.status(404).json({ success: false, error: 'Student not found' });
+      }
 
       const comments = await ProjectService.commentOnDefenceDay(
         studentId,
@@ -172,7 +197,7 @@ export default class ProjectController {
         author,
         text
       );
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Commented on', `Student project on Defence day`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} project on Defence day`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: comments });
     } catch (err: any) {
       console.log(err)
