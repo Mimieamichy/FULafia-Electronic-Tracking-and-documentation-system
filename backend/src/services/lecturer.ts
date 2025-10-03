@@ -1,5 +1,6 @@
 import { Lecturer, User, Student } from '../models/index';
 import { Role } from '../utils/permissions';
+import NotificationService from '../services/notification'
 
 
 export default class LecturerService {
@@ -387,6 +388,12 @@ export default class LecturerService {
             },
             { new: true }
         );
+
+        await NotificationService.createNotifications({
+          lecturerIds: [staffId],
+          role: "faculty_pg_rep",
+          message: `You have been assigned a Faculty PG rep for ${lecturer.faculty}`,
+        });
 
         return updatedUser;
     }

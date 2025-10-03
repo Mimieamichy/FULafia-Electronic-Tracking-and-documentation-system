@@ -1,4 +1,4 @@
-import { Project, Student, Session, DefenceComment, IDefenceComment } from '../models/index';
+import { Project, Student, Session, DefenceComment, IDefenceComment , Defence} from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
@@ -203,10 +203,6 @@ export default class ProjectService {
     if (!session) throw new Error("Session not found");
     student.session = session.sessionName as any;
 
-
-    
-
-
     const project = await Project.findOne({ student: student._id })
       .populate("versions.uploadedBy", "firstName lastName email")
       .populate("versions.comments.author", "firstName lastName email");
@@ -258,29 +254,43 @@ export default class ProjectService {
 
 
   // Add a comment on defnce day
-  static async commentOnDefenceDay(studentId: string, defenceId: string, authorId: string, text: string): Promise<IDefenceComment> {
-
-    let defenceComment = await DefenceComment.findOne({
-      defence: new Types.ObjectId(defenceId),
-      student: new Types.ObjectId(studentId),
-    });
-
-    if (!defenceComment) {
-      defenceComment = new DefenceComment({
-        defence: new Types.ObjectId(defenceId),
-        student: studentId,
-        comments: [],
-      });
-    }
-
-    defenceComment.comments.push({
-      author: new Types.ObjectId(authorId),
-      text,
-      createdAt: new Date(),
-    });
-
-    return await defenceComment.save();
+  static async commentOnDefenceDay(
+  studentId: string, 
+  authorId: string, 
+  text: string
+): Promise<IDefenceComment> {
+  
+  // Find the latest defence for this student that has ended
+  const defence = await Defence.findOne({
+    student: new Types.ObjectId(studentId),
+    ended: true,
+  }).sort({ createdAt: -1 })
+  
+  if (!defence) {
+    throw new Error('No defence found for this student');
   }
+
+  let defenceComment = await DefenceComment.findOne({
+    defence: defence._id,
+    student: new Types.ObjectId(studentId),
+  });
+
+  if (!defenceComment) {
+    defenceComment = new DefenceComment({
+      defence: defence._id,
+      student: studentId,
+      comments: [],
+    });
+  }
+
+  defenceComment.comments.push({
+    author: new Types.ObjectId(authorId),
+    text,
+    createdAt: new Date(),
+  });
+
+  return await defenceComment.save();
+}
 
   static async getCommentsByUserForStudent(defenceId: string, studentId: string, authorId: string) {
 

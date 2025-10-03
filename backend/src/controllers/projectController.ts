@@ -199,7 +199,6 @@ export default class ProjectController {
 
       const comments = await ProjectService.commentOnDefenceDay(
         studentId,
-        defenceId,
         author,
         text
       );
