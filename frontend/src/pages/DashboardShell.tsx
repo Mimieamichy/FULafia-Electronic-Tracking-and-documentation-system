@@ -171,7 +171,7 @@ export default function DashboardShell() {
               >
                 My Students
               </li>
-              {isProvost  || isHod && (
+              {(isHod || isProvost) && (
                 <li
                   onClick={() => {
                     setCurrentView("activityLog");

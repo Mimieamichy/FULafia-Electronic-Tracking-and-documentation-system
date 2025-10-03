@@ -45,7 +45,7 @@ export default function UploadWorkPage() {
   const [loadingProject, setLoadingProject] = useState(false);
 
   // PANEL comments (read-only)
-  const [defenceId, setDefenceId] = useState<string | null>(null);
+ 
   const [panelComments, setPanelComments] = useState<CommentItem[]>([]);
   const [loadingPanelComments, setLoadingPanelComments] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
@@ -129,16 +129,8 @@ export default function UploadWorkPage() {
       const studentIdFromApi = projectObj.student ?? payload?.student ?? null;
       setStuId(String(studentIdFromApi ?? user.id ?? ""));
 
-      // Try to find a defenceId in likely places
-      const maybeDefenceId =
-        projectObj.defenceId ??
-        projectObj.defence?._id ??
-        projectObj.defence?.id ??
-        projectObj.currentDefenceId ??
-        projectObj.currentDefence?.id ??
-        payload?.defenceId ??
-        null;
-      setDefenceId(maybeDefenceId ? String(maybeDefenceId) : null);
+     
+      
 
       const mappedVersions = versions.map((v: any) => {
         const verNum = v.versionNumber ?? v.version ?? 0;
@@ -187,13 +179,13 @@ export default function UploadWorkPage() {
   };
 
   // fetch panel comments for the specific student + defence
-  const fetchPanelComments = async (studentId: string, defId: string) => {
+  const fetchPanelComments = async (studentId: string) => {
     setLoadingPanelComments(true);
     setPanelError(null);
     try {
       const url = `${baseUrl}/project/student/defence-comments/${encodeURIComponent(
         studentId
-      )}/${encodeURIComponent(defId)}`;
+      )}`;
       const res = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
@@ -486,16 +478,16 @@ export default function UploadWorkPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.id]);
 
-  // whenever stuId + defenceId becomes available, fetch panel comments
+  // whenever stuId  becomes available, fetch panel comments
   useEffect(() => {
-    if (!stuId || !defenceId) {
+    if (!stuId) {
       setPanelComments([]);
       setPanelError(null);
       return;
     }
-    void fetchPanelComments(stuId, defenceId);
+    void fetchPanelComments(stuId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stuId, defenceId, token]);
+  }, [stuId, token]);
 
   return (
     <div className="space-y-6 px-4 sm:px-6">
@@ -702,7 +694,7 @@ export default function UploadWorkPage() {
               ) : (
                 // Panel comments (read-only)
                 <>
-                  {!stuId || !defenceId ? (
+                  {!stuId ? (
                     <div className="text-sm text-gray-500 italic">
                       Panel comments are not available — no defence selected for
                       this project.
