@@ -26,7 +26,6 @@ export default function Admin() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
-  
 
   // 1️⃣ Inject / remove axios Authorization header when token changes
   useEffect(() => {
@@ -90,7 +89,7 @@ export default function Admin() {
             return;
           }
 
-          // Build payload: include faculty for dean and hod; include department only for hod
+          // Build payload: include faculty & department for all roles (modal now provides names)
           const body: Partial<NewHodData> = {
             title: payload.title,
             firstName: payload.firstName,
@@ -98,13 +97,8 @@ export default function Admin() {
             staffId: payload.staffId,
             email: payload.email,
             role: payload.role,
-            ...(payload.role === "hod" && {
-              faculty: payload.faculty,
-              department: payload.department,
-            }),
-            ...(payload.role === "dean" && {
-              faculty: payload.faculty,
-            }),
+            faculty: payload.faculty ?? "",
+            department: payload.department ?? "",
           };
 
           // Choose endpoint based on role
@@ -116,18 +110,41 @@ export default function Admin() {
               : "/lecturer/add-hod";
 
           try {
-            const res = await axios.post<{ data: any }>(
-              `${baseUrl}${endpoint}`,
-              body
-            );
+            const res = await axios.post(`${baseUrl}${endpoint}`, body, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            // consider success if backend returns 200/201 or { success: true }
+            const ok =
+              res.status === 200 ||
+              res.status === 201 ||
+              (res.data &&
+                (res.data.success === true || typeof res.data === "object"));
+
+            if (!ok) {
+              throw new Error(
+                res.data?.message ?? `Unexpected response (${res.status})`
+              );
+            }
+
             toast({ title: "Success", description: "Staff added." });
             setIsAddModalOpen(false);
-            // TODO: trigger a reload of AdminStaffManagement (via context or callback) so the new Dean shows up immediately
-          } catch (err) {
+
+            // TODO: trigger a reload of AdminStaffManagement so the new staff appears immediately.
+            // If you have a loadStaff() or refresh callback, call it here:
+            // await loadStaff?.();
+          } catch (err: any) {
             console.error("Add staff failed", err);
+            const serverMsg =
+              err?.response?.data?.message ??
+              err?.message ??
+              "Failed to add staff";
             toast({
               title: "Error",
-              description: "Failed to add staff. See console for details.",
+              description: serverMsg,
               variant: "destructive",
             });
           }
