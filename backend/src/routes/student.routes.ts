@@ -37,7 +37,7 @@ router.get('/msc/:department/:session', authenticate, checkPermission(Permission
 router.get('/phd/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsByDepartment);
 router.get('/msc/:faculty/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllMscStudentsInFaculty);
 router.get('/phd/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsInFaculty);
-router.post('/assignSupervisor/:matricNo', validateBody(addSupervisorSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
+router.post('/assignSupervisor/:studentId', validateBody(addSupervisorSchema), authenticate, checkPermission(Permission.ASSIGN_SUPERVISORS), StudentController.assignSupervisor);
 router.get('/getMyStudents/msc', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorMsc)
 router.get('/getMyStudents/phd', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorPhd)
 router.post('/assign-college-rep/:staffId/:studentId', StudentController.assignCollegeRep);

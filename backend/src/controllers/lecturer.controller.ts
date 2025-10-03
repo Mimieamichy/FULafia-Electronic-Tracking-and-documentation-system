@@ -79,9 +79,9 @@ export default class LecturerController {
 
   static async addDean(req: AuthenticatedRequest, res: Response) {
     try {
-      const { email, title, firstName, lastName, staffId, role, faculty } = req.body;
+      const { email, title, firstName, lastName, staffId, role, department, faculty } = req.body;
       const userId = req.user?.id || ''
-      const dean = await LecturerService.addDean({ email, title, firstName, lastName, userId, staffId, role, faculty });
+      const dean = await LecturerService.addDean({ email, title, firstName, lastName, userId, staffId, role, department, faculty });
       res.json({ success: true, data: dean });
     } catch (err: any) {
       console.log('Error adding Dean:', err);
@@ -92,8 +92,8 @@ export default class LecturerController {
 
   static async addProvost(req: AuthenticatedRequest, res: Response) {
     try {
-      const { email, title, firstName, lastName, staffId, role } = req.body;
-      const provost = await LecturerService.addProvost({ email, title, firstName, lastName, staffId, role });
+      const { email, title, firstName, lastName, staffId, role, department, faculty } = req.body;
+      const provost = await LecturerService.addProvost({ email, title, firstName, lastName, staffId, department, faculty , role});
       res.json({ success: true, data: provost });
     } catch (err: any) {
       console.log('Error adding Provost:', err);

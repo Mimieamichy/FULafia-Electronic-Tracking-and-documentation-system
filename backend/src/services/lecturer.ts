@@ -176,6 +176,7 @@ export default class LecturerService {
         userId: string;
         staffId: string;
         role: string;
+        department: string;
         faculty: string;
     }) {
 
@@ -206,6 +207,7 @@ export default class LecturerService {
 
         return await Lecturer.create({
             user: user._id,
+            department: data.department,
             faculty: data.faculty,
             staffId: data.staffId,
         });
@@ -217,6 +219,8 @@ export default class LecturerService {
         firstName: string;
         lastName: string;
         staffId: string;
+        department: string;
+        faculty: string;
         role: string;
     }) {
 
@@ -247,8 +251,8 @@ export default class LecturerService {
 
         return await Lecturer.create({
             user: user._id,
-            department: 'none',
-            faculty: 'none',
+            department: data.department,
+            faculty: data.faculty,
             staffId: data.staffId,
         });
     }

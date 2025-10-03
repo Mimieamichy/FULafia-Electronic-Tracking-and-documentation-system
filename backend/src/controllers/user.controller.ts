@@ -40,9 +40,9 @@ export default class UserController {
   static async getAllLogs(req: AuthenticatedRequest, res: Response) {
     try {
       let logs;
-      if (req.user?.roles?.includes("provost")) {
+      if (req.user?.role?.includes("provost")) {
         logs = await ActivityLogService.getAllLogs();
-      } else if (req.user?.roles?.includes("hod")) {
+      } else if (req.user?.role?.includes("hod")) {
         const lecturer = await Lecturer.findOne({ user: req.user?.id }).select("department");
         if (!lecturer?.department) {
           res.status(400).json({ success: false, error: "No department found for this HOD" });

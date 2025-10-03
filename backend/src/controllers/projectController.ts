@@ -3,6 +3,8 @@ import ProjectService from '../services/project';
 import ActivityLogService from '../services/activity_log';
 import path from 'path';
 import StudentService from '../services/students';
+import UserService from '../services/user'
+
 
 
 export interface AuthenticatedRequest extends Request {
@@ -42,8 +44,9 @@ export default class ProjectController {
       const { studentId, versionNumber } = req.params;
       const { text } = req.body;
       const author = req.user?.id || ''
-      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
-      const userLastName = req.user?.lastName || '';
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(author)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
 
       const updatedProject = await ProjectService.commentOnVersion(
         studentId,
@@ -56,7 +59,7 @@ export default class ProjectController {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
       }
-      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version ${versionNumber}`, studentData.department);
+      await ActivityLogService.logActivity(author, userName, role, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version ${versionNumber}`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: updatedProject });
     } catch (err: any) {
       console.log(err)
@@ -80,8 +83,9 @@ export default class ProjectController {
     try {
       const { studentId, versionNumber } = req.params;
       const author = req.user?.id || ''
-      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
-      const userLastName = req.user?.lastName || '';
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(author)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
         res.status(404).json({ success: false, error: 'Student not found' });
@@ -95,7 +99,7 @@ export default class ProjectController {
     const fileName = path.basename(project.fileUrl);
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'downloaded project', `of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
+      await ActivityLogService.logActivity(author, userName, role, 'downloaded project', `of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -107,8 +111,9 @@ export default class ProjectController {
     try {
       const { studentId } = req.params;
       const userId = req.user?.id || ''
-      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
-      const userLastName = req.user?.lastName || '';
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(userId)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const project = await ProjectService.downloadLatestProject(studentId);
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
@@ -123,7 +128,7 @@ export default class ProjectController {
       }
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Downloaded', `Latest Project version of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
+      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -131,39 +136,40 @@ export default class ProjectController {
     }
   }
 
-  static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
-    try {
-      const userId = req.user?.id || ''
-      const { studentId } = req.params;
-      const {comments} = req.body
-      const fileUrl = req.file?.path || req.body.fileUrl;
+  // static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
+  //   try {
+  //     const userId = req.user?.id || ''
+  //     const { studentId } = req.params;
+  //     const {comments} = req.body
+  //     const fileUrl = req.file?.path || req.body.fileUrl;
 
-      const project = await ProjectService.supervisorUploadCorrection(
-        studentId,
-        fileUrl,
-        userId,
-        comments
-      );
-      res.status(200).json({ success: true, message: 'Project uploaded succesfully', data: project });
-    } catch (err: any) {
-      console.log(err)
-      res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
-    }
-  }
+  //     const project = await ProjectService.supervisorUploadCorrection(
+  //       studentId,
+  //       fileUrl,
+  //       userId,
+  //       comments
+  //     );
+  //     res.status(200).json({ success: true, message: 'Project uploaded succesfully', data: project });
+  //   } catch (err: any) {
+  //     console.log(err)
+  //     res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
+  //   }
+  // }
 
   static async approveProject(req: AuthenticatedRequest, res: Response) {
     try {
       const { studentId } = req.params;
       const userId = req.user?.id || ''
-      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
-      const userLastName = req.user?.lastName || '';
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(userId)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
       }
       const project = await ProjectService.approveProject(studentId);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Approved', `Project of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} for defence`, studentData.department);
+      await ActivityLogService.logActivity(userId, userName, role, 'Approved', `Project of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} for defence`, studentData.department);
       res.status(200).json({ success: true, message: 'Project approved successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -189,8 +195,9 @@ export default class ProjectController {
       const { text } = req.body;
       const author = req.user?.id || ''
       const userId = req.user?.id || ''
-      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
-      const userLastName = req.user?.lastName || '';
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(userId)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
         res.status(404).json({ success: false, error: 'Student not found' });
@@ -203,7 +210,7 @@ export default class ProjectController {
         author,
         text
       );
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} project on Defence day`, studentData.department);
+      await ActivityLogService.logActivity(userId, userName, role, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} project on Defence day`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: comments });
     } catch (err: any) {
       console.log(err)
