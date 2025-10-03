@@ -503,7 +503,7 @@ const StudentSessionManagement = () => {
 
     try {
       const res = await fetch(
-        `${baseUrl}/student/assignSupervisor/${encodeURIComponent(matricNo)}`,
+        `${baseUrl}/student/assignSupervisor/${encodeURIComponent(studentId)}`,
         {
           method: "POST",
           headers: {
