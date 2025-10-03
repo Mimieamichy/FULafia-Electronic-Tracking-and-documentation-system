@@ -31,7 +31,12 @@ export default class StudentController {
         session,
         projectTopic,
       });
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'added', `student ${firstName} ${lastName} with Matric No: (${matricNo})`);
+      const studentData = await StudentService.getOneStudent(String(newStudent._id))
+      if (!studentData) {
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
+      }
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'added', `student ${firstName} ${lastName} with Matric No: (${matricNo})`, studentData.department);
       res.status(201).json({ success: true, data: newStudent });
     } catch (err: any) {
       console.log(err)
@@ -179,12 +184,17 @@ export default class StudentController {
   static async assignSupervisor(req: AuthenticatedRequest, res: Response) {
     try {
       const { staffId, staffName, type } = req.body
-      const { matricNo } = req.params;
+      const { studentId } = req.params;
       const userId = req.user?.id || ''
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
-      const assignedStudent = await StudentService.assignSupervisor(staffId, staffName, type, matricNo)
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `${type} supervisor ${staffName} to student with Matric No: (${matricNo})`);
+      const studentData = await StudentService.getOneStudent(studentId)
+      if (!studentData) {
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
+      }
+      const assignedStudent = await StudentService.assignSupervisor(staffId, staffName, type, studentId)
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `${type} supervisor ${staffName} to ${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`, studentData.department);
       res.status(201).json({ success: true, data: assignedStudent });
     } catch (err: any) {
       console.log(err)
@@ -231,7 +241,12 @@ export default class StudentController {
       const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
       const userLastName = req.user?.lastName || '';
       const updatedStudent = await StudentService.editStudent(studentId, {matricNo,firstName,lastName,projectTopic });
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'updated', `${firstName} ${lastName} with Matric No: (${matricNo}) data`);
+      const studentData = await StudentService.getOneStudent(studentId)
+      if (!studentData) {
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
+      }
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'updated', `${firstName} ${lastName} with Matric No: (${matricNo}) data`, studentData.department);
       res.status(200).json({ success: true, data: updatedStudent });
     } catch (err: any) {
       console.error(err);
@@ -247,10 +262,11 @@ export default class StudentController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
       }
       const { deletedStudent, deletedUser } = await StudentService.deleteStudent(studentId);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'deleted a student', `${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'deleted a student', `${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`, studentData.department);
       res.status(200).json({ success: true, data: deletedStudent, deletedUser });
     } catch (err: any) {
       console.error(err);
@@ -267,9 +283,10 @@ export default class StudentController {
       const { updatedLecturer, updatedStudent } = await StudentService.assignCollegeRep(staffId, studentId)
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
       }
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `college rep to ${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`);
+      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'assigned', `college rep to ${studentData.firstName} ${studentData.lastName} with Matric No: (${studentData.matricNo})`, studentData.department);
       res.status(200).json({ success: true, data: updatedStudent, updatedLecturer });
     } catch (err: any) {
       console.error(err);

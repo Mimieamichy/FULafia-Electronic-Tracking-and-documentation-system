@@ -67,7 +67,8 @@ export default class DefenceController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
       }
       const sheet = await DefenceService.submitScore(defenceId, panelMemberId,studentId,scores);
       await ActivityLogService.logActivity(userId, userFirstName, userLastName, "Submitted Score for", `${studentData.firstName} ${studentData.lastName} with Matric No: ${studentData.matricNo} for defence`, studentData.department);
@@ -102,7 +103,8 @@ export default class DefenceController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
       }
       const student = await DefenceService.approveStudentDefence(studentId);
       await ActivityLogService.logActivity(userId, userFirstName, userLastName, "Approved",   `Defence for ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
@@ -122,7 +124,8 @@ export default class DefenceController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
       }
       const student = await DefenceService.rejectStudentDefence(studentId);
       await ActivityLogService.logActivity(userId, userFirstName, userLastName, "Rejected", `Defence for ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo}`, studentData.department);

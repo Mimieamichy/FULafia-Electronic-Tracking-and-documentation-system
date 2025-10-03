@@ -24,7 +24,8 @@ export default class ProjectController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
       }
 
       const project = await ProjectService.uploadProject(studentId, fileUrl);
@@ -52,7 +53,8 @@ export default class ProjectController {
       );
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
       }
       await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version ${versionNumber}`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: updatedProject });
@@ -82,10 +84,10 @@ export default class ProjectController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return
       }
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
-      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'downloaded project', `of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -93,7 +95,7 @@ export default class ProjectController {
     const fileName = path.basename(project.fileUrl);
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'Downloaded', `Project version ${versionNumber} of student`);
+      await ActivityLogService.logActivity(author, userFirstName, userLastName, 'downloaded project', `of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -110,12 +112,14 @@ export default class ProjectController {
       const project = await ProjectService.downloadLatestProject(studentId);
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
+       return 
     }
 
     const fileName = path.basename(project.fileUrl);
     const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+       res.status(404).json({ success: false, error: 'Student not found' });
+      return 
       }
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
@@ -155,7 +159,8 @@ export default class ProjectController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
       }
       const project = await ProjectService.approveProject(studentId);
       await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Approved', `Project of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} for defence`, studentData.department);
@@ -188,7 +193,8 @@ export default class ProjectController {
       const userLastName = req.user?.lastName || '';
       const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
-        return res.status(404).json({ success: false, error: 'Student not found' });
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
       }
 
       const comments = await ProjectService.commentOnDefenceDay(

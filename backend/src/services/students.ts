@@ -343,7 +343,7 @@ export default class StudentService {
         return results;
     }
 
-    static async assignSupervisor(staffId: string, staffName: string, type: string, matricNo: string) {
+    static async assignSupervisor(staffId: string, staffName: string, type: string, studentId: string) {
     // Decide field to update
     const updateField =
         type === 'major'
@@ -356,7 +356,7 @@ export default class StudentService {
 
     // Update student
     const student = await Student.findOneAndUpdate(
-        { matricNo },
+        { _id: studentId },
         { $set: updateField },
         { new: true, runValidators: true, context: 'query' }
     );
