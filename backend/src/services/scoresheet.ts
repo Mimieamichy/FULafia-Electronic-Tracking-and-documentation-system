@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 
 export default class ScoreSheetService {
-     static async createDeptScoreSheet(criteria: { name: string; weight: number }[], userId: string) {
+    static async createDeptScoreSheet(criteria: { name: string; weight: number }[], userId: string) {
     const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
     if (totalWeight !== 100) throw new Error("Criteria weights must add up to 100");
 

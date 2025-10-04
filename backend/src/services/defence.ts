@@ -1,4 +1,4 @@
-import { Defence, Student, Project, ScoreSheet, Lecturer } from '../models/index';
+import { Defence, Student, Project, ScoreSheet, Lecturer , GeneralScoreSheet} from '../models/index';
 import { Types } from 'mongoose';
 import NotificationService from "../services/notification";
 import { STAGES } from "../utils/constants";
@@ -179,8 +179,6 @@ export default class DefenceService {
     if (!lecturer) throw new Error("Lecturer profile not found");
     const lecturerId = (lecturer._id as Types.ObjectId).toString();
 
-    console.log("Lecturer ID:", lecturerId);
-
     // load defence and populate students.user
     const defence = await Defence.findById(defenceId)
       .populate({
@@ -222,9 +220,17 @@ export default class DefenceService {
       projectMap.set(sid, proj);
     }
 
-    // load scoresheet criteria for this defence's department 
-    const scoreSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
-    const criteria = scoreSheet?.criteria || [];
+    // load scoresheet criteria for this defence's department based on the defence
+    let criteria: any[] = [];
+  if (defence.stage?.toLowerCase() == "external") {
+    const generalSheet = await GeneralScoreSheet.findOne().lean();
+    if (!generalSheet) throw new Error("General scoresheet not found");
+    criteria = generalSheet.criteria || [];
+  } else {
+    const deptSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
+    if (!deptSheet) throw new Error("Departmental scoresheet not found");
+    criteria = deptSheet.criteria || [];
+  }
 
     // build students array with only requested fields
     const students = (defence.students || []).map((student: any) => {
