@@ -5,6 +5,7 @@ import { checkPermission } from '../middlewares/permission';
 import { validateBody } from '../middlewares/validations';
 import { Permission } from '../utils/permissions';
 import Joi from 'joi';
+import department from 'src/models/department';
 
 
 const router = Router();
@@ -30,6 +31,7 @@ const addDeanSchema = Joi.object({
   role: Joi.string().required(),
   staffId: Joi.string().required(),
   faculty: Joi.string().required(),
+  department: Joi.string().required(),
 }); 
 
 const addLectuerSchema = Joi.object({
