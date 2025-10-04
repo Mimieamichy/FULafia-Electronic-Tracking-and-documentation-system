@@ -16,7 +16,6 @@ import {
 
 import { useToast } from "@/hooks/use-toast";
 
-
 type Level = "MSC" | "PHD";
 
 interface Criterion {
@@ -77,12 +76,8 @@ export default function DefenseDayPage() {
     return [];
   })();
 
-  const [rolesLoaded, setRolesLoaded] = useState<boolean>(
-    () => roles !== undefined
-  );
-  useEffect(() => {
-    if (roles !== undefined) setRolesLoaded(true);
-  }, [roles]);
+  // If there's a token but roles are empty, auth may still be settling (wait)
+  const authSettling = Boolean(token && rolesArray.length === 0 && user);
 
   // Use memoized checks from normalized roles
   const PANEL_KEYWORDS = [
@@ -93,28 +88,32 @@ export default function DefenseDayPage() {
     "provost",
   ];
 
-  const isPanel = React.useMemo(() => {
-    if (!rolesLoaded) return false;
-    return rolesArray.some((r) =>
-      PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
-    );
+  const isPanel = React.useMemo(
+    () =>
+      rolesArray.some((r) =>
+        PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rolesLoaded, rolesArray.join("|")]);
-  console.log("isPanel:", isPanel);
-  console.log("rolesArray:", rolesArray);
+    [rolesArray.join("|")]
+  );
 
-  const isHodOrProvost = React.useMemo(() => {
-    if (!rolesLoaded) return false;
-    return rolesArray.some(
-      (r) =>
-        r === "hod" ||
-        r === "provost" ||
-        r.includes("hod") ||
-        r.includes("provost") ||
-        r.startsWith("hod") ||
-        r.startsWith("provost")
-    );
-  }, [rolesLoaded, rolesArray.join("|")]);
+  console.log("[DefenseDayPage] rolesArray:", rolesArray, "isPanel:", isPanel);
+  
+
+  const isHodOrProvost = React.useMemo(
+    () =>
+      rolesArray.some(
+        (r) =>
+          r === "hod" ||
+          r === "provost" ||
+          r.includes("hod") ||
+          r.includes("provost") ||
+          r.startsWith("hod") ||
+          r.startsWith("provost")
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rolesArray.join("|")]
+  );
 
   // --- hooks (always declared, never conditional) ---
   const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
@@ -259,6 +258,12 @@ export default function DefenseDayPage() {
   };
 
   useEffect(() => {
+    if (authSettling) return;
+
+    if (!isPanel) {
+      setDefenseDays([]);
+      return;
+    }
     let cancelled = false;
 
     // show cached immediately if present (so switching levels doesn't blank UI)
@@ -279,7 +284,9 @@ export default function DefenseDayPage() {
         const recentUrl = `${baseUrl}/defence/panel-member/${encodeURIComponent(
           level
         )}`;
-        
+        console.log(
+          `[DefenseDayPage] GET /defence/panel-member -> ${recentUrl}`
+        );
         const resRecent = await fetch(recentUrl, {
           method: "GET",
           headers: {
@@ -289,9 +296,12 @@ export default function DefenseDayPage() {
         });
 
         const textRecent = await resRecent.text();
-       
+        console.log(
+          "[DefenseDayPage] /defence/recent status:",
+          resRecent.status
+        );
 
-        
+        console.log("[DefenseDayPage] /defence/recent raw text:", textRecent);
 
         let parsedRecent: any = null;
         try {
@@ -299,7 +309,7 @@ export default function DefenseDayPage() {
         } catch {
           parsedRecent = textRecent;
         }
-       
+        console.log("[DefenseDayPage] /defence/recent parsed:", parsedRecent);
 
         if (cancelled) return;
 
@@ -385,7 +395,7 @@ export default function DefenseDayPage() {
           }
         }
 
-       
+        console.log("[DefenseDayPage] extracted defence IDs:", ids);
 
         if (cancelled) return;
 
@@ -412,7 +422,7 @@ export default function DefenseDayPage() {
             });
 
             const text = await res.text();
-            
+            console.log(`[DefenseDayPage] /defence/${did} raw text:`, text);
 
             let parsed: any = null;
             try {
@@ -420,7 +430,7 @@ export default function DefenseDayPage() {
             } catch {
               parsed = text;
             }
-            
+            console.log(`[DefenseDayPage] /defence/${did} parsed:`, parsed);
 
             // API returns { success: true, data: { defence, students, criteria } }
             const defObj =
@@ -470,7 +480,11 @@ export default function DefenseDayPage() {
           setCriteria([]);
         }
 
-        
+        console.log(
+          "[DefenseDayPage] normalized defenseDays for level",
+          level,
+          normalizedDefs
+        );
       } catch (err) {
         console.error(
           "[DefenseDayPage] error fetching recent ids or details:",
@@ -484,9 +498,10 @@ export default function DefenseDayPage() {
     return () => {
       cancelled = true;
     };
-  }, [level, token]);
+  }, [level, token, isPanel, authSettling]);
 
-  if (!rolesLoaded) {
+  if (authSettling) {
+    // auth still settling — don't show denial; show a small loading placeholder.
     return (
       <div className="p-6 text-center text-gray-600">Loading permissions…</div>
     );
@@ -862,7 +877,7 @@ export default function DefenseDayPage() {
             parsed = raw;
           }
 
-        
+          console.log("submit result", { status: res.status, parsed, raw });
 
           if (!res.ok) {
             const msg =
