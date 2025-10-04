@@ -50,7 +50,7 @@ export default class StudentController {
     try {
       const { studentId } = req.params
       const student = await StudentService.getOneStudent(studentId);
-      res.status(201).json({ success: true, data: student });
+      res.status(200).json({ success: true, data: student });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({success: false, error: 'Failed to get student', message: err.message});
@@ -61,7 +61,7 @@ export default class StudentController {
     try {
       const userId = req.user?.id || ''
       const student = await StudentService.getOneStudentByUser(userId);
-      res.status(201).json({ success: true, data: student });
+      res.status(200).json({ success: true, data: student });
     } catch (err: any) {
       console.log(err)
       res.status(400).json({success: false, error: 'Failed to get student', message: err.message});

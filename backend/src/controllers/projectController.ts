@@ -64,7 +64,7 @@ export default class ProjectController {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
       }
-      await ActivityLogService.logActivity(author, userName, role, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version ${versionNumber}`, studentData.department);
+      await ActivityLogService.logActivity(author, userName, role, 'Commented on', `${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo} Project version ${versionNumber}`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: updatedProject });
     } catch (err: any) {
       console.log(err)
@@ -104,7 +104,7 @@ export default class ProjectController {
     const fileName = path.basename(project.fileUrl);
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-      await ActivityLogService.logActivity(author, userName, role, 'downloaded project', `of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
+      await ActivityLogService.logActivity(author, userName, role, 'downloaded project', `of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -133,7 +133,7 @@ export default class ProjectController {
       }
     //construct the full file path
     const absolutePath = path.join('uploads', 'projects', fileName);
-      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
+      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
       console.log(err)
@@ -174,7 +174,7 @@ export default class ProjectController {
         return 
       }
       const project = await ProjectService.approveProject(studentId);
-      await ActivityLogService.logActivity(userId, userName, role, 'Approved', `Project of ${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} for defence`, studentData.department);
+      await ActivityLogService.logActivity(userId, userName, role, 'Approved', `Project of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo} for defence`, studentData.department);
       res.status(200).json({ success: true, message: 'Project approved successfully', data: project });
     } catch (err: any) {
       console.log(err)
@@ -215,7 +215,7 @@ export default class ProjectController {
         author,
         text
       );
-      await ActivityLogService.logActivity(userId, userName, role, 'Commented on', `${studentData.firstName} ${studentData.lastName} with matric No: ${studentData.matricNo} project on Defence day`, studentData.department);
+      await ActivityLogService.logActivity(userId, userName, role, 'Commented on', `${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo} project on Defence day`, studentData.department);
       res.status(200).json({ success: true, message: 'Comment added', data: comments });
     } catch (err: any) {
       console.log(err)
