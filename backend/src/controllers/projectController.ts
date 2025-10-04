@@ -50,7 +50,6 @@ export default class ProjectController {
       const { text } = req.body;
       const author = req.user?.id || ''
       const role = req.user?.role[0] || ''
-      console.log('Role',req.user)
       const user = await UserService.getUserProfile(author)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
 
