@@ -41,6 +41,7 @@ router.post('/assignSupervisor/:studentId', validateBody(addSupervisorSchema), a
 router.get('/getMyStudents/msc', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorMsc)
 router.get('/getMyStudents/phd', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorPhd)
 router.post('/assign-college-rep/:staffId/:studentId', StudentController.assignCollegeRep);
+router.get('/user', authenticate, StudentController.getOneStudentByUser);
 
 
 

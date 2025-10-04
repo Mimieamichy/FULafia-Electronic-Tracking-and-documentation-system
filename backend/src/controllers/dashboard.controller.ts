@@ -77,17 +77,39 @@ export default class DashboardController {
 
   // 4. Number of lecturers in department
   static async countLecturersInDept(req: AuthenticatedRequest, res: Response) {
-    try {
-      const userId = req.user?.id || '';
-      const lecturerDept = await Lecturer.findOne({user: userId}).select('department');
-      const dept = lecturerDept?.department;
-      const count = await Lecturer.countDocuments({ department: dept });
-      res.json({ success: true, count });
-    } catch (err: any) {
-      console.log(err)
-      res.status(400).json({success: false, error: 'Failed to get lecturers in a department', message: err.message});
+  try {
+    const userId = req.user?.id || '';
+    const lecturerDept = await Lecturer.findOne({ user: userId }).select('department');
+    const dept = lecturerDept?.department;
+
+    if (!dept) {
+      return res.status(404).json({ success: false, message: "Lecturer department not found" });
     }
+
+    const countResult = await Lecturer.aggregate([
+      { $match: { department: dept } },
+      {
+        $lookup: {
+          from: 'users', // collection name for your User model
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: '$user' },
+      { $match: { 'user.roles': { $ne: 'external_examiner' } } },
+      { $count: 'total' }
+    ]);
+
+    const count = countResult.length > 0 ? countResult[0].total : 0;
+
+    res.json({ success: true, count });
+  } catch (err: any) {
+    console.log(err);
+    res.status(400).json({success: false, error: 'Failed to get lecturers in a department', message: err.message});
   }
+}
+
 
   // 5. Number of lecturers in faculty
   static async countLecturersInFaculty(req: AuthenticatedRequest, res: Response) {

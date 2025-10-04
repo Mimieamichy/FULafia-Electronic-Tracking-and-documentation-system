@@ -55,6 +55,7 @@ export default class LecturerController {
   static async addLecturer(req: AuthenticatedRequest, res: Response) {
     try {
       const { email, title, firstName, lastName, staffId, role } = req.body;
+       console.log(req.body)
       const userId = req.user?.id || ''
       const lecturer = await LecturerService.addLecturer({ email, title, firstName, lastName, userId, staffId, role });
       res.json({ success: true, data: lecturer });
@@ -192,8 +193,8 @@ export default class LecturerController {
   static async getLecturerByDepartment(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id || '';
-      const provost = await LecturerService.getLecturerByDepartment(userId);
-      res.json({ success: true, data: provost });
+      const lecturer = await LecturerService.getLecturerByDepartment(userId);
+      res.json({ success: true, data: lecturer });
     } catch (err: any) {
       console.log(err);
       res.status(400).json({ success: false, error: 'Failed to get departmental lecturers', message: err.message });

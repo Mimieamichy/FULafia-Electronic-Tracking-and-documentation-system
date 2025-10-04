@@ -166,6 +166,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DELETE_STUDENT,
     Permission.GET_COLLEGE_REP,
     Permission.VIEW_FACULTY_REP,
+    Permission.GET_PROVOST,
 
   ],
   [Role.DEAN]: [

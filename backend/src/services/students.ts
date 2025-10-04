@@ -85,6 +85,11 @@ export default class StudentService {
         return findOneFormatted(Student, studentId)
     }
 
+    static async getOneStudentByUser(userId: string) {
+        return Student.findOne({ user: userId })
+    }
+
+
     static async editStudent(studentId: string, updateData: Partial<{
         matricNo: string;
         firstName: string;

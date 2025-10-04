@@ -20,18 +20,23 @@ export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
       const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
-      const studentId = req.user?.id || ''
       const userId = req.user?.id || ''
-      const userFirstName = `${req.user?.title || ''} ${req.user?.firstName || ''}`;
-      const userLastName = req.user?.lastName || '';
-      const studentData = await StudentService.getOneStudent(studentId);
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(userId)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
+      const student = await StudentService.getOneStudentByUser(userId)
+       if (!student) {
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
+      }
+      const studentData = await StudentService.getOneStudent(String(student._id));
       if (!studentData) {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
       }
 
-      const project = await ProjectService.uploadProject(studentId, fileUrl);
-      await ActivityLogService.logActivity(userId, userFirstName, userLastName, 'Uploaded', 'a new Project version', studentData.departments);
+      const project = await ProjectService.uploadProject(userId, fileUrl);
+      await ActivityLogService.logActivity(userId, userName, role, 'Uploaded', 'a new Project version', studentData.department);
       res.status(201).json({ success: true, message: 'Project uploaded successfully', data: project });
     } catch (err: any) {
       console.log(err)

@@ -105,6 +105,8 @@ export default class LecturerService {
         let faculty = lecturer?.faculty ?? "none";
         let department = lecturer?.department ?? "none";
 
+        console.log(department)
+
         // Create User with dynamic roles
         const user = await User.create({
             email: data.email,
@@ -327,14 +329,22 @@ export default class LecturerService {
     }
 
 
-    static async getLecturerByDepartment(userId: string) {
-        const currentLecturer = await Lecturer.findOne({ user: userId });
-        if (!currentLecturer || !currentLecturer.department) {
-            throw new Error("Lecturer not found or department not set");
-        }
-
-        return Lecturer.find({ department: currentLecturer.department }).populate('user');
+  static async getLecturerByDepartment(userId: string) {
+    const currentLecturer = await Lecturer.findOne({ user: userId });
+    if (!currentLecturer || !currentLecturer.department) {
+        throw new Error("Lecturer not found or department not set");
     }
+
+    return Lecturer.find({ department: currentLecturer.department })
+        .populate({
+            path: 'user',
+            match: { roles: { $ne: 'external_examiner' } } // exclude external examiners
+        })
+        .then(lecturers =>
+            lecturers.filter(l => l.user) // remove ones with null user due to match exclusion
+        );
+}
+
 
     static async getLecturerByFaculty(userId: string) {
         const currentLecturer = await Lecturer.findOne({ user: userId });
