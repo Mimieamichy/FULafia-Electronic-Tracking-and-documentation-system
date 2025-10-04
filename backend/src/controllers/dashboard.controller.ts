@@ -83,7 +83,8 @@ export default class DashboardController {
     const dept = lecturerDept?.department;
 
     if (!dept) {
-      return res.status(404).json({ success: false, message: "Lecturer department not found" });
+      res.status(404).json({ success: false, message: "Lecturer department not found" });
+      return 
     }
 
     const countResult = await Lecturer.aggregate([

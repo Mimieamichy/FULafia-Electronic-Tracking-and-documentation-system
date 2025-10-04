@@ -223,7 +223,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_ALL_STUDENTS,
     Permission.VIEW_ALL_SESSIONS,
     Permission.VIEW_SESSIONS,
-    Permission.SCHEDULE_DEFENSE,
     Permission.GENERATE_GENERAL_SCORE_SHEET,
     Permission.ADD_EXTERNAL_EXAMINER,
     Permission.CREATE_SESSION,
@@ -232,9 +231,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.GET_ALL_FACULTY_DEPT,
     Permission.GET_ALL_DEPARTMENTS,
     Permission.VIEW_FACULTY_REP,
-    Permission.APPROVE_DEFENSE,
-    Permission.START_DEFENSE,
-    Permission.END_DEFENSE,
     Permission.VIEW_ACTIVITY_LOGS,
   ],
   [Role.EXTERNAL_EXAMINER]: [

@@ -21,7 +21,6 @@ const scheduleDefenceSchema = Joi.object({
 
   date: Joi.date()
     .iso()
-    .greater("now")
     .required(),
 
   time: Joi.string()
