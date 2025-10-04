@@ -29,9 +29,10 @@ export const addSupervisorSchema = Joi.object({
 })
 
 // Routes
-router.post('/add', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ADD_STUDENTS),StudentController.addStudent);
-router.put('/:studentId', StudentController.editStudent);
+router.post('/add', validateBody(addStudentSchema), authenticate, checkPermission(Permission.ADD_STUDENTS),StudentController.addStudent)
+router.get('', authenticate, StudentController.getOneStudentByUser);
 router.get('/:studentId', authenticate, checkPermission(Permission.VIEW_ONE_STUDENT), StudentController.getOneStudent);
+router.put('/:studentId', StudentController.editStudent);
 router.delete('/:studentId', authenticate, checkPermission(Permission.DELETE_STUDENT), StudentController.deleteStudent);
 router.get('/msc/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllMscStudentsByDepartment);
 router.get('/phd/:department/:session', authenticate, checkPermission(Permission.VIEW_ALL_STUDENTS), StudentController.getAllPhdStudentsByDepartment);
@@ -41,7 +42,7 @@ router.post('/assignSupervisor/:studentId', validateBody(addSupervisorSchema), a
 router.get('/getMyStudents/msc', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorMsc)
 router.get('/getMyStudents/phd', authenticate, checkPermission(Permission.VIEW_PROJECT_BY_STUDENT), StudentController.getStudentsBySupervisorPhd)
 router.post('/assign-college-rep/:staffId/:studentId', StudentController.assignCollegeRep);
-router.get('', authenticate, StudentController.getOneStudentByUser);
+
 
 
 
