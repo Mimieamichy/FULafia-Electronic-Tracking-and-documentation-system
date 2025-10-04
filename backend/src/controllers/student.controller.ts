@@ -251,8 +251,10 @@ export default class StudentController {
       const { studentId } = req.params;
       const { matricNo, firstName, lastName, projectTopic } = req.body;
       const userId = req.user?.id || ''
+      console.log('userID', req.user)
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
+      console.log(user)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const updatedStudent = await StudentService.editStudent(studentId, {matricNo,firstName,lastName,projectTopic });
       const studentData = await StudentService.getOneStudent(studentId)
