@@ -16,7 +16,7 @@ export default function StudentDashboard() {
     setLoadingProject(true);
     try {
       const studentId = String(user.id ?? "");
-      const url = `${baseUrl}/project/${encodeURIComponent(studentId)}`;
+      const url = `${baseUrl}/student`;
       const res = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
@@ -33,7 +33,7 @@ export default function StudentDashboard() {
         return;
       }
 
-      const projectObj = payload?.data?.student;
+      const projectObj = payload?.data
       setProject(projectObj);
       console.log("Fetched project:", projectObj);
     } catch (err) {
