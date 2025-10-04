@@ -3,7 +3,7 @@ import { Role } from '../utils/permissions';
 import LecturerService from "../services/lecturer"
 import { paginateFormatted, findOneFormatted } from "../utils/paginatedAndTransform"
 import NotificationService from "./notification";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 
 
@@ -85,9 +85,9 @@ export default class StudentService {
         return findOneFormatted(Student, studentId)
     }
 
-    static async getOneStudentByUser(userId: string) {
-        return Student.findOne({ user: userId })
-    }
+   static async getOneStudentByUser(userId: string) {
+  return Student.findOne({ user: new mongoose.Types.ObjectId(userId) })
+}
 
 
     static async editStudent(studentId: string, updateData: Partial<{
@@ -414,7 +414,7 @@ export default class StudentService {
         NotificationService.createNotifications({
             lecturerIds: [staffId],
             role: roleToAdd[0] || 'supervisor',
-            message: `${staffName} has been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
+            message: `You have been assigned as ${type.replace(/_/g, ' ')} for student with matric Number ${student.matricNo}.`
         }),
         NotificationService.createNotifications({
             studentIds: [String(student._id)],
@@ -476,6 +476,12 @@ export default class StudentService {
         role: "college_rep",
         message,
     });
+
+    await NotificationService.createNotifications({
+        studentIds: [studentId],
+        role: 'student',
+        message: `You have been assigned a college rep`
+    })
 
     return { updatedStudent, updatedLecturer };
 }
