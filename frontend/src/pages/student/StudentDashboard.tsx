@@ -9,7 +9,7 @@ export default function StudentDashboard() {
   const [loadingProject, setLoadingProject] = useState(false);
   const [project, setProject] = useState<any>(null);
 
-  // Mock session and stage data (replace with real data when API is available)
+  
 
   const fetchProject = async () => {
     if (!user) return;
