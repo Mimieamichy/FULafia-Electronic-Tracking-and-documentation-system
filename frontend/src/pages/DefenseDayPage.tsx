@@ -1,5 +1,5 @@
 // DefenseDayPage.tsx
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { Button } from "@/components/ui/button";
 import ScoreSheetPanel from "./ScoreSheetDefense";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { useToast } from "@/hooks/use-toast";
+
 
 type Level = "MSC" | "PHD";
 
@@ -50,7 +51,7 @@ interface DefenseDay {
 const baseUrl = import.meta.env.VITE_BACKEND_URL ?? "";
 
 export default function DefenseDayPage() {
-  const { user, token, roles = [] } = useAuth();
+  const { user, token, roles } = useAuth();
   const { toast } = useToast();
   const userName = user?.userName;
 
@@ -62,31 +63,58 @@ export default function DefenseDayPage() {
   } | null>(null);
   const [confirmProcessing, setConfirmProcessing] = useState(false);
 
-  const normalizedRoles: string[] = Array.isArray(roles)
-    ? roles.map((r) => String(r).toLowerCase())
-    : [];
+  const rolesArray: string[] = (() => {
+    if (!roles) return [];
+    if (Array.isArray(roles)) return roles.map((r) => String(r).toLowerCase());
+    if (typeof roles === "string") {
+      // handle comma-separated string as well
+      return roles
+        .split?.(",")
+        .map((r) => r.trim())
+        .filter(Boolean)
+        .map((r) => r.toLowerCase());
+    }
+    return [];
+  })();
+
+  const [rolesLoaded, setRolesLoaded] = useState<boolean>(
+    () => roles !== undefined
+  );
+  useEffect(() => {
+    if (roles !== undefined) setRolesLoaded(true);
+  }, [roles]);
+
+  // Use memoized checks from normalized roles
   const PANEL_KEYWORDS = [
     "panel_member",
     "internal_examiner",
     "supervisor",
     "major_supervisor",
-    "provost"
+    "provost",
   ];
-  
-  
-  const isPanel = normalizedRoles.some((r) =>
-    PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
-  );
-  const isHodOrProvost = normalizedRoles.some(
-    (r) =>
-      r === "hod" ||
-      r === "provost" ||
-      r.includes("hod") ||
-      r.includes("provost") ||
-      r.startsWith("hod") ||
-      r.startsWith("provost")
-  );
-  
+
+  const isPanel = React.useMemo(() => {
+    if (!rolesLoaded) return false;
+    return rolesArray.some((r) =>
+      PANEL_KEYWORDS.some((k) => r === k || r.startsWith(k) || r.includes(k))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rolesLoaded, rolesArray.join("|")]);
+  console.log("isPanel:", isPanel);
+  console.log("rolesArray:", rolesArray);
+
+  const isHodOrProvost = React.useMemo(() => {
+    if (!rolesLoaded) return false;
+    return rolesArray.some(
+      (r) =>
+        r === "hod" ||
+        r === "provost" ||
+        r.includes("hod") ||
+        r.includes("provost") ||
+        r.startsWith("hod") ||
+        r.startsWith("provost")
+    );
+  }, [rolesLoaded, rolesArray.join("|")]);
 
   // --- hooks (always declared, never conditional) ---
   const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
@@ -251,9 +279,7 @@ export default function DefenseDayPage() {
         const recentUrl = `${baseUrl}/defence/panel-member/${encodeURIComponent(
           level
         )}`;
-        console.log(
-          `[DefenseDayPage] GET /defence/panel-member -> ${recentUrl}`
-        );
+        
         const resRecent = await fetch(recentUrl, {
           method: "GET",
           headers: {
@@ -263,9 +289,9 @@ export default function DefenseDayPage() {
         });
 
         const textRecent = await resRecent.text();
-        console.log("[DefenseDayPage] /defence/recent status:", resRecent.status);
+       
+
         
-        console.log("[DefenseDayPage] /defence/recent raw text:", textRecent);
 
         let parsedRecent: any = null;
         try {
@@ -273,7 +299,7 @@ export default function DefenseDayPage() {
         } catch {
           parsedRecent = textRecent;
         }
-        console.log("[DefenseDayPage] /defence/recent parsed:", parsedRecent);
+       
 
         if (cancelled) return;
 
@@ -359,7 +385,7 @@ export default function DefenseDayPage() {
           }
         }
 
-        console.log("[DefenseDayPage] extracted defence IDs:", ids);
+       
 
         if (cancelled) return;
 
@@ -386,7 +412,7 @@ export default function DefenseDayPage() {
             });
 
             const text = await res.text();
-            console.log(`[DefenseDayPage] /defence/${did} raw text:`, text);
+            
 
             let parsed: any = null;
             try {
@@ -394,7 +420,7 @@ export default function DefenseDayPage() {
             } catch {
               parsed = text;
             }
-            console.log(`[DefenseDayPage] /defence/${did} parsed:`, parsed);
+            
 
             // API returns { success: true, data: { defence, students, criteria } }
             const defObj =
@@ -444,11 +470,7 @@ export default function DefenseDayPage() {
           setCriteria([]);
         }
 
-        console.log(
-          "[DefenseDayPage] normalized defenseDays for level",
-          level,
-          normalizedDefs
-        );
+        
       } catch (err) {
         console.error(
           "[DefenseDayPage] error fetching recent ids or details:",
@@ -462,10 +484,14 @@ export default function DefenseDayPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, token]); // token included so fetch re-runs when auth changes
+  }, [level, token]);
 
-  // --- ACCESS CHECK (after hooks) ---
+  if (!rolesLoaded) {
+    return (
+      <div className="p-6 text-center text-gray-600">Loading permissions…</div>
+    );
+  }
+
   if (!isPanel) {
     return (
       <div className="p-6 text-center text-red-600">
@@ -636,7 +662,6 @@ export default function DefenseDayPage() {
   // replace or add these handlers in DefenseDayPage.tsx
 
   const setProcessing = (studentId: string, v: boolean) =>
-    
     setProcessingIds((p) => ({ ...p, [studentId]: v }));
 
   const handleApprove = async (studentId: string) => {
@@ -672,7 +697,6 @@ export default function DefenseDayPage() {
           ),
         }));
 
-        
         setDefenseDays(updated[level] ?? []);
         return updated;
       });
@@ -838,7 +862,7 @@ export default function DefenseDayPage() {
             parsed = raw;
           }
 
-          console.log("submit result", { status: res.status, parsed, raw });
+        
 
           if (!res.ok) {
             const msg =
@@ -1071,7 +1095,7 @@ export default function DefenseDayPage() {
             onApprove={(studentId) => handleApprove(studentId)}
             onReject={(studentId) => handleReject(studentId)}
             processingIds={processingIds}
-            defenseStage={activeDefense?.currentStage }
+            defenseStage={activeDefense?.currentStage}
           />
         )}
       </div>

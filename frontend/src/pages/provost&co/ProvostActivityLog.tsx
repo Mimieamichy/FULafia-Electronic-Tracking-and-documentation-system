@@ -24,7 +24,6 @@ type ActivityLog = {
   id: string;
   type: ActivityType;
   actor: string;
-  role: string;
   target: string;
   description: string;
   timestamp: string; // ISO
@@ -41,7 +40,7 @@ const typeIcons: Record<string, JSX.Element> = {
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 const ProvostActivityLog: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { toast } = useToast();
 
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -69,8 +68,8 @@ const ProvostActivityLog: React.FC = () => {
         : undefined) ??
       raw.by ??
       "Unknown";
-    const role =
-      raw.actorRole ?? raw.role ?? (raw.user && raw.user.role) ?? "Unknown";
+  
+      
     const target =
       raw.targetName ??
       raw.target ??
@@ -86,7 +85,6 @@ const ProvostActivityLog: React.FC = () => {
       id,
       type,
       actor: String(actor),
-      role: String(role),
       target: String(target),
       description: String(description),
       timestamp: String(timestamp),
@@ -201,12 +199,9 @@ const ProvostActivityLog: React.FC = () => {
                   <span className="font-medium text-amber-800">
                     {log.actor}
                   </span>{" "}
-                  <span className="text-xs text-gray-500">({log.role})</span>{" "}
-                  performed{" "}
-                  <span className="font-medium lowercase">
-                    {String(log.type).replace(/_/g, " ").toLowerCase()}
-                  </span>{" "}
-                  on <span className="font-medium">{log.target}</span>
+                  
+                  performed an action{" "}
+                  <span className="font-medium">{log.target}</span>
                 </p>
 
                 {log.description ? (

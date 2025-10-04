@@ -1108,29 +1108,13 @@ const StudentSessionManagement = () => {
         <div className="mt-4 flex items-center justify-between">
           <div />
           <div className="flex items-center gap-3">
-            {!isProvost &&
-              selectedDefense !== EXTERNAL_DEFENSE_KEY &&
-              selectedDefense !== START_KEY &&
-              !isDean && (
-                <Button
-                  className="bg-amber-700 hover:bg-amber-800 text-white"
-                  onClick={() => {
-                    setDefenseStage(selectedDefense);
-                    setDefenseModalOpen(true);
-                  }}
-                >
-                  Schedule {selectedDefenseLabel}
-                </Button>
-              )}
-
-            {isProvost && selectedDefense === EXTERNAL_DEFENSE_KEY && (
+            {!isProvost && selectedDefense !== START_KEY && !isDean && (
               <Button
-                className="bg-amber-700 text-white"
+                className="bg-amber-700 hover:bg-amber-800 text-white"
                 onClick={() => {
                   setDefenseStage(selectedDefense);
                   setDefenseModalOpen(true);
                 }}
-                disabled={!selectedDepartmentForDefense}
               >
                 Schedule {selectedDefenseLabel}
               </Button>
@@ -1374,6 +1358,7 @@ const StudentSessionManagement = () => {
         isOpen={defenseModalOpen}
         onClose={closeDefenseModal}
         defenseStage={defenseStage}
+        defenseLabel={selectedDefenseLabel}
         schedulerRole={isProvost ? "provost" : isHod ? "hod" : "pgcord"}
         studentIds={defenseStudentIds}
         program={degreeTab}

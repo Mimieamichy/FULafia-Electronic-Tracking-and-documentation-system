@@ -278,7 +278,7 @@ export default function LecturerTab() {
       "email",
       "role",
     ] as const) {
-      if (!form[key]) {
+      if (!form[key as keyof typeof form]) {
         toast({
           title: "Validation Error",
           description: `Please fill in the ${key} field.`,
@@ -288,8 +288,9 @@ export default function LecturerTab() {
       }
     }
 
-    // Provost must select a department to assign external examiner
-    if (isProvost && !selectedDepartmentId) {
+    // If we're creating an external examiner, ensure a department is chosen
+    const isExternal = form.role === "external_examiner";
+    if (isExternal && !selectedDepartmentId) {
       toast({
         title: "Validation Error",
         description:
@@ -303,7 +304,6 @@ export default function LecturerTab() {
     try {
       // Edit flow
       if (editId) {
-        // Use PUT /api/lecturer/:lecturerId
         // Build payload - backend may accept partial updates
         const payload: any = {
           title: form.title,
@@ -315,18 +315,26 @@ export default function LecturerTab() {
         // only include staffId if present / applicable
         if (form.staffId) payload.staffId = form.staffId;
 
+        // Only include department when editing an external examiner
+        if (form.role === "external_examiner") {
+          const deptId = selectedDepartmentId || form.department;
+          const deptName =
+            departments.find((d) => d.value === deptId)?.label ?? deptId;
+          // send department name (or adjust to send id if your backend expects that)
+          payload.department = deptName;
+        }
+
         await axios.put(`${baseUrl}/lecturer/${editId}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // optimistic update locally
+        // optimistic local update
         setLecturers((prev) =>
           prev.map((p) =>
             p.id === editId ? ({ ...p, ...form } as Lecturer) : p
           )
         );
 
-        console.log("Lecturer updated:", editId, payload);
         toast({ title: "Updated", description: "Lecturer updated." });
         setModalOpen(false);
         setEditId(null);
@@ -336,18 +344,20 @@ export default function LecturerTab() {
       // Add flow
       if (isProvost) {
         // Provost adds external examiner
-        // Payload must have email, title, firstName, lastName and role
-         const departmentId = selectedDepartmentId || form.department;
+        const deptId = selectedDepartmentId || form.department;
         const departmentName =
-          departments.find((d) => d.value === departmentId)?.label ??
-          departmentId;
-        const payload = {
+          departments.find((d) => d.value === deptId)?.label ?? deptId;
+
+        const payload: any = {
           email: form.email,
           title: form.title,
           firstName: form.firstName,
           lastName: form.lastName,
           role: form.role || "external_examiner",
-          department: departmentName,
+          // include department ONLY for external examiners
+          ...(form.role === "external_examiner"
+            ? { department: departmentName }
+            : {}),
         };
 
         const res = await axios.post(
@@ -358,9 +368,7 @@ export default function LecturerTab() {
           }
         );
         const raw = res.data?.data ?? res.data;
-        console.log("External examiner added:", res.status);
 
-        // Map created object defensively
         const created: Lecturer = {
           id: raw._id ?? raw.id,
           title: raw.title ?? payload.title,
@@ -369,6 +377,7 @@ export default function LecturerTab() {
           staffId: raw.staffId ?? "",
           email: raw.user?.email ?? raw.email ?? payload.email,
           role: raw.role ?? payload.role,
+          department: raw.department ?? payload.department ?? undefined,
         };
         setLecturers((prev) => [...prev, created]);
         toast({
@@ -378,13 +387,25 @@ export default function LecturerTab() {
         setModalOpen(false);
         return;
       } else {
-        // Regular lecturer add (existing behaviour)
-        const res = await axios.post(`${baseUrl}/lecturer/add-lecturer`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Regular lecturer add (existing behaviour) - do NOT send department
+        const res = await axios.post(
+          `${baseUrl}/lecturer/add-lecturer`,
+          {
+            title: form.title,
+            firstName: form.firstName,
+            lastName: form.lastName,
+            staffId: form.staffId,
+            email: form.email,
+            role: form.role,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
         const raw = res.data?.data ?? res.data;
         const created: Lecturer = {
-          id: raw._id ?? raw.id,
+          id: raw._1 ?? raw._id ?? raw.id,
           title: raw.title ?? form.title,
           firstName: raw.user?.firstName ?? raw.firstName ?? form.firstName,
           lastName: raw.user?.lastName ?? raw.lastName ?? form.lastName,

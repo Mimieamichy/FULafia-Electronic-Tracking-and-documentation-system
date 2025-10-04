@@ -1,4 +1,3 @@
-// src/pgc/SetDefenseModal.tsx
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,7 @@ interface SetDefenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   defenseStage: string;
+  defenseLabel?: string; // optional label for display (e.g., "Proposal Defense")
   lecturers?: Lecturer[]; // optional preloaded lecturers
   schedulerRole?: "hod" | "provost" | "pgcord"; // default "hod"
   studentIds: string[]; // required: students to schedule (fallback)
@@ -65,6 +65,7 @@ const normalizeProgram2 = (p?: string) => {
 const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   isOpen,
   onClose,
+  defenseLabel, // <-- new optional prop  
   defenseStage,
   lecturers: initialLecturers,
   schedulerRole = "hod",
@@ -95,11 +96,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   )}`;
 
   const collegeRepEndpoint = `${baseUrl}/lecturer/get-college-rep`;
-  const provostEndpoint = `${baseUrl}/lecturer/get-provost`; // new
-
-  // pick the primary GET endpoint based on role
-  const lecturerEndpoint =
-    schedulerRole === "provost" ? externalExaminerEndpoint : facultyRepEndpoint;
+  const provostEndpoint = `${baseUrl}/lecturer/get-provost`;
 
   const normalizePayloadCandidates = (raw: any): Lecturer[] => {
     const payload = raw?.data ?? raw;
@@ -157,12 +154,13 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
       : [];
 
     try {
-      // always attempt the primary GET endpoint
+      // always attempt multiple relevant endpoints and merge results
       const results: Lecturer[][] = [seed];
 
+      // 1) Faculty reps
       try {
-        console.log(`[SetDefenseModal] GET -> ${lecturerEndpoint}`);
-        const res = await fetch(lecturerEndpoint, {
+        console.log(`[SetDefenseModal] GET -> ${facultyRepEndpoint}`);
+        const res = await fetch(facultyRepEndpoint, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -176,25 +174,45 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         } catch {
           parsed = text;
         }
-        console.log("Raw response (primary):", parsed);
+        console.log("Raw response (faculty reps):", parsed);
         const arr = normalizePayloadCandidates(parsed);
         results.push(arr);
       } catch (err) {
-        console.warn("[SetDefenseModal] primary lecturers fetch failed:", err);
+        console.warn("[SetDefenseModal] faculty reps fetch failed:", err);
       }
 
-      // --- COLLEGE-REP: perform GET with query params: department (name), level, stage ---
+      // 2) External examiners (department-aware)
+      try {
+        console.log(`[SetDefenseModal] GET -> ${externalExaminerEndpoint}`);
+        const resEx = await fetch(externalExaminerEndpoint, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const textEx = await resEx.text();
+        let parsedEx: any = null;
+        try {
+          parsedEx = textEx ? JSON.parse(textEx) : null;
+        } catch {
+          parsedEx = textEx;
+        }
+        console.log("Raw response (external examiners):", parsedEx);
+        const arrEx = normalizePayloadCandidates(parsedEx);
+        results.push(arrEx);
+      } catch (err) {
+        console.warn("[SetDefenseModal] external examiners fetch failed:", err);
+      }
+
+      // 3) College rep (only if department provided)
       if (department && String(department).trim() !== "") {
         try {
           const params = new URLSearchParams({
-            department: String(department).trim(), // department NAME
-            level: String((normalizeProgram(program) || "").trim()), // msc|phd trimmed
+            department: String(department).trim(),
+            level: String((normalizeProgram(program) || "").trim()),
             stage: String(defenseStage || ""),
           });
-          console.log(
-            "[SetDefenseModal] fetchLecturers running — department:",
-            department
-          );
 
           const url = `${collegeRepEndpoint}?${params.toString()}`;
           console.log(`[SetDefenseModal] GET -> ${url}`);
@@ -215,17 +233,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
             parsed2 = text2;
           }
 
-          // explicit raw log
-          console.log("text", text2);
           console.log("Raw response (college rep):", parsed2);
-
-          if (!res2.ok) {
-            console.warn(
-              `[SetDefenseModal] college-rep GET returned ${res2.status}`,
-              parsed2
-            );
-          }
-
           const arr2 = normalizePayloadCandidates(parsed2);
           results.push(arr2);
         } catch (err) {
@@ -237,30 +245,28 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         );
       }
 
-      // --- NEW: fetch provost when schedulerRole is hod or pgcord and merge it in
-      if (schedulerRole === "hod" || schedulerRole === "pgcord") {
+      // 4) Provost — include provost in the merged list so HOD/PGC can also see it
+      try {
+        console.log(`[SetDefenseModal] GET -> ${provostEndpoint}`);
+        const resProv = await fetch(provostEndpoint, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const textProv = await resProv.text();
+        let parsedProv: any = null;
         try {
-          console.log(`[SetDefenseModal] GET -> ${provostEndpoint}`);
-          const resProv = await fetch(provostEndpoint, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          });
-          const textProv = await resProv.text();
-          let parsedProv: any = null;
-          try {
-            parsedProv = textProv ? JSON.parse(textProv) : null;
-          } catch {
-            parsedProv = textProv;
-          }
-          console.log("Raw response (provost):", parsedProv);
-          const arrProv = normalizePayloadCandidates(parsedProv);
-          results.push(arrProv);
-        } catch (err) {
-          console.warn("[SetDefenseModal] provost fetch failed:", err);
+          parsedProv = textProv ? JSON.parse(textProv) : null;
+        } catch {
+          parsedProv = textProv;
         }
+        console.log("Raw response (provost):", parsedProv);
+        const arrProv = normalizePayloadCandidates(parsedProv);
+        results.push(arrProv);
+      } catch (err) {
+        console.warn("[SetDefenseModal] provost fetch failed:", err);
       }
 
       const merged = mergeUnique(results);
@@ -279,13 +285,13 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     }
   }, [
     initialLecturers,
-    lecturerEndpoint,
+    facultyRepEndpoint,
+    externalExaminerEndpoint,
     collegeRepEndpoint,
+    provostEndpoint,
     department,
     program,
     defenseStage,
-    provostEndpoint,
-    schedulerRole,
     token,
     toast,
   ]);
@@ -399,7 +405,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
       <div className="w-full max-w-3xl bg-white rounded-xl p-6 shadow-lg max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">
-          Schedule {defenseStage}
+          Schedule {defenseLabel}
         </h2>
 
         <div className="mb-4">
