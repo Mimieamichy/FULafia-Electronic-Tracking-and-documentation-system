@@ -290,72 +290,106 @@ export default class DefenceService {
   /**
    * Panel member submits score for a student
    */
-  static async submitScore(
+   static async submitScore(
   defenceId: string,
   panelMemberId: string,
   studentId: string,
   scores: { criterion: string; score: number }[]
 ) {
-  console.log("Raw frontend scores:", scores);
+  console.log(scores);
 
-  const department = await Defence.findById(defenceId).then((d) => d?.department);
-  const scoreSheet = await ScoreSheet.findOne({ department });
-  if (!scoreSheet) throw new Error("ScoreSheet not found for this defence");
+  const defence = await Defence.findById(defenceId);
+  if (!defence) throw new Error("Defence not found");
+
+  // Get the appropriate score sheet
+  let scoreSheet: any;
+  let sheetModel: any;
+
+  if (defence.stage?.toLowerCase() === "external") {
+    sheetModel = GeneralScoreSheet;
+    scoreSheet = await GeneralScoreSheet.findOne({});
+    if (!scoreSheet) throw new Error("General scoresheet not found");
+  } else {
+    sheetModel = ScoreSheet;
+    scoreSheet = await ScoreSheet.findOne({ department: defence.department });
+    if (!scoreSheet) throw new Error("Departmental scoresheet not found");
+  }
 
   if (!Array.isArray(scores) || scores.length === 0) {
     throw new Error("Scores array is required and cannot be empty");
   }
 
-  // Criteria defined in DB
-  const definedCriteria = scoreSheet.criteria.map((c) => c.name);
+  // Criteria validation
+  const definedCriteria = scoreSheet.criteria.map((c: any) => c.name);
+  const definedCriteriaSet = new Set(definedCriteria);
 
-  // Normalize incoming scores (trim, case-insensitive match)
-  const incomingMap = new Map(
-    scores.map((s) => [s.criterion.trim().toLowerCase(), s.score])
-  );
+  const submittedCriteria = scores.map((s) => s.criterion);
+  const submittedSet = new Set(submittedCriteria);
 
-  // Build a complete score list aligned with definedCriteria
-  const finalScores = definedCriteria.map((crit) => {
-    const key = crit.trim().toLowerCase();
-    return {
-      criterion: crit,
-      score: incomingMap.has(key) ? incomingMap.get(key)! : 0, // default 0 if missing
-    };
-  });
+  if (submittedSet.size !== submittedCriteria.length) {
+    throw new Error("Duplicate criteria found in submission");
+  }
 
-  // Validate score ranges
-  for (const s of finalScores) {
+  if (submittedCriteria.length !== definedCriteria.length) {
+    throw new Error(
+      `You must submit scores for exactly ${definedCriteria.length} criteria`
+    );
+  }
+
+  for (const crit of submittedCriteria) {
+    if (!definedCriteriaSet.has(crit)) {
+      throw new Error(`Invalid criterion submitted: ${crit}`);
+    }
+  }
+  
+
+  // Validate numeric values and ensure each score ≤ its criterion weight
+  for (const s of scores) {
     if (typeof s.score !== "number" || Number.isNaN(s.score)) {
       throw new Error(`Score for criterion "${s.criterion}" must be a number`);
     }
-    if (s.score < 0 || s.score > 100) {
+    if (s.score < 0) {
+      throw new Error(`Score for criterion "${s.criterion}" cannot be negative`);
+    }
+
+    const criterionDef = scoreSheet.criteria.find(
+      (c: any) => c.name === s.criterion
+    );
+    if (!criterionDef) {
+      throw new Error(`Criterion "${s.criterion}" not found in score sheet`);
+    }
+
+    if (s.score > criterionDef.weight) {
       throw new Error(
-        `Score for criterion "${s.criterion}" must be between 0 and 100`
+        `Score for "${s.criterion}" (${s.score}) cannot exceed its weight (${criterionDef.weight})`
       );
     }
   }
 
-  // Ensure panel member hasn't already scored this student
-  const already = scoreSheet.entries.find(
-    (e) =>
+  // Check if user already submitted — update or create new
+  const existingEntryIndex = scoreSheet.entries.findIndex(
+    (e: any) =>
       e.student.toString() === studentId &&
       e.panelMember.toString() === panelMemberId
   );
-  if (already) {
-    throw new Error("You have already submitted scores for this student");
+
+  if (existingEntryIndex >= 0) {
+    // Update existing entry
+    scoreSheet.entries[existingEntryIndex].scores = scores;
+    await scoreSheet.save();
+  } else {
+    // Add new entry
+    scoreSheet.entries.push({
+      student: new Types.ObjectId(studentId),
+      panelMember: new Types.ObjectId(panelMemberId),
+      defence: new Types.ObjectId(defenceId),
+      scores,
+    });
+    await scoreSheet.save();
   }
 
-  // Push the aligned entry
-  scoreSheet.entries.push({
-    student: new Types.ObjectId(studentId),
-    panelMember: new Types.ObjectId(panelMemberId),
-    defence: new Types.ObjectId(defenceId),
-    scores: finalScores,
-  });
-
-  await scoreSheet.save();
-
-  return await ScoreSheet.findById(scoreSheet._id).lean();
+  // Return updated sheet as lean (same style as your original version)
+  return await sheetModel.findById(scoreSheet._id).lean();
 }
 
 
