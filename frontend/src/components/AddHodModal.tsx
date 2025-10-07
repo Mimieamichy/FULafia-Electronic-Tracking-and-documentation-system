@@ -294,14 +294,9 @@ export default function AddHodModal({
                   <SelectValue placeholder="Select Title" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[
-                    "MR.",
-                    "MRS.",
-                    "MISS.",
-                    "DR.",
-                    "ASSOC. PROF.",
+                  {[                   
+                    "DR.",                    
                     "PROF.",
-                    "ENGR.",
                   ].map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}

@@ -52,13 +52,8 @@ const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
 // Titles for dropdown
 const titleOptions = [
-  "Mr.",
-  "Mrs.",
-  "Miss.",
   "Dr.",
-  "Engr.",
   "Prof.",
-  "Assoc. Prof.",
 ];
 
 // Roles for dropdown

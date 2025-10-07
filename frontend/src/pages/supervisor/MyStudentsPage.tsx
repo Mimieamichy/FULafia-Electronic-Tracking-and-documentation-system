@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// src/yourpath/MyStudentsPage.tsx
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "../AuthProvider";
-import { Download, Send } from "lucide-react";
+import { Download, Send, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // ---------- add after imports ----------
@@ -110,10 +111,24 @@ export default function MyStudentsPage() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
 
+  // upload UI state
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   const displayedStudents =
     selectedDegree === "MSc" ? studentsMsc : studentsPhd;
 
   const selected = selectedIdx !== null ? displayedStudents[selectedIdx] : null;
+
+  // helper: detect if current user is a supervisor (try multiple shapes)
+  const isSupervisor = (() => {
+    const r = (user as any)?.roles ?? (user?.role ? [user.role] : []);
+    if (!r) return false;
+    const arr = Array.isArray(r) ? r : [r];
+    return arr
+      .map((x: any) => String(x).toLowerCase())
+      .some((s: string) => s.includes("supervisor"));
+  })();
 
   // fetching my students
 
@@ -182,13 +197,14 @@ export default function MyStudentsPage() {
           by: string;
           text: string;
           uploadedAt?: string;
+          version?: number | null;
         }[] = versions.flatMap((v: any) =>
           Array.isArray(v.comments)
             ? v.comments.map((c: any) => ({
                 by: c.by ?? c.authorName ?? c.author ?? "Unknown",
                 text: c.text ?? c.comment ?? "",
                 uploadedAt: c.date ?? c.uploadedAt ?? c.createdAt,
-                version: v.versionNumber ?? v.versions ?? null,
+                version: v.versionNumber ?? v.version ?? null,
               }))
             : []
         );
@@ -205,7 +221,6 @@ export default function MyStudentsPage() {
             studentObj._id ??
             studentObj.id ??
             studentObj.matricNo ??
-            
             Math.random().toString(36).slice(2),
           matNo: studentObj.matricNo ?? studentObj.matNo ?? "",
           name: `${first} ${last}`.trim(),
@@ -216,7 +231,6 @@ export default function MyStudentsPage() {
             projectObj?.topic ??
             studentObj.topic ??
             "",
-
 
           stage: (studentObj.currentStage ?? "").toLowerCase(),
           stageKey: (studentObj.currentStage ?? "").toLowerCase(),
@@ -275,6 +289,7 @@ export default function MyStudentsPage() {
 
     fetchMyStudentsByDegree("msc");
     fetchMyStudentsByDegree("phd");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   // handle comment submission
@@ -290,7 +305,7 @@ export default function MyStudentsPage() {
     const latestVersion = versions[latestIdx];
     const versionNumber = latestVersion?.versionNumber ?? latestIdx + 1; // fallback
 
-    if (!versionNumber) {
+    if (!versionNumber && versionNumber !== 0) {
       console.error("No versionNumber found for selected student");
       return;
     }
@@ -363,8 +378,107 @@ export default function MyStudentsPage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download error:", err);
+      toast({
+        title: "Download failed",
+        description: "See console for details.",
+        variant: "destructive",
+      });
     }
   };
+
+  // ---------- NEW: Supervisor upload handler ----------
+  const validateFile = (file: File) => {
+    const allowedMimeTypes = new Set([
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ]);
+    const allowedExt = new Set([".pdf", ".doc", ".docx"]);
+    const getExt = (n: string) => {
+      const i = n.lastIndexOf(".");
+      return i >= 0 ? n.slice(i).toLowerCase() : "";
+    };
+    const ext = getExt(file.name);
+    const mimeOk = allowedMimeTypes.has(file.type);
+    const extOk = allowedExt.has(ext);
+    const MAX_BYTES = 5 * 1024 * 1024;
+    if (!mimeOk && !extOk) {
+      return "Only PDF and Word documents are allowed.";
+    }
+    if (file.size > MAX_BYTES) {
+      return "Maximum file size is 5 MB.";
+    }
+    return null;
+  };
+
+  const handleUploadClick = () => {
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = "";
+    fileInputRef.current.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+
+    const validationErr = validateFile(file);
+    if (validationErr) {
+      toast({ title: "Invalid file", description: validationErr, variant: "destructive" });
+      return;
+    }
+
+    if (!selected) {
+      toast({ title: "No student selected", description: "Please open a student before uploading.", variant: "destructive" });
+      return;
+    }
+
+    // compute version number to attach (prefer latest.versionNumber or increment)
+    const versions = selected.projectVersions ?? [];
+    const latestIdx =
+      selected.latestVersionIndex ?? (versions.length > 0 ? versions.length - 1 : -1);
+    const latestVersion = versions[latestIdx];
+    const versionNumber = latestVersion?.versionNumber ?? latestIdx + 1;
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      // change 'file' here if backend expects different field name
+      form.append("file", file);
+      form.append("studentId", selected.id);
+      if (versionNumber || versionNumber === 0) {
+        form.append("versionNumber", String(versionNumber));
+      }
+
+      const res = await fetch(`${baseUrl}/supervisor/upload`, {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // DO NOT set Content-Type, browser will set multipart boundary
+        },
+        body: form,
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`Upload failed: ${res.status} ${txt}`);
+      }
+
+      toast({ title: "Upload successful", description: "File uploaded.", variant: "default" });
+      // refresh current degree list to pick up new file/comments
+      const degreeToRefresh = selectedDegree.toLowerCase() as "msc" | "phd";
+      await fetchMyStudentsByDegree(degreeToRefresh);
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      toast({
+        title: "Upload failed",
+        description: err?.message ?? "See console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+  // ---------- end upload handler ----------
 
   // handle student approval
   const handleApproveStudent = async (
@@ -564,22 +678,46 @@ export default function MyStudentsPage() {
                           selected.latestVersionIndex ?? -1
                         ];
 
+                      const versionNumber =
+                        latest?.versionNumber ??
+                        (selected.latestVersionIndex ?? -1) + 1;
+
                       return (
                         <>
-                          <Button
-                            className="bg-amber-700 text-white"
-                            onClick={() =>
-                              handleDownload(
-                                selected.id,
-                                selected.projectVersions[
-                                  selected.latestVersionIndex
-                                ].versionNumber
-                              )
-                            }
-                          >
-                            <Download className="mr-1 h-4 w-4" />
-                            Download
-                          </Button>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              className="bg-amber-700 text-white"
+                              onClick={() =>
+                                handleDownload(
+                                  selected.id,
+                                  versionNumber
+                                )
+                              }
+                            >
+                              <Download className="mr-1 h-4 w-4" />
+                              Download
+                            </Button>
+
+                            {/* Upload button (visible only to supervisors) */}
+                            
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept=".pdf,application/pdf,.doc,application/msword,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                  onChange={handleFileSelected}
+                                  className="hidden"
+                                />
+                                <Button
+                                  className="bg-white border text-amber-700 hover:bg-amber-50"
+                                  onClick={handleUploadClick}
+                                  disabled={uploading}
+                                  title="Upload document for student"
+                                >
+                                  <Upload className="mr-1 h-4 w-4" />
+                                  {uploading ? "Uploading…" : "Upload"}
+                                </Button>
+                             
+                          </div>
 
                           <div className="text-xs text-gray-500 mt-1">
                             Version #{latest.versionNumber}
@@ -591,6 +729,29 @@ export default function MyStudentsPage() {
                 ) : (
                   <div className="text-sm text-gray-500">
                     No project file uploaded yet.
+                    {/* allow upload even if no version yet */}
+                    {isSupervisor && (
+                      <>
+                        <div className="mt-3">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".pdf,application/pdf,.doc,application/msword,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleFileSelected}
+                            className="hidden"
+                          />
+                          <Button
+                            className="bg-white border text-amber-700 hover:bg-amber-50"
+                            onClick={handleUploadClick}
+                            disabled={uploading}
+                            title="Upload document for student"
+                          >
+                            <Upload className="mr-1 h-4 w-4" />
+                            {uploading ? "Uploading…" : "Upload"}
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

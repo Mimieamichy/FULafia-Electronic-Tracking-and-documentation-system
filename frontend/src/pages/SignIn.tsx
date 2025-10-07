@@ -62,10 +62,10 @@ const SignIn = () => {
       { keys: ["dean"], route: "/dean" },
       { keys: ["hod", "pgcord", "provost"], route: "/dashboard" },
       // supervisor types should take precedence over faculty pg rep
-      { keys: ["supervisor", "major_supervisor", "college_rep"], route: "/supervisor" },
+      { keys: ["supervisor", "major_supervisor", "college_rep","internal_examiner"], route: "/supervisor" },
       { keys: ["student"], route: "/student" },
       // roles that land on defense-day
-      { keys: ["external_examiner", "faculty_pg_rep", "panel_member"], route: "/defense-day" },
+      { keys: ["external_examiner", "faculty_pg_rep", "panel_member", "lecturer"], route: "/defense-day" },
       // fallback lecturer/general -> dashboard
       
     ];
@@ -126,7 +126,10 @@ const SignIn = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="max-w-md w-full">
           <div className="mb-8">
-            <h1 className="text-4xl font-semibold text-gray-800 mb-2">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            FULAFIA Electronic Tracking and Documentation System
+          </h1>
+            <h1 className="text-4xl font-medium text-gray-800 mb-2">
               Sign In
             </h1>
             <p className="text-gray-600">Fill in your details to sign in</p>

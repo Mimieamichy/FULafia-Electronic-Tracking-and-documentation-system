@@ -389,8 +389,7 @@ export default function UploadWorkPage() {
 
     const mimeOk = allowedMimeTypes.has(file.type);
     const extOk = allowedExtensions.has(getExtension(file.name));
-    const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
-
+    const MAX_FILE_BYTES = 1024 ** 3;
     if (!mimeOk && !extOk) {
       toast({
         title: "Invalid File Type",
@@ -497,7 +496,7 @@ export default function UploadWorkPage() {
         {/* File Upload */}
         <div className="space-y-1">
           <label className="text-gray-700 font-medium block">
-            Upload File (PDF / DOC / DOCX, max 5MB):
+            Upload File (PDF / DOC / DOCX, max 1GB):
           </label>
           <input
             ref={fileInputRef}
