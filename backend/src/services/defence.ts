@@ -303,7 +303,6 @@ export default class DefenceService {
     studentId: string,
     scores: { criterion: string; score: number }[]
   ) {
-    console.log(scores);
 
     const defence = await Defence.findById(defenceId);
     if (!defence) throw new Error("Defence not found");
@@ -379,11 +378,13 @@ export default class DefenceService {
     const existingEntryIndex = scoreSheet.entries.findIndex(
       (e: any) =>
         e.student.toString() === studentId &&
-        e.panelMember.toString() === panelMemberId
+        e.panelMember.toString() === panelMemberId &&
+        e.defence.toString() === defenceId
     );
 
     if (existingEntryIndex >= 0) {
       // Update existing entry
+      console.log(scoreSheet.entries[existingEntryIndex])
       scoreSheet.entries[existingEntryIndex].scores = scores;
       await scoreSheet.save();
     } else {
@@ -407,6 +408,7 @@ export default class DefenceService {
    */
   static async endDefence(defenceId: string) {
     const defence = await Defence.findById(defenceId);
+    console.log(defenceId)
     if (!defence) throw new Error("Defence not found");
     if (!defence.started) throw new Error("Defence has not started");
     if (defence.ended) throw new Error("Defence already ended");
@@ -417,7 +419,7 @@ export default class DefenceService {
 
     // Filter entries for this specific defence
     const defenceEntries = sheet.entries.filter(entry =>
-      entry.defence.toString() === defenceId
+      entry.defence.toString() == defenceId
     );
 
     if (defenceEntries.length === 0) {
@@ -522,6 +524,7 @@ export default class DefenceService {
   if (!lecturer) throw new Error("Lecturer not found");
 
   const userRoles = (lecturer.user as any)?.roles || [];
+ 
   const isHodOrProvost =
     Array.isArray(userRoles) &&
     (userRoles.includes("hod") || userRoles.includes("provost"));
@@ -544,11 +547,14 @@ export default class DefenceService {
       const allMarked = def.students.every(
         (student: any) => student.defenceMarked === true
       );
+      console.log(activeDefences, def.students)
       return !allMarked; // still active if not all marked
     });
-
+    
     return activeDefences.length > 0;
   }
+
+  
 
   return defences.length > 0;
 }
@@ -678,27 +684,61 @@ export default class DefenceService {
 
 
   /**Get all the active defences for a panel member */
-  static async getDefenceForPanelMember(program: string, userId: string) {
-    const lecturer = await Lecturer.findOne({ user: userId });
-    if (!lecturer) throw new Error("Lecturer profile not found");
-    const lecturerId = lecturer._id;
+static async getDefenceForPanelMember(program: string, userId: string) {
+  const lecturer = await Lecturer.findOne({ user: userId }).populate("user");
+  if (!lecturer) throw new Error("Lecturer profile not found");
 
-    // Find defences where the lecturer is a panel member, regardless of department
-    const defences = await Defence.find({
-      program,
-      panelMembers: lecturerId, // Check if lecturer ID is in panelMembers array
-      ended: false,
-    })
-      .select('_id stage program department date time started ended')
-      .populate('students', 'name matricNo') // Optional: include student details
-      .lean();
+  const lecturerId = lecturer._id;
 
-    if (!defences || defences.length === 0) {
-      throw new Error(`No ${program} defences found where you are a panel member`);
-    }
+  // Check if user is HOD or PROVOST
+  const isHodOrProvost =
+    lecturer.user &&
+    typeof lecturer.user === "object" &&
+    Array.isArray((lecturer.user as any).roles) &&
+    ((lecturer.user as any).roles.includes("hod") ||
+      (lecturer.user as any).roles.includes("provost"));
 
-    return defences;
+  // Build base query
+  const query: any = {
+    program,
+    panelMembers: lecturerId,
+  };
+
+  // Regular lecturers only see ongoing defences
+  if (!isHodOrProvost) {
+    query.ended = false;
   }
+
+  // Fetch defences with students
+  const defences = await Defence.find(query)
+    .select("_id stage program department date time started ended students")
+    .populate("students", "name matricNo defenceMarked")
+    .lean();
+
+  if (!defences || defences.length === 0) {
+    throw new Error(`No ${program} defences found where you are a panel member`);
+  }
+
+  if (isHodOrProvost) {
+    const activeDefences = defences.filter((def) => {
+      if (!Array.isArray(def.students) || def.students.length === 0) return false;
+
+      const allMarked = def.students.every(
+        (student: any) => student.defenceMarked === true
+      );
+
+      // Return if defence not ended OR ended but not all students marked
+      return def.ended === false || (def.ended === true && !allMarked);
+    });
+
+    return activeDefences;
+  }
+
+  // For other lecturers — only active defences
+  return defences;
+}
+
+
 
   /**Get other lecturers in the department that is not a panel member for a defence */
   static async getAvailableLecturersForDefence(
