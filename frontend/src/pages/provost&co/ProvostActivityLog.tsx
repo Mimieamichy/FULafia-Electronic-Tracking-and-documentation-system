@@ -210,12 +210,7 @@ const ProvostActivityLog: React.FC = () => {
                   </p>
                 ) : null}
 
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                  <Clock className="w-4 h-4" />
-                  {formatDistanceToNow(new Date(log.timestamp), {
-                    addSuffix: true,
-                  })}
-                </div>
+               
               </div>
             </div>
           ))}

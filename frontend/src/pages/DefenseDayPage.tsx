@@ -39,12 +39,13 @@ interface DefenseDay {
   id: string;
   title: string;
   date: string; // ISO string
-  durationMinutes: number;
+  durationMinutes: string;
   level: Level;
   sessionActive?: boolean;
   students: Student[];
   currentStage: string;
   criteria?: Criterion[];
+  time?: string;
 }
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL ?? "";
@@ -97,9 +98,6 @@ export default function DefenseDayPage() {
     [rolesArray.join("|")]
   );
 
-  console.log("[DefenseDayPage] rolesArray:", rolesArray, "isPanel:", isPanel);
-  
-
   const isHodOrProvost = React.useMemo(
     () =>
       rolesArray.some(
@@ -115,6 +113,9 @@ export default function DefenseDayPage() {
     [rolesArray.join("|")]
   );
 
+  
+  
+
   // --- hooks (always declared, never conditional) ---
   const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
     {
@@ -129,11 +130,12 @@ export default function DefenseDayPage() {
   const [activeTab, setActiveTab] = useState<
     "students" | "scores" | "assessment"
   >("students");
+
   const [selectedStudent, setSelectedStudent] = useState<{
     student: Student;
     defenseId: string;
   } | null>(null);
-  const [now, setNow] = useState(Date.now());
+
   const [toggling, setToggling] = useState(false);
   // add near other hooks at top of the component
   const [submittingScores, setSubmittingScores] = useState(false);
@@ -141,11 +143,6 @@ export default function DefenseDayPage() {
   const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
     {}
   );
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   // ------- helpers to map API shapes to our UI model -------
   const mapRawStudent = (s: any, fallbackStage = ""): Student => {
@@ -182,21 +179,9 @@ export default function DefenseDayPage() {
   const mapDefenseFromDefenceObj = (def: any, extraData?: any): DefenseDay => {
     const id = def?._id ?? def?.id ?? "unknown";
     const title = def?.title ?? def?.name ?? def?.label ?? `Defense ${id}`;
-    const date =
-      def?.date ??
-      def?.dateTime ??
-      def?.startTime ??
-      def?.start ??
-      def?.scheduledAt ??
-      new Date().toISOString();
-    const durationMinutes =
-      Number(
-        def?.durationMinutes ??
-          def?.duration ??
-          def?.length ??
-          def?.minutes ??
-          0
-      ) || 120;
+    const time = def?.time;
+    const date = new Date(def?.date).toISOString().split("T")[0];
+    const durationMinutes = def?.time;
     const levelRaw = (def?.program ??
       def?.level ??
       def?.levelName ??
@@ -248,22 +233,33 @@ export default function DefenseDayPage() {
       id: String(id),
       title: String(title),
       date: String(date),
-      durationMinutes: Number(durationMinutes),
+      durationMinutes: String(durationMinutes),
       level: levelMapped,
       sessionActive: Boolean(sessionActive),
       students,
       currentStage: String(currentStage),
       criteria: criteriaMapped.length ? criteriaMapped : undefined,
+      time: String(time),
     };
   };
 
-  useEffect(() => {
-    if (authSettling) return;
+  const formatHoursCountdown = (ms: number) => {
+    if (ms <= 0) return "0h";
+    const totalHours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    return `${totalHours}h ${minutes}m`;
+  };
 
-    if (!isPanel) {
-      setDefenseDays([]);
-      return;
-    }
+  const getCountdownFor = (def: DefenseDay) => {
+    // Combine date + time into ISO string
+    const dateTimeString = `${def.date}T${def.time}:00`;
+    // Example: "2025-10-12T09:00:00"
+
+    const start = new Date(dateTimeString).getTime();
+    return Math.max(0, start - Date.now()); // milliseconds until start
+  };
+
+  useEffect(() => {
     let cancelled = false;
 
     // show cached immediately if present (so switching levels doesn't blank UI)
@@ -498,12 +494,15 @@ export default function DefenseDayPage() {
     return () => {
       cancelled = true;
     };
-  }, [level, token, isPanel, authSettling]);
+  }, [level, token]);
 
   if (authSettling) {
     // auth still settling — don't show denial; show a small loading placeholder.
     return (
-      <div className="p-6 text-center text-gray-600">Loading permissions…</div>
+      <div className="p-6 text-center text-gray-600">
+        <h1>Loading permissions…</h1>
+        <h1>If it takes time kindly refresh</h1>
+      </div>
     );
   }
 
@@ -517,31 +516,6 @@ export default function DefenseDayPage() {
 
   // --- UI helpers & actions ---
   const activeDefense = defenseDays[activeDefenseIdx];
-
-  const formatCountdown = (ms: number) => {
-    if (ms <= 0) return "00:00:00";
-    const totalSeconds = Math.floor(ms / 1000);
-    const days = Math.floor(totalSeconds / (24 * 3600));
-    const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600)
-      .toString()
-      .padStart(2, "0");
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-      .toString()
-      .padStart(2, "0");
-    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-    return days > 0
-      ? `${days}d ${hours}:${minutes}:${seconds}`
-      : `${hours}:${minutes}:${seconds}`;
-  };
-
-  const getCountdownFor = (def: DefenseDay) => {
-    const start = new Date(def.date).getTime();
-    const end = start + def.durationMinutes * 60 * 1000;
-    if (def.sessionActive) {
-      return Math.max(0, end - now);
-    }
-    return Math.max(0, start - now);
-  };
 
   const updateStudentNested = (
     defenseId: string,
@@ -1000,7 +974,7 @@ export default function DefenseDayPage() {
                 Defense Day Details
               </h2>
               <p className="text-sm text-amber-700/90 mt-1">
-                {new Date(activeDefense.date).toLocaleString()} | Level:{" "}
+                {activeDefense.date}, {activeDefense.time} | Level:{" "}
                 <strong>{activeDefense.level}</strong> | Defense:{" "}
                 <strong className="capitalize">
                   {activeDefense.currentStage}
@@ -1009,11 +983,14 @@ export default function DefenseDayPage() {
               <p className="text-sm text-gray-700 mt-3">
                 Countdown:{" "}
                 <strong className="text-amber-700">
-                  {formatCountdown(getCountdownFor(activeDefense))}
+                  {formatHoursCountdown(getCountdownFor(activeDefense))}
                 </strong>{" "}
                 {activeDefense.sessionActive
                   ? " (Session active)"
                   : " (Not started)"}
+              </p>
+              <p className="text-sm text-gray-700 mt-3">
+                {user.userName} | Role: {user.role}
               </p>
             </div>
 
