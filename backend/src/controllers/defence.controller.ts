@@ -172,10 +172,9 @@ export default class DefenceController {
   /**Get lecturers in a department who aint panel members */
    static async getAvailableLecturersForDefence(req: AuthenticatedRequest, res: Response) {
     try {
-      const {studentIds} = req.params
-      const studentIdArray = studentIds.split(',').map(id => id.trim());
+      const {stage, level, department} = req.params
 
-      const lecturers = await DefenceService.getAvailableLecturersForDefence(studentIdArray);
+      const lecturers = await DefenceService.getAvailableLecturersForDefence({stage, level, department});
       res.json({ success: true, data: lecturers });
     } catch (err: any) {
       console.log(err)

@@ -658,15 +658,27 @@ export default class DefenceService {
   }
 
   /**Get other lecturers in the department that is not a panel member for a defence */
-  static async getAvailableLecturersForDefence(studentIds: (string | Types.ObjectId)[]) {
- 
-  const students = await Student.find({ _id: { $in: studentIds } }).lean();
+  static async getAvailableLecturersForDefence(
+  options: { 
+    stage: string; 
+    level: string; 
+    department: string; 
+  }
+) {
+  const { stage, level, department } = options;
+
+  // 1. Get students matching stage, level, and department
+  const students = await Student.find({
+    stage,
+    level,
+    department
+  }).lean();
 
   if (students.length === 0) {
-    throw new Error("No students found for the provided IDs.");
+    throw new Error("No students found for the specified stage, level, or department.");
   }
 
-  //Collect all associated lecturers (supervisors, internal examiners, college reps)
+  // 2. Collect all associated lecturers (supervisors, internal examiners, college reps)
   const assignedLecturerIds = new Set<string>();
   students.forEach((s) => {
     if (s.majorSupervisor) assignedLecturerIds.add(s.majorSupervisor.toString());
@@ -675,16 +687,16 @@ export default class DefenceService {
     if (s.collegeRep) assignedLecturerIds.add(s.collegeRep.toString());
   });
 
-  const departmentName = students[0]?.department;
-
-  const allLecturers = await Lecturer.find({ department: departmentName })
+  // 3. Get all lecturers in that department
+  const allLecturers = await Lecturer.find({ department })
     .populate('user', 'firstName lastName roles email');
 
+  // 4. Exclude assigned supervisors and examiners
   const availableLecturers = allLecturers.filter(
     (lecturer: any) => !assignedLecturerIds.has(String(lecturer._id))
   );
 
-  // Exclude external examiners or those with certain roles
+  // 5. Exclude external examiners or restricted roles
   const filteredLecturers = availableLecturers.filter(
     (lecturer) =>
       lecturer.user &&
@@ -695,6 +707,7 @@ export default class DefenceService {
 
   return filteredLecturers;
 }
+
 
 
 

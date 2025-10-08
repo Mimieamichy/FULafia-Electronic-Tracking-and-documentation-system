@@ -40,7 +40,7 @@ const scheduleDefenceSchema = Joi.object({
 router.get('/', authenticate, DefenceController.getAllDefences);
 router.get('/:defenceId', authenticate, DefenceController.getDefenceDetails);
 router.get('/panel-member/:level', authenticate, DefenceController.getDefenceForPanelMember);
-router.get('/lecturers/:studentIds', authenticate, DefenceController.getAvailableLecturersForDefence);
+router.get('/lecturers/:stage/:level/:department', authenticate, DefenceController.getAvailableLecturersForDefence);
 router.post('/schedule', authenticate, checkPermission(Permission.SCHEDULE_DEFENSE), validateBody(scheduleDefenceSchema), DefenceController.scheduleDefence);
 router.post('/start/:defenceId', authenticate, checkPermission(Permission.START_DEFENSE), DefenceController.startDefence);
 router.post('/submit-score/:defenceId', authenticate, checkPermission(Permission.SCORE_STUDENT), DefenceController.submitScore);
