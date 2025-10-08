@@ -90,6 +90,8 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const [loadingLecturers, setLoadingLecturers] = useState(false);
   const departmentName = String(department).trim();
 
+  console.log("ids to schedule:", studentIds);
+
   const facultyRepEndpoint = `${baseUrl}/lecturer/get-faculty-rep`;
   const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner?department=${encodeURIComponent(
     departmentName
@@ -97,6 +99,10 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
 
   const collegeRepEndpoint = `${baseUrl}/lecturer/get-college-rep`;
   const provostEndpoint = `${baseUrl}/lecturer/get-provost`;
+
+   const departmentLecturersEndpoint = `${baseUrl}/defence/lecturers/${encodeURIComponent(
+    studentIds.join(',')
+  )}`;
 
   const normalizePayloadCandidates = (raw: any): Lecturer[] => {
     const payload = raw?.data ?? raw;
@@ -144,7 +150,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     return studentIds;
   }, [allStudents, studentIds, defenseStage]);
 
-  const fetchLecturers = useCallback(async () => {
+   const fetchLecturers = useCallback(async () => {
     setLoadingLecturers(true);
     console.groupCollapsed("[SetDefenseModal] GET lecturers (combined)");
 
@@ -203,6 +209,41 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
         results.push(arrEx);
       } catch (err) {
         console.warn("[SetDefenseModal] external examiners fetch failed:", err);
+      }
+
+      // 2b) NEW: department-specific lecturers from /lecturer/:department
+      if (departmentName) {
+        try {
+          console.log(
+            `[SetDefenseModal] GET -> ${departmentLecturersEndpoint}`
+          );
+          const resDept = await fetch(departmentLecturersEndpoint, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+          const textDept = await resDept.text();
+          let parsedDept: any = null;
+          try {
+            parsedDept = textDept ? JSON.parse(textDept) : null;
+          } catch {
+            parsedDept = textDept;
+          }
+          console.log("Raw response (department lecturers):", parsedDept);
+          const arrDept = normalizePayloadCandidates(parsedDept);
+          results.push(arrDept);
+        } catch (err) {
+          console.warn(
+            "[SetDefenseModal] department lecturers fetch failed:",
+            err
+          );
+        }
+      } else {
+        console.log(
+          "[SetDefenseModal] skipping /lecturer/:department — departmentName empty"
+        );
       }
 
       // 3) College rep (only if department provided)
@@ -287,14 +328,17 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     initialLecturers,
     facultyRepEndpoint,
     externalExaminerEndpoint,
+    departmentLecturersEndpoint, // <-- added here
     collegeRepEndpoint,
     provostEndpoint,
     department,
     program,
     defenseStage,
     token,
+    departmentName,
     toast,
   ]);
+
 
   useEffect(() => {
     if (!isOpen) return;

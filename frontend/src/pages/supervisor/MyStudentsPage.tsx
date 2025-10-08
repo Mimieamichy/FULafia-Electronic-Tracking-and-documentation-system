@@ -401,12 +401,12 @@ export default function MyStudentsPage() {
     const ext = getExt(file.name);
     const mimeOk = allowedMimeTypes.has(file.type);
     const extOk = allowedExt.has(ext);
-    const MAX_BYTES = 5 * 1024 * 1024;
+    const MAX_BYTES = 1024 ** 3;
     if (!mimeOk && !extOk) {
       return "Only PDF and Word documents are allowed.";
     }
     if (file.size > MAX_BYTES) {
-      return "Maximum file size is 5 MB.";
+      return "Maximum file size is 1 GB.";
     }
     return null;
   };
@@ -423,47 +423,82 @@ export default function MyStudentsPage() {
 
     const validationErr = validateFile(file);
     if (validationErr) {
-      toast({ title: "Invalid file", description: validationErr, variant: "destructive" });
+      toast({
+        title: "Invalid file",
+        description: validationErr,
+        variant: "destructive",
+      });
+      e.currentTarget.value = ""; // reset input
       return;
     }
 
     if (!selected) {
-      toast({ title: "No student selected", description: "Please open a student before uploading.", variant: "destructive" });
+      toast({
+        title: "No student selected",
+        description: "Please open a student before uploading.",
+        variant: "destructive",
+      });
+      e.currentTarget.value = ""; // reset input
       return;
     }
 
     // compute version number to attach (prefer latest.versionNumber or increment)
     const versions = selected.projectVersions ?? [];
     const latestIdx =
-      selected.latestVersionIndex ?? (versions.length > 0 ? versions.length - 1 : -1);
+      selected.latestVersionIndex ??
+      (versions.length > 0 ? versions.length - 1 : -1);
     const latestVersion = versions[latestIdx];
     const versionNumber = latestVersion?.versionNumber ?? latestIdx + 1;
 
     setUploading(true);
     try {
       const form = new FormData();
-      // change 'file' here if backend expects different field name
-      form.append("file", file);
-      form.append("studentId", selected.id);
-      if (versionNumber || versionNumber === 0) {
+
+      // IMPORTANT: append using the exact field name server expects
+      // You asked to send only 'fileUrl' — so we append with that key.
+      form.append("project", file);
+
+      // If backend expects versionNumber in the form (optional), you can include it:
+      if (typeof versionNumber === "number" && !Number.isNaN(versionNumber)) {
         form.append("versionNumber", String(versionNumber));
       }
 
-      const res = await fetch(`${baseUrl}/supervisor/upload`, {
-        method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          // DO NOT set Content-Type, browser will set multipart boundary
-        },
-        body: form,
-      });
+      // Do NOT set Content-Type header — let the browser set multipart boundary.
+      const res = await fetch(
+        `${baseUrl}/project/upload/${encodeURIComponent(selected.id)}`,
+        {
+          method: "POST",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: form,
+        }
+      );
 
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(`Upload failed: ${res.status} ${txt}`);
+      // Read as text then try to parse JSON for better error messages
+      const text = await res.text().catch(() => "");
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
       }
 
-      toast({ title: "Upload successful", description: "File uploaded.", variant: "default" });
+      if (!res.ok) {
+        // Helpful error message shown to user + console for debugging
+        const serverMsg =
+          (parsed && (parsed.message || parsed.error)) ||
+          text ||
+          `HTTP ${res.status}`;
+        throw new Error(serverMsg);
+      }
+
+      toast({
+        title: "Upload successful",
+        description: "File uploaded.",
+        variant: "default",
+      });
+
       // refresh current degree list to pick up new file/comments
       const degreeToRefresh = selectedDegree.toLowerCase() as "msc" | "phd";
       await fetchMyStudentsByDegree(degreeToRefresh);
@@ -476,8 +511,13 @@ export default function MyStudentsPage() {
       });
     } finally {
       setUploading(false);
+      // reset input so user can re-select same file later if needed
+      if (e.currentTarget) e.currentTarget.value = "";
+      // also reset ref if you use it for clicking
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
   // ---------- end upload handler ----------
 
   // handle student approval
@@ -659,7 +699,9 @@ export default function MyStudentsPage() {
       >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selected?.name}'s Submission</DialogTitle>
+            <DialogTitle className="capitalize">
+              {selected?.name}'s Submission
+            </DialogTitle>
           </DialogHeader>
 
           {selected && (
@@ -688,10 +730,7 @@ export default function MyStudentsPage() {
                             <Button
                               className="bg-amber-700 text-white"
                               onClick={() =>
-                                handleDownload(
-                                  selected.id,
-                                  versionNumber
-                                )
+                                handleDownload(selected.id, versionNumber)
                               }
                             >
                               <Download className="mr-1 h-4 w-4" />
@@ -699,24 +738,23 @@ export default function MyStudentsPage() {
                             </Button>
 
                             {/* Upload button (visible only to supervisors) */}
-                            
-                                <input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  accept=".pdf,application/pdf,.doc,application/msword,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                  onChange={handleFileSelected}
-                                  className="hidden"
-                                />
-                                <Button
-                                  className="bg-white border text-amber-700 hover:bg-amber-50"
-                                  onClick={handleUploadClick}
-                                  disabled={uploading}
-                                  title="Upload document for student"
-                                >
-                                  <Upload className="mr-1 h-4 w-4" />
-                                  {uploading ? "Uploading…" : "Upload"}
-                                </Button>
-                             
+
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept=".pdf,application/pdf,.doc,application/msword,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              onChange={handleFileSelected}
+                              className="hidden"
+                            />
+                            <Button
+                              className="bg-white border text-amber-700 hover:bg-amber-50"
+                              onClick={handleUploadClick}
+                              disabled={uploading}
+                              title="Upload document for student"
+                            >
+                              <Upload className="mr-1 h-4 w-4" />
+                              {uploading ? "Uploading…" : "Upload"}
+                            </Button>
                           </div>
 
                           <div className="text-xs text-gray-500 mt-1">

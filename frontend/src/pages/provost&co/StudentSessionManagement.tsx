@@ -870,7 +870,7 @@ const StudentSessionManagement = () => {
 
   console.log("Rendering ", defenseStudentIds.length, "students for", {
     selectedDefense,
-    selectedDefenseLabel,
+    defenseStudentIds,
   });
 
   return (

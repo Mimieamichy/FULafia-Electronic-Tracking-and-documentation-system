@@ -390,6 +390,8 @@ export default function UploadWorkPage() {
     const mimeOk = allowedMimeTypes.has(file.type);
     const extOk = allowedExtensions.has(getExtension(file.name));
     const MAX_FILE_BYTES = 1024 ** 3;
+    console.log("Max file size (bytes):", MAX_FILE_BYTES);
+    
     if (!mimeOk && !extOk) {
       toast({
         title: "Invalid File Type",
