@@ -65,7 +65,7 @@ const normalizeProgram2 = (p?: string) => {
 const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   isOpen,
   onClose,
-  defenseLabel, // <-- new optional prop  
+  defenseLabel, // <-- new optional prop
   defenseStage,
   lecturers: initialLecturers,
   schedulerRole = "hod",
@@ -90,7 +90,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const [loadingLecturers, setLoadingLecturers] = useState(false);
   const departmentName = String(department).trim();
 
-  console.log("ids to schedule:", studentIds);
+  
 
   const facultyRepEndpoint = `${baseUrl}/lecturer/get-faculty-rep`;
   const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner?department=${encodeURIComponent(
@@ -100,8 +100,10 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   const collegeRepEndpoint = `${baseUrl}/lecturer/get-college-rep`;
   const provostEndpoint = `${baseUrl}/lecturer/get-provost`;
 
-   const departmentLecturersEndpoint = `${baseUrl}/defence/lecturers/${encodeURIComponent(
-    studentIds.join(',')
+  const departmentLecturersEndpoint = `${baseUrl}/defence/lecturers/${encodeURIComponent(
+    defenseStage
+  )}/${encodeURIComponent(normalizeProgram(program))}/${encodeURIComponent(
+    departmentName
   )}`;
 
   const normalizePayloadCandidates = (raw: any): Lecturer[] => {
@@ -150,7 +152,7 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     return studentIds;
   }, [allStudents, studentIds, defenseStage]);
 
-   const fetchLecturers = useCallback(async () => {
+  const fetchLecturers = useCallback(async () => {
     setLoadingLecturers(true);
     console.groupCollapsed("[SetDefenseModal] GET lecturers (combined)");
 
@@ -338,7 +340,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
     departmentName,
     toast,
   ]);
-
 
   useEffect(() => {
     if (!isOpen) return;
