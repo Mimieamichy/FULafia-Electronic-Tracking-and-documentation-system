@@ -391,7 +391,6 @@ export default class DefenceService {
     return await sheetModel.findById(scoreSheet._id).lean();
   }
 
-
   /** Marks defence as ended
    * Computes average scores and updates Student.stageScores
    * Notifies students that scores are available
@@ -657,6 +656,45 @@ export default class DefenceService {
 
     return defences;
   }
+
+  /**Get other lecturers in the department that is not a panel member for a defence */
+  static async getAvailableLecturersForDefence(studentIds: (string | Types.ObjectId)[]) {
+ 
+  const students = await Student.find({ _id: { $in: studentIds } }).lean();
+
+  if (students.length === 0) {
+    throw new Error("No students found for the provided IDs.");
+  }
+
+  //Collect all associated lecturers (supervisors, internal examiners, college reps)
+  const assignedLecturerIds = new Set<string>();
+  students.forEach((s) => {
+    if (s.majorSupervisor) assignedLecturerIds.add(s.majorSupervisor.toString());
+    if (s.minorSupervisor) assignedLecturerIds.add(s.minorSupervisor.toString());
+    if (s.internalExaminer) assignedLecturerIds.add(s.internalExaminer.toString());
+    if (s.collegeRep) assignedLecturerIds.add(s.collegeRep.toString());
+  });
+
+  const departmentName = students[0]?.department;
+
+  const allLecturers = await Lecturer.find({ department: departmentName })
+    .populate('user', 'firstName lastName roles email');
+
+  const availableLecturers = allLecturers.filter(
+    (lecturer: any) => !assignedLecturerIds.has(String(lecturer._id))
+  );
+
+  // Exclude external examiners or those with certain roles
+  const filteredLecturers = availableLecturers.filter(
+    (lecturer) =>
+      lecturer.user &&
+      typeof lecturer.user === 'object' &&
+      Array.isArray((lecturer.user as any).roles) &&
+      !(lecturer.user as any).roles.includes('external_examiner')
+  );
+
+  return filteredLecturers;
+}
 
 
 

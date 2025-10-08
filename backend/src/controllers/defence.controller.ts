@@ -168,5 +168,20 @@ export default class DefenceController {
       res.status(400).json({ success: false, error: 'Failed to get most recent defence', message: err.message });
     }
   }
+
+  /**Get lecturers in a department who aint panel members */
+   static async getAvailableLecturersForDefence(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {studentIds} = req.params
+      const studentIdArray = studentIds.split(',').map(id => id.trim());
+
+      const lecturers = await DefenceService.getAvailableLecturersForDefence(studentIdArray);
+      res.json({ success: true, data: lecturers });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to schedule defence', message: err.message });
+    }
+  }
+
 }
 

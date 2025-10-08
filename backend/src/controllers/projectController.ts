@@ -145,7 +145,21 @@ export default class ProjectController {
     try {
       const userId = req.user?.id || ''
       const { studentId } = req.params;
-      const fileUrl = req.file?.path || req.body.fileUrl;
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
+      const role = req.user?.role[0] || ''
+      const user = await UserService.getUserProfile(userId)
+      const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
+      const student = await StudentService.getOneStudentByUser(userId)
+       if (!student) {
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
+      }
+      const studentData = await StudentService.getOneStudent(String(student._id));
+      if (!studentData) {
+        res.status(404).json({ success: false, error: 'Student not found' });
+        return 
+      }
+      await ActivityLogService.logActivity(userId, userName, role, 'Uploaded', `a corrected project for ${studentData.user.firstName} ${studentData.user.firstName} with matric No ${studentData.matricNo} `, studentData.department);
 
       const project = await ProjectService.supervisorUploadCorrection(
         studentId,

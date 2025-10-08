@@ -315,35 +315,35 @@ export default class LecturerService {
     }
 
     static async getExternalExaminer(department?: string) {
-    const query: any = {};
-    if (department) {
-        query.department = department; 
+        const query: any = {};
+        if (department) {
+            query.department = department;
+        }
+
+        return Lecturer.find(query)
+            .populate({
+                path: 'user',
+                match: { roles: 'external_examiner' },
+            })
+            .then(lecturers => lecturers.filter(l => l.user)); // keep only those with a matched user
     }
 
-    return Lecturer.find(query)
-        .populate({
-            path: 'user',
-            match: { roles: 'external_examiner' },
-        })
-        .then(lecturers => lecturers.filter(l => l.user)); // keep only those with a matched user
+
+    static async getLecturerByDepartment(userId: string) {
+        const currentLecturer = await Lecturer.findOne({ user: userId });
+        if (!currentLecturer || !currentLecturer.department) {
+            throw new Error("Lecturer not found or department not set");
+        }
+
+        return Lecturer.find({ department: currentLecturer.department })
+            .populate({
+                path: 'user',
+                match: { roles: { $ne: 'external_examiner' } } // exclude external examiners
+            })
+            .then(lecturers =>
+                lecturers.filter(l => l.user) // remove ones with null user due to match exclusion
+            )
     }
-
-
-  static async getLecturerByDepartment(userId: string) {
-    const currentLecturer = await Lecturer.findOne({ user: userId });
-    if (!currentLecturer || !currentLecturer.department) {
-        throw new Error("Lecturer not found or department not set");
-    }
-
-    return Lecturer.find({ department: currentLecturer.department })
-        .populate({
-            path: 'user',
-            match: { roles: { $ne: 'external_examiner' } } // exclude external examiners
-        })
-        .then(lecturers =>
-            lecturers.filter(l => l.user) // remove ones with null user due to match exclusion
-        );
-}
 
 
     static async getLecturerByFaculty(userId: string) {
@@ -404,9 +404,9 @@ export default class LecturerService {
         );
 
         await NotificationService.createNotifications({
-          lecturerIds: [staffId],
-          role: "faculty_pg_rep",
-          message: `You have been assigned a Faculty PG rep for ${lecturer.faculty}`,
+            lecturerIds: [staffId],
+            role: "faculty_pg_rep",
+            message: `You have been assigned a Faculty PG rep for ${lecturer.faculty}`,
         });
 
         return updatedUser;
