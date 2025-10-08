@@ -25,6 +25,7 @@ const app = express();
 
 //Security Middlewares
 app.use(helmet()); // sets secure HTTP headers
+console.log('Allowed Origin:', process.env.FRONTEND_URL);
 
 app.use(cors({
   origin: process.env.FRONTEND_URL, // restrict to frontend domain in prod
