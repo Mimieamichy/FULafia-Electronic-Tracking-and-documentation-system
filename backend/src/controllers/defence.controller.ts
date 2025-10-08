@@ -44,6 +44,7 @@ export default class DefenceController {
   static async startDefence(req: AuthenticatedRequest, res: Response) {
     try {
       const { defenceId } = req.params;
+      console.log(defenceId)
       const userId = req.user?.id || '';
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
@@ -53,6 +54,7 @@ export default class DefenceController {
       await ActivityLogService.logActivity(userId, userName, role, "Started",  `Defence for ${defence.program} for stage ${defence.stage}`, defence.department);
       res.json({ success: true, data: defence });
     } catch (err: any) {
+      console.log(err)
       res.status(400).json({success: false,error: 'Failed to start defence',message: err.message});
     }
   }

@@ -102,7 +102,6 @@ export default class ProjectService {
     studentId: string,
     fileUrl: string,
     supervisorId: string,
-    comments: string
   ) {
     const project = await Project.findOne({ student: studentId });
     if (!project) throw new Error("Project not found");
@@ -116,7 +115,7 @@ export default class ProjectService {
       fileUrl,
       uploadedBy: new Types.ObjectId(supervisorId),
       uploadedAt: new Date(),
-      comments: [comments],
+      comments: [],
       topic: student.projectTopic,
     });
 

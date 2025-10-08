@@ -141,25 +141,23 @@ export default class ProjectController {
     }
   }
 
-  // static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
-  //   try {
-  //     const userId = req.user?.id || ''
-  //     const { studentId } = req.params;
-  //     const {comments} = req.body
-  //     const fileUrl = req.file?.path || req.body.fileUrl;
+  static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
+    try {
+      const userId = req.user?.id || ''
+      const { studentId } = req.params;
+      const fileUrl = req.file?.path || req.body.fileUrl;
 
-  //     const project = await ProjectService.supervisorUploadCorrection(
-  //       studentId,
-  //       fileUrl,
-  //       userId,
-  //       comments
-  //     );
-  //     res.status(200).json({ success: true, message: 'Project uploaded succesfully', data: project });
-  //   } catch (err: any) {
-  //     console.log(err)
-  //     res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
-  //   }
-  // }
+      const project = await ProjectService.supervisorUploadCorrection(
+        studentId,
+        fileUrl,
+        userId,
+      );
+      res.status(200).json({ success: true, message: 'Project uploaded succesfully by supervisor', data: project });
+    } catch (err: any) {
+      console.log(err)
+      res.status(400).json({ success: false, error: 'Failed to upload project', message: err.message });
+    }
+  }
 
   static async approveProject(req: AuthenticatedRequest, res: Response) {
     try {

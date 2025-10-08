@@ -1,4 +1,4 @@
-import { Defence, Student, Project, ScoreSheet, Lecturer , GeneralScoreSheet} from '../models/index';
+import { Defence, Student, Project, ScoreSheet, Lecturer, GeneralScoreSheet, User } from '../models/index';
 import { Types } from 'mongoose';
 import NotificationService from "../services/notification";
 import { STAGES } from "../utils/constants";
@@ -56,12 +56,22 @@ export default class DefenceService {
     // 4. Find role-based panel members (HOD, Dean, PGCord)
     const extraPanelMembers: string[] = [];
 
-    const hod = await Lecturer.findOne({ department: departmentName }).populate({ path: "user", match: { roles: "hod" }, select: "roles" });
+    const departmentLecturers = await Lecturer.find({ department: departmentName })
+      .populate({
+        path: "user",
+        match: { roles: { $in: [Role.HOD, Role.PGCOORD] } },
+        select: "roles",
+      });
 
-    if (hod) {
-      extraPanelMembers.push((hod._id as Types.ObjectId | string).toString())
-    } else {
-      throw new Error(`HOD not found for department: ${departmentName}`)
+    if (!departmentLecturers || departmentLecturers.length === 0) {
+      throw new Error(`No HOD or PG Coordinator found for department: ${departmentName}`);
+    }
+
+    // Loop through and add PANEL_MEMBER role + push IDs
+    for (const lecturer of departmentLecturers) {
+      if (!lecturer.user) continue; // skip if no linked user
+
+      extraPanelMembers.push((lecturer._id as Types.ObjectId).toString());
     }
 
     const dean = await Lecturer.findOne({ faculty: studentFaculty }).populate({ path: "user", match: { roles: "dean" }, select: "roles" });
@@ -69,17 +79,6 @@ export default class DefenceService {
       extraPanelMembers.push((dean._id as Types.ObjectId | string).toString());
     } else {
       throw new Error(`DEAN not found for "${studentFaculty}".`);
-    }
-
-    const pgcord = await Lecturer.findOne({ department: departmentName }).populate({
-      path: "user",
-      match: { roles: "pgcord" },
-      select: "roles",
-    });
-    if (pgcord) {
-      extraPanelMembers.push((pgcord._id as Types.ObjectId | string).toString());
-    } else {
-      throw new Error(`PG Coordinator not found for department: ${departmentName}`);
     }
 
     // 5. Merge all unique IDs into a single Set
@@ -150,7 +149,7 @@ export default class DefenceService {
    * Notifies panel members and supervisors
    */
   static async startDefence(defenceId: string) {
-    const defence = await Defence.findById(defenceId).populate("students");
+    const defence = await Defence.findById(defenceId);
     if (!defence) throw new Error("Defence not found");
     if (defence.started) throw new Error("Defence already started");
 
@@ -222,15 +221,15 @@ export default class DefenceService {
 
     // load scoresheet criteria for this defence's department based on the defence
     let criteria: any[] = [];
-  if (defence.stage?.toLowerCase() == "external") {
-    const generalSheet = await GeneralScoreSheet.findOne().lean();
-    if (!generalSheet) throw new Error("General scoresheet not found");
-    criteria = generalSheet.criteria || [];
-  } else {
-    const deptSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
-    if (!deptSheet) throw new Error("Departmental scoresheet not found");
-    criteria = deptSheet.criteria || [];
-  }
+    if (defence.stage?.toLowerCase() == "external") {
+      const generalSheet = await GeneralScoreSheet.findOne().lean();
+      if (!generalSheet) throw new Error("General scoresheet not found");
+      criteria = generalSheet.criteria || [];
+    } else {
+      const deptSheet = await ScoreSheet.findOne({ department: defence.department }).lean();
+      if (!deptSheet) throw new Error("Departmental scoresheet not found");
+      criteria = deptSheet.criteria || [];
+    }
 
     // build students array with only requested fields
     const students = (defence.students || []).map((student: any) => {
@@ -290,107 +289,107 @@ export default class DefenceService {
   /**
    * Panel member submits score for a student
    */
-   static async submitScore(
-  defenceId: string,
-  panelMemberId: string,
-  studentId: string,
-  scores: { criterion: string; score: number }[]
-) {
-  console.log(scores);
+  static async submitScore(
+    defenceId: string,
+    panelMemberId: string,
+    studentId: string,
+    scores: { criterion: string; score: number }[]
+  ) {
+    console.log(scores);
 
-  const defence = await Defence.findById(defenceId);
-  if (!defence) throw new Error("Defence not found");
+    const defence = await Defence.findById(defenceId);
+    if (!defence) throw new Error("Defence not found");
 
-  // Get the appropriate score sheet
-  let scoreSheet: any;
-  let sheetModel: any;
+    // Get the appropriate score sheet
+    let scoreSheet: any;
+    let sheetModel: any;
 
-  if (defence.stage?.toLowerCase() === "external") {
-    sheetModel = GeneralScoreSheet;
-    scoreSheet = await GeneralScoreSheet.findOne({});
-    if (!scoreSheet) throw new Error("General scoresheet not found");
-  } else {
-    sheetModel = ScoreSheet;
-    scoreSheet = await ScoreSheet.findOne({ department: defence.department });
-    if (!scoreSheet) throw new Error("Departmental scoresheet not found");
-  }
-
-  if (!Array.isArray(scores) || scores.length === 0) {
-    throw new Error("Scores array is required and cannot be empty");
-  }
-
-  // Criteria validation
-  const definedCriteria = scoreSheet.criteria.map((c: any) => c.name);
-  const definedCriteriaSet = new Set(definedCriteria);
-
-  const submittedCriteria = scores.map((s) => s.criterion);
-  const submittedSet = new Set(submittedCriteria);
-
-  if (submittedSet.size !== submittedCriteria.length) {
-    throw new Error("Duplicate criteria found in submission");
-  }
-
-  if (submittedCriteria.length !== definedCriteria.length) {
-    throw new Error(
-      `You must submit scores for exactly ${definedCriteria.length} criteria`
-    );
-  }
-
-  for (const crit of submittedCriteria) {
-    if (!definedCriteriaSet.has(crit)) {
-      throw new Error(`Invalid criterion submitted: ${crit}`);
-    }
-  }
-  
-
-  // Validate numeric values and ensure each score ≤ its criterion weight
-  for (const s of scores) {
-    if (typeof s.score !== "number" || Number.isNaN(s.score)) {
-      throw new Error(`Score for criterion "${s.criterion}" must be a number`);
-    }
-    if (s.score < 0) {
-      throw new Error(`Score for criterion "${s.criterion}" cannot be negative`);
+    if (defence.stage?.toLowerCase() === "external") {
+      sheetModel = GeneralScoreSheet;
+      scoreSheet = await GeneralScoreSheet.findOne({});
+      if (!scoreSheet) throw new Error("General scoresheet not found");
+    } else {
+      sheetModel = ScoreSheet;
+      scoreSheet = await ScoreSheet.findOne({ department: defence.department });
+      if (!scoreSheet) throw new Error("Departmental scoresheet not found");
     }
 
-    const criterionDef = scoreSheet.criteria.find(
-      (c: any) => c.name === s.criterion
-    );
-    if (!criterionDef) {
-      throw new Error(`Criterion "${s.criterion}" not found in score sheet`);
+    if (!Array.isArray(scores) || scores.length === 0) {
+      throw new Error("Scores array is required and cannot be empty");
     }
 
-    if (s.score > criterionDef.weight) {
+    // Criteria validation
+    const definedCriteria = scoreSheet.criteria.map((c: any) => c.name);
+    const definedCriteriaSet = new Set(definedCriteria);
+
+    const submittedCriteria = scores.map((s) => s.criterion);
+    const submittedSet = new Set(submittedCriteria);
+
+    if (submittedSet.size !== submittedCriteria.length) {
+      throw new Error("Duplicate criteria found in submission");
+    }
+
+    if (submittedCriteria.length !== definedCriteria.length) {
       throw new Error(
-        `Score for "${s.criterion}" (${s.score}) cannot exceed its weight (${criterionDef.weight})`
+        `You must submit scores for exactly ${definedCriteria.length} criteria`
       );
     }
+
+    for (const crit of submittedCriteria) {
+      if (!definedCriteriaSet.has(crit)) {
+        throw new Error(`Invalid criterion submitted: ${crit}`);
+      }
+    }
+
+
+    // Validate numeric values and ensure each score ≤ its criterion weight
+    for (const s of scores) {
+      if (typeof s.score !== "number" || Number.isNaN(s.score)) {
+        throw new Error(`Score for criterion "${s.criterion}" must be a number`);
+      }
+      if (s.score < 0) {
+        throw new Error(`Score for criterion "${s.criterion}" cannot be negative`);
+      }
+
+      const criterionDef = scoreSheet.criteria.find(
+        (c: any) => c.name === s.criterion
+      );
+      if (!criterionDef) {
+        throw new Error(`Criterion "${s.criterion}" not found in score sheet`);
+      }
+
+      if (s.score > criterionDef.weight) {
+        throw new Error(
+          `Score for "${s.criterion}" (${s.score}) cannot exceed its weight (${criterionDef.weight})`
+        );
+      }
+    }
+
+    // Check if user already submitted — update or create new
+    const existingEntryIndex = scoreSheet.entries.findIndex(
+      (e: any) =>
+        e.student.toString() === studentId &&
+        e.panelMember.toString() === panelMemberId
+    );
+
+    if (existingEntryIndex >= 0) {
+      // Update existing entry
+      scoreSheet.entries[existingEntryIndex].scores = scores;
+      await scoreSheet.save();
+    } else {
+      // Add new entry
+      scoreSheet.entries.push({
+        student: new Types.ObjectId(studentId),
+        panelMember: new Types.ObjectId(panelMemberId),
+        defence: new Types.ObjectId(defenceId),
+        scores,
+      });
+      await scoreSheet.save();
+    }
+
+    // Return updated sheet as lean (same style as your original version)
+    return await sheetModel.findById(scoreSheet._id).lean();
   }
-
-  // Check if user already submitted — update or create new
-  const existingEntryIndex = scoreSheet.entries.findIndex(
-    (e: any) =>
-      e.student.toString() === studentId &&
-      e.panelMember.toString() === panelMemberId
-  );
-
-  if (existingEntryIndex >= 0) {
-    // Update existing entry
-    scoreSheet.entries[existingEntryIndex].scores = scores;
-    await scoreSheet.save();
-  } else {
-    // Add new entry
-    scoreSheet.entries.push({
-      student: new Types.ObjectId(studentId),
-      panelMember: new Types.ObjectId(panelMemberId),
-      defence: new Types.ObjectId(defenceId),
-      scores,
-    });
-    await scoreSheet.save();
-  }
-
-  // Return updated sheet as lean (same style as your original version)
-  return await sheetModel.findById(scoreSheet._id).lean();
-}
 
 
   /** Marks defence as ended
@@ -648,24 +647,16 @@ export default class DefenceService {
       panelMembers: lecturerId, // Check if lecturer ID is in panelMembers array
       ended: false,
     })
-    .select('_id stage program department date time started ended')
-    .populate('students', 'name matricNo') // Optional: include student details
-    .lean();
-
-    console.log('🔍 Defences found for panel member:', {
-      userId,
-      lecturerId,
-      program,
-      defenceCount: defences.length,
-      defences: defences.map(d => ({ id: d._id, stage: d.stage, department: d.department }))
-    });
+      .select('_id stage program department date time started ended')
+      .populate('students', 'name matricNo') // Optional: include student details
+      .lean();
 
     if (!defences || defences.length === 0) {
       throw new Error(`No ${program} defences found where you are a panel member`);
     }
 
     return defences;
-}
+  }
 
 
 
