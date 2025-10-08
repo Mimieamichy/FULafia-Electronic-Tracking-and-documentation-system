@@ -19,6 +19,7 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
+      console.log(`Hello`)
       const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
@@ -149,7 +150,7 @@ export default class ProjectController {
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
-      const student = await StudentService.getOneStudentByUser(userId)
+      const student = await StudentService.getOneStudent(studentId)
        if (!student) {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
@@ -193,7 +194,6 @@ export default class ProjectController {
       res.status(400).json({ success: false, error: 'Failed to approve project', message: err.message });
     }
   }
-
 
   static async getStudentProjects(req: AuthenticatedRequest, res: Response) {
     try {
