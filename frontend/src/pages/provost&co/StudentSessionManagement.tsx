@@ -60,7 +60,7 @@ const stageLabelToApiKeyMap: Record<string, string> = {
   proposal: "proposal",
   "internal defense": "internal",
   "external defense": "external_defense",
-  "proposal defense": "proposal_defense",
+  "1st seminar": "first_seminar",
   "2nd seminar": "second_seminar",
   "3rd seminar": "third_seminar",
 };
@@ -73,7 +73,7 @@ const getStageKey = (label: string) => {
 };
 
 const START_KEY = getStageKey("Start");
-const EXTERNAL_DEFENSE_KEY = getStageKey("External Defense");
+
 
 const getLabelFromKey = (key: string, labels: string[]) => {
   const found = labels.find((l) => getStageKey(l) === key);
@@ -108,7 +108,7 @@ const StudentSessionManagement = () => {
       ? ["Start", "Proposal", "Internal Defense", "External Defense"]
       : [
           "Start",
-          "Proposal Defense",
+          "1st Seminar",
           "2nd Seminar",
           "3rd Seminar",
           "External Defense",
