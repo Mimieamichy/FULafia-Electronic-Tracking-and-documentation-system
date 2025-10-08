@@ -60,7 +60,7 @@ const stageLabelToApiKeyMap: Record<string, string> = {
   proposal: "proposal",
   "internal defense": "internal",
   "external defense": "external_defense",
-  "1st seminar": "first_seminar",
+  "proposal defense": "proposal_defense",
   "2nd seminar": "second_seminar",
   "3rd seminar": "third_seminar",
 };
@@ -73,7 +73,7 @@ const getStageKey = (label: string) => {
 };
 
 const START_KEY = getStageKey("Start");
-
+const EXTERNAL_DEFENSE_KEY = getStageKey("External Defense");
 
 const getLabelFromKey = (key: string, labels: string[]) => {
   const found = labels.find((l) => getStageKey(l) === key);
@@ -108,7 +108,7 @@ const StudentSessionManagement = () => {
       ? ["Start", "Proposal", "Internal Defense", "External Defense"]
       : [
           "Start",
-          "1st Seminar",
+          "Proposal Defense",
           "2nd Seminar",
           "3rd Seminar",
           "External Defense",
@@ -810,7 +810,7 @@ const StudentSessionManagement = () => {
       {
         re: /first seminar|1st seminar/,
         key: "firstSeminarScore",
-        label: "1st Seminar",
+        label: "Proposal Defense",
       },
       { re: /defense|defence|final/, key: "internalScore", label: "Defense" },
     ];
@@ -846,9 +846,8 @@ const StudentSessionManagement = () => {
             : chosenKey === "thirdSeminarScore"
             ? "3rd Seminar"
             : chosenKey === "firstSeminarScore"
-            ? "1st Seminar"
-            : chosenKey === "proposalScore"
             ? "Proposal Defense"
+            
             : "Score";
       } else {
         // fallback to first numeric key in s.scores
