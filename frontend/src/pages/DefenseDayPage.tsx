@@ -113,9 +113,6 @@ export default function DefenseDayPage() {
     [rolesArray.join("|")]
   );
 
-  
-  
-
   // --- hooks (always declared, never conditional) ---
   const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
     {
@@ -496,12 +493,43 @@ export default function DefenseDayPage() {
     };
   }, [level, token]);
 
+  // ---------- AUTO-REFRESH WHEN AUTH IS STILL SETTLING OR USER IS NOT PANEL ----------
+  useEffect(() => {
+    // Only set an auto-reload when either auth is still settling or user is currently not a panel member.
+    // Wait a short time to allow auth to finish; don't reload immediately to avoid loop.
+    let timer: number | undefined;
+    if (authSettling || (!authSettling && !isPanel)) {
+      // auto refresh after 8 seconds
+      timer = window.setTimeout(() => {
+        // before reloading, check again (avoid infinite loop if condition changed)
+        if (authSettling || (!authSettling && !isPanel)) {
+          window.location.reload();
+        }
+      }, 8000);
+    }
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [authSettling, isPanel]);
+
   if (authSettling) {
-    // auth still settling — don't show denial; show a small loading placeholder.
     return (
       <div className="p-6 text-center text-gray-600">
-        <h1>Loading permissions…</h1>
-        <h1>If it takes time kindly refresh</h1>
+        <h1 className="text-lg font-medium">Loading permissions…</h1>
+        <p className="text-sm mt-1">
+          If it takes time, you can refresh the page.
+        </p>
+        <div className="mt-4">
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-amber-700 text-white"
+          >
+            Refresh
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          (Auto-refresh will try in 8 seconds if this status persists.)
+        </p>
       </div>
     );
   }
@@ -509,7 +537,24 @@ export default function DefenseDayPage() {
   if (!isPanel) {
     return (
       <div className="p-6 text-center text-red-600">
-        Only panel members can access this page.
+        <div className="text-lg font-semibold">
+          Only panel members can access this page.
+        </div>
+        <p className="text-sm mt-1">
+          If you believe this is an error, refresh to pick up any updated
+          permissions.
+        </p>
+        <div className="mt-4">
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-amber-700 text-white"
+          >
+            Refresh
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          (Auto-refresh will try in 8 seconds if this status persists.)
+        </p>
       </div>
     );
   }
@@ -779,6 +824,20 @@ export default function DefenseDayPage() {
       return;
     }
 
+    // Only criteria that belong to this defence (use title as key)
+    const allowedCriteria = new Set(
+      (def.criteria ?? []).map((c) => String(c.title))
+    );
+    if (allowedCriteria.size === 0) {
+      toast({
+        title: "No criteria available",
+        description:
+          "This defense does not have criteria configured — cannot submit scores.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const panelMemberId = String(user?.id ?? user?._id ?? "");
     if (!panelMemberId) {
       toast({
@@ -789,34 +848,41 @@ export default function DefenseDayPage() {
       return;
     }
 
-    // Build payloads: for each student create both an object and an array representation
+    // criteria meta to include in each payload (only the criteria for this defense)
+    const criteriaForApi = (def.criteria ?? []).map((c) => ({
+      title: c.title,
+      percentage: c.percentage,
+    }));
+
+    // Build per-student payloads: only include scores for allowed criteria
     const payloads = def.students
       .map((s) => {
-        const scoresObj: Record<string, number> = {};
         const scoresArray: Array<{ criterion: string; score: number }> = [];
 
         Object.entries(s.scores ?? {}).forEach(([k, v]) => {
+          if (!allowedCriteria.has(k)) return;
           const n = Number(v);
           if (v !== null && v !== undefined && !Number.isNaN(n)) {
-            scoresObj[k] = n;
             scoresArray.push({ criterion: k, score: n });
           }
         });
 
+        if (scoresArray.length === 0) return null;
+
         return {
           studentId: s.id,
           panelMemberId,
-          // primary payload shape uses an array (server appears to expect this)
+          // only include the criteria for this defense and the scores array
+          criteria: criteriaForApi,
           scores: scoresArray,
-          // include object variant too in case backend accepts it
         };
       })
-      .filter((p) => Array.isArray(p.scores) && p.scores.length > 0);
+      .filter(Boolean) as Array<any>;
 
     if (payloads.length === 0) {
       toast({
         title: "No scores to submit",
-        description: "There are no entered scores to submit for this defense.",
+        description: "There are no entered scores for this defense's criteria.",
         variant: "destructive",
       });
       return;
@@ -831,7 +897,6 @@ export default function DefenseDayPage() {
             defenseId
           )}`;
 
-          // LOG payload so you can inspect in console
           console.log("Submitting score payload:", url, pl);
 
           const res = await fetch(url, {
@@ -863,16 +928,14 @@ export default function DefenseDayPage() {
         })
       );
 
-      // inside handleSubmitScores after `const results = await Promise.all(...)` and after you compute `failed` / `results`
       const failed = results.filter((r) => !r.ok);
       const succeeded = results.filter((r) => r.ok).map((r) => r.studentId);
 
-      // Clear scores for only the succeeded students
+      // Clear scores for succeeded students only
       if (succeeded.length > 0) {
         succeeded.forEach((studentId) => {
           updateStudentNested(defenseId, studentId, (s) => ({
             ...s,
-            // remove all scores so inputs become blank
             scores: {},
           }));
         });
@@ -1088,6 +1151,7 @@ export default function DefenseDayPage() {
             onReject={(studentId) => handleReject(studentId)}
             processingIds={processingIds}
             defenseStage={activeDefense?.currentStage}
+            defense={activeDefense ?? ({} as any)}
           />
         )}
       </div>

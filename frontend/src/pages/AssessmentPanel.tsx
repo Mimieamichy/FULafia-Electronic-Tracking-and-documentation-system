@@ -25,6 +25,7 @@ type Props = {
   onApprove: (studentId: string) => void;
   onReject?: (studentId: string) => void;
   processingIds?: Record<string, boolean>;
+  defense: any; // new optional prop: current defense details from parent
   defenseStage: string; // new optional prop: current defense stage from parent
 };
 
@@ -35,6 +36,7 @@ export default function AssessmentPanel({
   onReject,
   processingIds = {},
   defenseStage,
+  defense,
 }: Props) {
   // Simple stage -> score lookup (no weighted computation)
   const getStageScore = (s: Student): { value: number; label: string } => {
@@ -87,14 +89,27 @@ export default function AssessmentPanel({
 
   // Filter out students that have been approved for the current defense stage
   const visibleStudents = students.filter((s) => {
-    if ((s.currentStage ?? "").toLowerCase().trim() !== normalizedDefenseStage)
-       {
+    if (
+      (s.currentStage ?? "").toLowerCase().trim() !== normalizedDefenseStage
+    ) {
       return false; // hide this student
-      
-      
     }
     return true;
   });
+
+  const canShow = (() => {
+    const defenseDate = new Date(defense.date);
+    const now = new Date();
+    return now >= defenseDate;
+  })();
+
+  if (!canShow) {
+    return (
+      <div className="p-6 bg-white rounded shadow text-gray-600">
+        Assessment Table will be available on the day of the defense.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -166,7 +181,11 @@ export default function AssessmentPanel({
                               : "bg-amber-700 hover:bg-amber-900 text-white"
                           }`}
                         >
-                          {processing ? "Working..." : s.approved ? "Approved" : "Approve"}
+                          {processing
+                            ? "Working..."
+                            : s.approved
+                            ? "Approved"
+                            : "Approve"}
                         </Button>
 
                         <Button
@@ -180,7 +199,9 @@ export default function AssessmentPanel({
                           }}
                           disabled={processing}
                           className={`px-4 py-2 rounded-xl font-medium shadow-sm border ${
-                            processing ? "bg-gray-50 text-gray-400" : "bg-white text-amber-700 hover:bg-red-50"
+                            processing
+                              ? "bg-gray-50 text-gray-400"
+                              : "bg-white text-amber-700 hover:bg-red-50"
                           }`}
                         >
                           Reject
