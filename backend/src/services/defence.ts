@@ -30,12 +30,20 @@ export default class DefenceService {
   }) {
     const { stage, session, date, time, studentIds, panelMemberIds = [], program } = options;
 
-    // 1. Fetch students and their projects
+    //0. Set students defenceMarked == false
+    await Student.updateMany(
+    { _id: { $in: studentIds } },
+    { $set: { defenceMarked: false } }
+    );
+
+    // 1. Fetch students and their projects 
     const students = await Student.find({ _id: { $in: studentIds } }).lean();
 
     if (students.length === 0) {
       throw new Error("No students found for the provided IDs.");
     }
+
+
 
     // 2. Collect all associated lecturers IDs from student documents
     const allStudentLecturers: Set<Types.ObjectId | string> = new Set();
@@ -300,6 +308,8 @@ export default class DefenceService {
     const defence = await Defence.findById(defenceId);
     if (!defence) throw new Error("Defence not found");
 
+    if (defence.ended == true) throw new Error("Defence has ended no score can be submitted");
+
     // Get the appropriate score sheet
     let scoreSheet: any;
     let sheetModel: any;
@@ -508,13 +518,42 @@ export default class DefenceService {
 
   // Helper method to check if lecturer has any active defences
   static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
-    const activeDefences = await Defence.find({
-      panelMembers: lecturerId,
-      ended: false
+  const lecturer = await Lecturer.findById(lecturerId).populate("user");
+
+  if (!lecturer) throw new Error("Lecturer not found");
+
+  const isHodOrProvost =
+    lecturer.user &&
+    typeof lecturer.user === "object" &&
+    Array.isArray((lecturer.user as any).roles) &&
+    ((lecturer.user as any).roles.includes("hod") ||
+      (lecturer.user as any).roles.includes("provost"));
+
+  const query: any = { panelMembers: lecturerId };
+  if (!isHodOrProvost) {
+    query.ended = false;
+  }
+
+  // Get all defences
+  const defences = await Defence.find(query).populate("students");
+
+  // If HOD or PROVOST — exclude defences where all students have defenceMarked = true
+  if (isHodOrProvost) {
+    const activeDefences = defences.filter((def) => {
+      if (!Array.isArray(def.students)) return true; // keep if no students
+      const allMarked = def.students.every(
+        (student: any) => student.defenceMarked === true
+      );
+      return !allMarked; 
     });
 
     return activeDefences.length > 0;
   }
+
+  return defences.length > 0;
+}
+
+
 
   /**Finds students and move student to next stage in the proram type  */
   static async approveStudentDefence(studentId: string) {
@@ -562,6 +601,7 @@ export default class DefenceService {
       throw new Error(`Unknown program: ${program}`);
     }
 
+    student.defenceMarked = true
     await student.save();
 
     const message = `Your project has been approved, you can proceed to prepare for next stage.`;
@@ -618,7 +658,9 @@ export default class DefenceService {
       }
     }
 
+    student.defenceMarked = true
     await student.save();
+    
 
     // notify student
     const message = `Your project was not approved, you need to rejoin defence for ${student.currentStage}.`;
@@ -674,7 +716,6 @@ export default class DefenceService {
     department
   }).lean();
 
-  console.log(students)
   if (students.length === 0) {
     throw new Error("No students found for the specified stage, level, or department.");
   }
