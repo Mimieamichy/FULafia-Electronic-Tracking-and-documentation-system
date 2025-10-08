@@ -25,13 +25,29 @@ const app = express();
 
 //Security Middlewares
 app.use(helmet()); // sets secure HTTP headers
-console.log('Allowed Origin:', process.env.FRONTEND_URL);
+
+// app.use(cors({
+//   origin: process.env.FRONTEND_URL, // restrict to frontend domain in prod
+//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+//   credentials: true,
+// }));
+const allowedOrigins = [
+  'http://localhost:8080',
+  'https://fulafia-electronic-tracking-and-8x35.onrender.com',
+];
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // restrict to frontend domain in prod
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true,
 }));
+
 
 app.use(express.json({ limit: '10kb' })); // prevent huge payload attacks
 
