@@ -517,7 +517,7 @@ export default class DefenceService {
   }
 
   // Helper method to check if lecturer has any active defences
-  static async countActiveDefences(lecturerId: string | Types.ObjectId) {
+  static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
   const lecturer = await Lecturer.findById(lecturerId).populate("user");
   if (!lecturer) throw new Error("Lecturer not found");
 
