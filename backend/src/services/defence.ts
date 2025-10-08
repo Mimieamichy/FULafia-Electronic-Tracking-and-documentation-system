@@ -669,11 +669,12 @@ export default class DefenceService {
 
   // 1. Get students matching stage, level, and department
   const students = await Student.find({
-    stage,
+    currentStage: stage,
     level,
     department
   }).lean();
 
+  console.log(students)
   if (students.length === 0) {
     throw new Error("No students found for the specified stage, level, or department.");
   }
