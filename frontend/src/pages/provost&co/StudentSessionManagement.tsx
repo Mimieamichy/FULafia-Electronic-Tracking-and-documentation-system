@@ -518,6 +518,13 @@ const StudentSessionManagement = () => {
           }),
         }
       );
+      if (res.ok) {
+        toast({
+          title: "Supervisor assigned",
+          description: `Supervisor assigned successfully to ${matricNo}.`,
+          variant: "default",
+        });
+      }
 
       if (!res.ok) {
         const text = await res.text();

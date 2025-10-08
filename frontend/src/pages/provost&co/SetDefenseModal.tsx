@@ -9,7 +9,12 @@ interface Lecturer {
   _id: string;
   fullName?: string;
   staffId?: string;
-  user?: { firstName?: string; lastName?: string; email?: string };
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    roles: string;
+  };
   email?: string;
   name?: string;
 }
@@ -52,6 +57,14 @@ const normalizeProgram = (p?: string): string | undefined => {
 
   return normalized.toLowerCase();
 };
+// convert role keys like "external_examiner" -> "External Examiner"
+const prettyRole = (role?: string) => {
+  if (!role) return "";
+  return String(role)
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
 
 const normalizeProgram2 = (p?: string) => {
   if (!p) return p;
@@ -89,8 +102,6 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
   );
   const [loadingLecturers, setLoadingLecturers] = useState(false);
   const departmentName = String(department).trim();
-
-  
 
   const facultyRepEndpoint = `${baseUrl}/lecturer/get-faculty-rep`;
   const externalExaminerEndpoint = `${baseUrl}/lecturer/get-external-examiner?department=${encodeURIComponent(
@@ -495,6 +506,15 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
                   lec.name ||
                   lec._id;
 
+                // Get first role from user.roles (fallback to lec.role)
+                const firstRole =
+                  Array.isArray(lec.user?.roles) && lec.user!.roles.length
+                    ? lec.user!.roles[0]
+                    : lec.role ?? "";
+
+                // human friendly label
+                const roleLabel = prettyRole(firstRole);
+
                 return (
                   <label
                     key={lec._id}
@@ -508,7 +528,9 @@ const SetDefenseModal: React.FC<SetDefenseModalProps> = ({
                         else setPanel((p) => p.filter((id) => id !== lec._id));
                       }}
                     />
-                    <span>{displayName}</span>
+                    <span>
+                      {displayName} | {roleLabel}
+                    </span>
                   </label>
                 );
               })}
