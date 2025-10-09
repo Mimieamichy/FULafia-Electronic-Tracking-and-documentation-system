@@ -98,10 +98,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Run once immediately
 (async () => {
   try {
-    console.log("🚀 Initial stale project check...");
+    console.log("Initial stale project check...");
     await ProjectService.checkStaleProjects();
   } catch (err) {
-    console.error("❌ Error during initial stale project check:", err);
+    console.error("Error during initial stale project check:", err);
   }
 })();
 

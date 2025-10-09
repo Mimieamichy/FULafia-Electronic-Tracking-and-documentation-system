@@ -286,8 +286,6 @@ export default class ProjectService {
     })
       .populate('comments.author', 'firstName lastName email');
 
-    console.log('defenceComment', defenceComment)
-
     if (!defenceComment) {
       console.log("No comments found")
       return [];
@@ -298,7 +296,6 @@ export default class ProjectService {
       comment.author._id.toString() === authorId.toString()
     );
 
-    console.log('comments', userComments)
     return userComments;
   }
 

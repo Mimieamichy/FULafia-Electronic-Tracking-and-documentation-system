@@ -2,8 +2,10 @@ import { Request, Response } from 'express';
 import ProjectService from '../services/project';
 import ActivityLogService from '../services/activity_log';
 import path from 'path';
+import fs from 'fs'
 import StudentService from '../services/students';
 import UserService from '../services/user'
+import { uploadDir } from '../middlewares/upload';
 
 
 
@@ -19,8 +21,8 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      console.log(`Hello`)
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
+      // const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
+      const fileUrl = `/uploads/projects/${req.file.filename}`;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
@@ -36,6 +38,7 @@ export default class ProjectController {
         return 
       }
 
+      
       const project = await ProjectService.uploadProject(userId, fileUrl);
       await ActivityLogService.logActivity(userId, userName, role, 'Uploaded', 'a new Project version', studentData.department);
       res.status(201).json({ success: true, message: 'Project uploaded successfully', data: project });
@@ -102,9 +105,18 @@ export default class ProjectController {
       res.status(404).json({ success: false, error: 'Project not found' });
     }
 
+    // Extract filename from the stored URL
     const fileName = path.basename(project.fileUrl);
-    //construct the full file path
-    const absolutePath = path.join('uploads', 'projects', fileName);
+    
+    // Use the same upload directory that multer uses
+    const absolutePath = path.join(uploadDir, fileName);
+    
+    // Check if file exists
+    if (!fs.existsSync(absolutePath)) {
+      console.log(`File not found: ${absolutePath}`);
+      res.status(404).json({ success: false, error: 'File not found on server' });
+      return;
+    }
       await ActivityLogService.logActivity(author, userName, role, 'downloaded project', `of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo} Project version number ${versionNumber}`, studentData.department);
       return res.download(absolutePath);
     } catch (err: any) {
@@ -126,16 +138,26 @@ export default class ProjectController {
        return 
     }
 
-    const fileName = path.basename(project.fileUrl);
     const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
        res.status(404).json({ success: false, error: 'Student not found' });
       return 
       }
-    //construct the full file path
-    const absolutePath = path.join('uploads', 'projects', fileName);
+
+      const fileName = path.basename(project.fileUrl);
+    
+    // Use the same upload directory
+    const absolutePath = path.join(uploadDir, fileName);
+
+    if (!fs.existsSync(absolutePath)) {
+      console.log(`File not found: ${absolutePath}`);
+      return res.status(404).json({ success: false, error: 'File not found on server' });
+    }
+
+    
       await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
-      return res.download(absolutePath);
+      // return res.download(absolutePath);
+      return res.download(absolutePath, path.basename(absolutePath))
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });

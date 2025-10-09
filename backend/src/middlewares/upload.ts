@@ -2,10 +2,19 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+
+// Use absolute path consistent with your static serving
+const uploadDir = path.join(process.cwd(), 'uploads');
+
+
+// Create directory if it doesn't exist
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 // Set storage engine
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../../uploads/projects');
+    const uploadPath = path.join(__dirname, '../../uploads');
     fs.mkdirSync(uploadPath, { recursive: true }); // Ensure folder exists
     cb(null, uploadPath);
   },
@@ -40,3 +49,4 @@ const upload = multer({
 });
 
 export default upload;
+export { uploadDir };
