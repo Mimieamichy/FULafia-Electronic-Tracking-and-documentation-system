@@ -907,10 +907,7 @@ const StudentSessionManagement = () => {
       .filter(Boolean) as string[];
   }, [students, selectedDefense]);
 
-  console.log("Rendering ", defenseStudentIds.length, "students for", {
-    selectedDefense,
-    defenseStudentIds,
-  });
+  
 
   return (
     <div className="space-y-6">

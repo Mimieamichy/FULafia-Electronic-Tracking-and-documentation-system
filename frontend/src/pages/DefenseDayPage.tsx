@@ -173,11 +173,7 @@ export default function DefenseDayPage() {
     student: Student;
     defenseId: string;
   } | null>(null);
-
   const [toggling, setToggling] = useState(false);
-  // add near other hooks at top of the component
-  const [submittingScores, setSubmittingScores] = useState(false);
-  // add near other useState hooks
   const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
     {}
   );
@@ -300,17 +296,19 @@ export default function DefenseDayPage() {
   useEffect(() => {
     let cancelled = false;
 
-    // show cached immediately if present (so switching levels doesn't blank UI)
-    setDefenseDays(defenseCache[level] ?? []);
-    setActiveDefenseIdx(0);
-    // set criteria from first cached if exists
-    if (
-      (defenseCache[level] ?? []).length > 0 &&
-      (defenseCache[level] ?? [])[0].criteria
-    ) {
-      setCriteria((defenseCache[level] ?? [])[0].criteria ?? []);
-    } else {
-      setCriteria([]); // clear criteria while fetching
+    if (!token || authSettling || !isPanel) {
+      // still set cached UI or clear if needed; but don't fetch yet
+      setDefenseDays(defenseCache[level] ?? []);
+      setActiveDefenseIdx(0);
+      if (
+        (defenseCache[level] ?? []).length > 0 &&
+        (defenseCache[level] ?? [])[0].criteria
+      ) {
+        setCriteria((defenseCache[level] ?? [])[0].criteria ?? []);
+      } else {
+        setCriteria([]);
+      }
+      return;
     }
 
     const fetchIdsAndDetails = async () => {
@@ -532,7 +530,7 @@ export default function DefenseDayPage() {
     return () => {
       cancelled = true;
     };
-  }, [level, token]);
+  }, [level, token, isPanel, authSettling]);
 
   // ---------- AUTO-REFRESH WHEN AUTH IS STILL SETTLING OR USER IS NOT PANEL ----------
   useEffect(() => {
@@ -929,7 +927,6 @@ export default function DefenseDayPage() {
       return;
     }
 
-    setSubmittingScores(true);
 
     try {
       const results = await Promise.all(
@@ -1009,9 +1006,7 @@ export default function DefenseDayPage() {
           err?.message || "Network or server error while submitting scores.",
         variant: "destructive",
       });
-    } finally {
-      setSubmittingScores(false);
-    }
+    } 
   };
 
   return (

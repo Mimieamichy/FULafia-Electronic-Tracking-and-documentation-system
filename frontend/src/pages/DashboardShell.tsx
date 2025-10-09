@@ -77,13 +77,7 @@ export default function DashboardShell() {
   }, [token, fetchNotifications]);
 
   // optional: refresh when window focus to keep counts in sync across tabs
-  useEffect(() => {
-    const onFocus = () => {
-      if (token) fetchNotifications({ baseUrl, token });
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [token, fetchNotifications]);
+  
 
   const renderView = () => {
     switch (currentView) {
@@ -213,8 +207,9 @@ export default function DashboardShell() {
             />
             {unreadCount > 0 && (
               <span
-                className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-white bg-amber-600 rounded-full"
+                className="absolute -top-1 cursor-pointer -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium leading-none text-white bg-amber-600 rounded-full"
                 aria-label={`${unreadCount} unread notifications`}
+                onClick={() => setCurrentView("notifications")}
               >
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
