@@ -151,7 +151,8 @@ export default class ProjectController {
 
     if (!fs.existsSync(absolutePath)) {
       console.log(`File not found: ${absolutePath}`);
-      return res.status(404).json({ success: false, error: 'File not found on server' });
+      res.status(404).json({ success: false, error: 'File not found on server' });
+      return 
     }
 
     
