@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cron from 'node-cron';
 
 
 dotenv.config();
@@ -20,6 +21,9 @@ import facultyRoutes from './routes/faculty.routes';
 import defenceRoutes from './routes/defence.routes';
 import scoreSheetRoute from './routes/scoresheet.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+
+
+import ProjectService from './services/project';
 
 const app = express();
 
@@ -86,5 +90,31 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message,
   });
 });
+
+
+
+
+
+// Run once immediately
+(async () => {
+  try {
+    console.log("Initial stale project check...");
+    await ProjectService.checkStaleProjects();
+  } catch (err) {
+    console.error("Error during initial stale project check:", err);
+  }
+})();
+
+// Run daily at midnight
+cron.schedule('0 0 * * *', async () => {
+  try {
+    console.log("🕒 Running daily stale project check...");
+    await ProjectService.checkStaleProjects();
+  } catch (err) {
+    console.error("❌ Error during daily stale project check:", err);
+  }
+});
+
+
 
 export default app;

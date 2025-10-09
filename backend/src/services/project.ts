@@ -1,4 +1,4 @@
-import { Project, Student, Session, DefenceComment, IDefenceComment , Defence} from '../models/index';
+import { Project, Student, Session, DefenceComment, IDefenceComment, Defence, Lecturer } from '../models/index';
 import NotificationService from '../services/notification';
 import { Types } from 'mongoose';
 import { STAGES } from "../utils/constants";
@@ -223,12 +223,12 @@ export default class ProjectService {
     }
 
 
-    return { 
+    return {
       student: {
-      ...student.toObject(),
-      sessionName: (student.session as any).sessionName 
+        ...student.toObject(),
+        sessionName: (student.session as any).sessionName
       },
-      project 
+      project
     };
   }
 
@@ -286,8 +286,6 @@ export default class ProjectService {
     })
       .populate('comments.author', 'firstName lastName email');
 
-    console.log('defenceComment', defenceComment)
-
     if (!defenceComment) {
       console.log("No comments found")
       return [];
@@ -298,21 +296,20 @@ export default class ProjectService {
       comment.author._id.toString() === authorId.toString()
     );
 
-    console.log('comments', userComments)
     return userComments;
   }
 
 
   static async getDefenceDayComments(studentId: string) {
     const defence = await Defence.findOne({
-    students: studentId,
-  }).sort({ createdAt: -1 })
+      students: studentId,
+    }).sort({ createdAt: -1 })
 
     if (!defence) {
-    throw new Error('No defence found for this student'); 
-  }
+      throw new Error('No defence found for this student');
+    }
 
-  console.log(defence)
+    console.log(defence)
 
     const defenceComment = await DefenceComment.findOne({
       defence: defence._id,
@@ -320,10 +317,89 @@ export default class ProjectService {
     })
       .populate('comments.author', 'firstName lastName email') // Populate author details 
 
-      console.log(defenceComment)
+    console.log(defenceComment)
 
     return defenceComment;
   }
+
+  static async checkStaleProjects() {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const projects = await Project.find()
+      .populate({
+        path: "student",
+        select: "majorSupervisor department user projectTopic matricNo",
+        model: "Student"
+      });
+
+    for (const project of projects) {
+      const s = project.student as any;
+      if (!s || !s.majorSupervisor) continue;
+
+      // Get all uploads by the student
+      const studentUploads = project.versions.filter(
+        v => v.uploadedBy?.toString() === s._id.toString()
+      );
+      if (!studentUploads.length) continue;
+
+      // Find the most recent student upload
+      const lastUpload = studentUploads.reduce((a, b) =>
+        new Date(a.uploadedAt) > new Date(b.uploadedAt) ? a : b
+      );
+
+      // Skip if student uploaded within the last month
+      if (new Date(lastUpload.uploadedAt) > oneMonthAgo) continue;
+
+      // Check if supervisor uploaded after the last student upload
+      const supUploads = project.versions.filter(
+        v => v.uploadedBy?.toString() === s.majorSupervisor.toString()
+      );
+      const hasNewSupUpload = supUploads.some(
+        v => new Date(v.uploadedAt) > new Date(lastUpload.uploadedAt)
+      );
+      if (hasNewSupUpload) continue;
+
+      // Find HOD with 'hod' role in same department
+      const hod = await Lecturer.findOne({ department: s.department })
+        .populate({
+          path: "user",
+          match: { roles: "hod" },
+          select: "roles"
+        });
+
+      if (!hod || !hod.user) {
+        console.warn(`HOD not found for department: ${s.department}`);
+        continue;
+      }
+
+      // Find Provost with 'provost' role
+      const provost = await Lecturer.findOne()
+        .populate({
+          path: "user",
+          match: { roles: "provost" },
+          select: "roles"
+        });
+
+      if (!provost || !provost.user) {
+        console.warn("Provost not found");
+        continue;
+      }
+
+      // Collect recipients
+      const recipients: (string | Types.ObjectId)[] = [
+        hod._id as Types.ObjectId,
+        provost._id as Types.ObjectId
+      ];
+
+      await NotificationService.createNotifications({
+        lecturerIds: recipients,
+        role: "admin",
+        message: `Student ${s.matricNo} (${s.projectTopic}) uploaded a project over a month ago without supervisor feedback.`,
+      });
+    }
+  }
+
 
 
 
