@@ -18,6 +18,47 @@ import { useToast } from "@/hooks/use-toast";
 
 type Level = "MSC" | "PHD";
 
+// --- add after imports ---
+const STAGE_LABELS: Record<string, string> = {
+  // generic map — keep keys normalized (lowercase, spaces)
+  start: "Start",
+  proposal: "Proposal",
+  "proposal defense": "Proposal Defense",
+  "internal defense": "Internal Defense",
+  internal: "Internal Defense",
+  "external defense": "External Defense",
+  external: "External Defense",
+  "2nd seminar": "2nd Seminar",
+  "second seminar": "2nd Seminar",
+  "3rd seminar": "3rd Seminar",
+  "third seminar": "3rd Seminar",
+  "first seminar": "Proposal Defense", // helpful alias
+  firstseminar: "Proposal Defense",
+};
+
+function formatStage(raw?: string | null, _level?: "MSC" | "PHD") {
+  if (!raw) return "Unknown";
+  const key = String(raw)
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // direct lookup
+  if (STAGE_LABELS[key]) return STAGE_LABELS[key];
+
+  // fuzzy: if the raw contains a known token
+  const found = Object.keys(STAGE_LABELS).find((k) => key.includes(k));
+  if (found) return STAGE_LABELS[found];
+
+  // fallback: title-case the normalized key
+  return key
+    .split(" ")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ""))
+    .join(" ");
+}
+
 interface Criterion {
   title: string;
   percentage: number;
@@ -1040,7 +1081,7 @@ export default function DefenseDayPage() {
                 {activeDefense.date}, {activeDefense.time} | Level:{" "}
                 <strong>{activeDefense.level}</strong> | Defense:{" "}
                 <strong className="capitalize">
-                  {activeDefense.currentStage}
+                  {formatStage(activeDefense.currentStage, activeDefense.level)}
                 </strong>
               </p>
               <p className="text-sm text-gray-700 mt-3">
@@ -1152,6 +1193,10 @@ export default function DefenseDayPage() {
             processingIds={processingIds}
             defenseStage={activeDefense?.currentStage}
             defense={activeDefense ?? ({} as any)}
+            defenseStageLabel={formatStage(
+              activeDefense?.currentStage,
+              activeDefense?.level
+            )}
           />
         )}
       </div>

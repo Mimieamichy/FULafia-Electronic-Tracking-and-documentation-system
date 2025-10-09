@@ -26,6 +26,7 @@ type Props = {
   onReject?: (studentId: string) => void;
   processingIds?: Record<string, boolean>;
   defense: any; // new optional prop: current defense details from parent
+  defenseStageLabel: string; // new optional prop: formatted defense stage label from parent
   defenseStage: string; // new optional prop: current defense stage from parent
 };
 
@@ -37,50 +38,124 @@ export default function AssessmentPanel({
   processingIds = {},
   defenseStage,
   defense,
+  defenseStageLabel
 }: Props) {
   // Simple stage -> score lookup (no weighted computation)
   const getStageScore = (s: Student): { value: number; label: string } => {
-    const stage = (s.currentStage ?? "").toLowerCase();
+    // normalize stage: "proposal_defense" -> "proposal defense"
+    const rawStage = String(s.currentStage ?? "")
+      .toLowerCase()
+      .replace(/[_-]+/g, " ")
+      .trim();
 
-    const mapping: Array<{ re: RegExp; key: string; label: string }> = [
-      { re: /proposal/, key: "proposalScore", label: "Proposal" },
-      { re: /internal/, key: "internalScore", label: "Internal" },
-      { re: /external/, key: "externalScore", label: "External" },
-      { re: /defense|defence|final/, key: "internalScore", label: "Defense" },
-    ];
+    // safe reader for numeric keys
+    const read = (k?: string) => {
+      if (!k) return 0;
+      const v = (s.scores ?? {})[k];
+      return typeof v === "number" && !isNaN(v) ? Math.round(v) : 0;
+    };
 
-    const found = mapping.find((m) => m.re.test(stage));
-    let chosenKey = found?.key;
-    let chosenLabel = found?.label ?? "Score";
-
-    if (!chosenKey) {
-      // prefer common keys if present
-      const prefer = ["internalScore", "proposalScore", "externalScore"];
-      chosenKey = prefer.find((k) => k in (s.scores || {}));
-      if (chosenKey) {
-        chosenLabel =
-          chosenKey === "proposalScore"
-            ? "Proposal"
-            : chosenKey === "internalScore"
-            ? "Internal"
-            : chosenKey === "externalScore"
-            ? "External"
-            : "Score";
-      } else {
-        // fallback to first numeric key in s.scores
-        const firstNumericKey = Object.entries(s.scores || {}).find(
-          ([, v]) => typeof v === "number" && !isNaN(v)
-        )?.[0];
-        chosenKey = firstNumericKey;
-        chosenLabel = firstNumericKey ?? "Score";
+    // ordered, specific mappings (most specific first)
+    if (
+      /\bproposal defense\b/.test(rawStage) ||
+      /\bproposal defense\b/.test(rawStage)
+    ) {
+      if ("firstSeminarScore" in (s.scores ?? {})) {
+        return { value: read("firstSeminarScore"), label: "Proposal Defense" };
+      }
+      if ("proposalScore" in (s.scores ?? {})) {
+        return { value: read("proposalScore"), label: "Proposal" };
       }
     }
 
-    const rawVal = chosenKey ? (s.scores?.[chosenKey] as any) : undefined;
-    const numeric =
-      typeof rawVal === "number" && !isNaN(rawVal) ? Math.round(rawVal) : 0;
+    if (/\bproposal\b/.test(rawStage)) {
+      if ("proposalScore" in (s.scores ?? {})) {
+        return { value: read("proposalScore"), label: "Proposal" };
+      }
+      if ("firstSeminarScore" in (s.scores ?? {})) {
+        // fallback if backend uses firstSeminarScore for proposal
+        return { value: read("firstSeminarScore"), label: "Proposal Defense" };
+      }
+    }
 
-    return { value: numeric, label: chosenLabel };
+    if (
+      /\b2nd seminar\b|\bsecond seminar\b|\b2nd\b|\bsecond\b/.test(rawStage)
+    ) {
+      if ("secondSeminarScore" in (s.scores ?? {})) {
+        return { value: read("secondSeminarScore"), label: "2nd Seminar" };
+      }
+    }
+
+    if (/\b3rd seminar\b|\bthird seminar\b|\b3rd\b|\bthird\b/.test(rawStage)) {
+      if ("thirdSeminarScore" in (s.scores ?? {})) {
+        return { value: read("thirdSeminarScore"), label: "3rd Seminar" };
+      }
+    }
+
+    if (/\binternal\b/.test(rawStage)) {
+      if ("internalScore" in (s.scores ?? {})) {
+        return { value: read("internalScore"), label: "Internal" };
+      }
+    }
+
+    if (/\bexternal\b/.test(rawStage)) {
+      if ("externalDefenseScore" in (s.scores ?? {})) {
+        return {
+          value: read("externalDefenseScore"),
+          label: "External Defense",
+        };
+      }
+      if ("externalScore" in (s.scores ?? {})) {
+        return { value: read("externalScore"), label: "External" };
+      }
+    }
+
+    // prefer common keys if stage text didn't match
+    const prefer = [
+      "firstSeminarScore",
+      "proposalScore",
+      "internalScore",
+      "externalScore",
+      "externalDefenseScore",
+      "secondSeminarScore",
+      "thirdSeminarScore",
+    ];
+    for (const k of prefer) {
+      if (k in (s.scores ?? {})) {
+        const label =
+          k === "firstSeminarScore"
+            ? "Proposal Defense"
+            : k === "proposalScore"
+            ? "Proposal"
+            : k === "internalScore"
+            ? "Internal"
+            : k === "externalScore"
+            ? "External"
+            : k === "externalDefenseScore"
+            ? "External Defense"
+            : k === "secondSeminarScore"
+            ? "2nd Seminar"
+            : k === "thirdSeminarScore"
+            ? "3rd Seminar"
+            : "Score";
+        return { value: read(k), label };
+      }
+    }
+
+    // final fallback: first numeric key found
+    const firstNumericKey = Object.entries(s.scores ?? {}).find(
+      ([, v]) => typeof v === "number" && !isNaN(v)
+    )?.[0];
+    if (firstNumericKey) {
+      const prettyLabel = firstNumericKey
+        .replace(/([A-Z])/g, " $1")
+        .replace(/_/g, " ")
+        .trim();
+      return { value: read(firstNumericKey), label: prettyLabel || "Score" };
+    }
+
+    // nothing available
+    return { value: 0, label: "Score" };
   };
 
   // Normalize defenseStage for comparison
@@ -163,7 +238,7 @@ export default function AssessmentPanel({
                     </td>
 
                     <td className="px-6 py-6 align-middle border-b border-amber-50 text-sm text-gray-800 text-center">
-                      <span className="inline-block">{s.currentStage}</span>
+                      <span className="inline-block">{defenseStageLabel}</span>
                     </td>
 
                     <td className="px-6 py-6 align-middle border-b border-amber-50 text-sm font-medium text-gray-900 text-center">

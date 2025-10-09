@@ -73,7 +73,7 @@ const getStageKey = (label: string) => {
 };
 
 const START_KEY = getStageKey("Start");
-const EXTERNAL_DEFENSE_KEY = getStageKey("External Defense");
+
 
 const getLabelFromKey = (key: string, labels: string[]) => {
   const found = labels.find((l) => getStageKey(l) === key);
@@ -788,83 +788,116 @@ const StudentSessionManagement = () => {
     setSelectedDepartmentForDefense("");
   };
 
-  const getStageScore = (
-    s: StudentFromAPI
-  ): { value: number; label: string } => {
-    const stage = (s.currentStage ?? "").toLowerCase();
+ const getStageScore = (
+  s: StudentFromAPI
+): { value: number; label: string } => {
+  // normalize stage: "proposal_defense" -> "proposal defense"
+  const rawStage = String(s.currentStage ?? "")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .trim();
 
-    const mapping: Array<{ re: RegExp; key: string; label: string }> = [
-      { re: /proposal/, key: "proposalScore", label: "Proposal" },
-      { re: /internal/, key: "internalScore", label: "Internal" },
-      { re: /external/, key: "externalScore", label: "External" },
-      {
-        re: /second seminar|2nd seminar/,
-        key: "secondSeminarScore",
-        label: "2nd Seminar",
-      },
-      {
-        re: /third seminar|3rd seminar/,
-        key: "thirdSeminarScore",
-        label: "3rd Seminar",
-      },
-      {
-        re: /first seminar|1st seminar/,
-        key: "firstSeminarScore",
-        label: "Proposal Defense",
-      },
-      { re: /defense|defence|final/, key: "internalScore", label: "Defense" },
-    ];
-
-    const found = mapping.find((m) => m.re.test(stage));
-    let chosenKey = found?.key;
-    let chosenLabel = found?.label ?? "Score";
-
-    if (!chosenKey) {
-      // prefer common keys if present
-      const prefer = [
-        "internalScore",
-        "externalScore",
-        "proposalScore",
-        "externalDefenseScore",
-        "secondSeminarScore",
-        "thirdSeminarScore",
-        "firstSeminarScore",
-      ];
-      chosenKey = prefer.find((k) => k in (s.stageScores || {}));
-      if (chosenKey) {
-        chosenLabel =
-          chosenKey === "proposalScore"
-            ? "Proposal"
-            : chosenKey === "internalScore"
-            ? "Internal"
-            : chosenKey === "externalScore"
-            ? "External"
-            : chosenKey === "externalDefenseScore"
-            ? "External Defense"
-            : chosenKey === "secondSeminarScore"
-            ? "2nd Seminar"
-            : chosenKey === "thirdSeminarScore"
-            ? "3rd Seminar"
-            : chosenKey === "firstSeminarScore"
-            ? "Proposal Defense"
-            
-            : "Score";
-      } else {
-        // fallback to first numeric key in s.scores
-        const firstNumericKey = Object.entries(s.stageScores || {}).find(
-          ([, v]) => typeof v === "number" && !isNaN(v)
-        )?.[0];
-        chosenKey = firstNumericKey;
-        chosenLabel = firstNumericKey ?? "Score";
-      }
-    }
-
-    const rawVal = chosenKey ? (s.stageScores?.[chosenKey] as any) : undefined;
-    const numeric =
-      typeof rawVal === "number" && !isNaN(rawVal) ? Math.round(rawVal) : 0;
-
-    return { value: numeric, label: chosenLabel };
+  // safe reader for numeric keys
+  const read = (k?: string) => {
+    if (!k) return 0;
+    const v = (s.stageScores ?? {})[k];
+    return typeof v === "number" && !isNaN(v) ? Math.round(v) : 0;
   };
+
+  // ordered, specific mappings (most specific first)
+  if (/\bproposal defense\b/.test(rawStage) || /\bproposal defense\b/.test(rawStage)) {
+    if ("firstSeminarScore" in (s.stageScores ?? {})) {
+      return { value: read("firstSeminarScore"), label: "Proposal Defense" };
+    }
+    if ("proposalScore" in (s.stageScores ?? {})) {
+      return { value: read("proposalScore"), label: "Proposal" };
+    }
+  }
+
+  if (/\bproposal\b/.test(rawStage)) {
+    if ("proposalScore" in (s.stageScores ?? {})) {
+      return { value: read("proposalScore"), label: "Proposal" };
+    }
+    if ("firstSeminarScore" in (s.stageScores ?? {})) {
+      // fallback if backend uses firstSeminarScore for proposal
+      return { value: read("firstSeminarScore"), label: "Proposal Defense" };
+    }
+  }
+
+  if (/\b2nd seminar\b|\bsecond seminar\b|\b2nd\b|\bsecond\b/.test(rawStage)) {
+    if ("secondSeminarScore" in (s.stageScores ?? {})) {
+      return { value: read("secondSeminarScore"), label: "2nd Seminar" };
+    }
+  }
+
+  if (/\b3rd seminar\b|\bthird seminar\b|\b3rd\b|\bthird\b/.test(rawStage)) {
+    if ("thirdSeminarScore" in (s.stageScores ?? {})) {
+      return { value: read("thirdSeminarScore"), label: "3rd Seminar" };
+    }
+  }
+
+  if (/\binternal\b/.test(rawStage)) {
+    if ("internalScore" in (s.stageScores ?? {})) {
+      return { value: read("internalScore"), label: "Internal" };
+    }
+  }
+
+  if (/\bexternal\b/.test(rawStage)) {
+    if ("externalDefenseScore" in (s.stageScores ?? {})) {
+      return { value: read("externalDefenseScore"), label: "External Defense" };
+    }
+    if ("externalScore" in (s.stageScores ?? {})) {
+      return { value: read("externalScore"), label: "External" };
+    }
+  }
+
+  // prefer common keys if stage text didn't match
+  const prefer = [
+    "firstSeminarScore",
+    "proposalScore",
+    "internalScore",
+    "externalScore",
+    "externalDefenseScore",
+    "secondSeminarScore",
+    "thirdSeminarScore",
+  ];
+  for (const k of prefer) {
+    if (k in (s.stageScores ?? {})) {
+      const label =
+        k === "firstSeminarScore"
+          ? "Proposal Defense"
+          : k === "proposalScore"
+          ? "Proposal"
+          : k === "internalScore"
+          ? "Internal"
+          : k === "externalScore"
+          ? "External"
+          : k === "externalDefenseScore"
+          ? "External Defense"
+          : k === "secondSeminarScore"
+          ? "2nd Seminar"
+          : k === "thirdSeminarScore"
+          ? "3rd Seminar"
+          : "Score";
+      return { value: read(k), label };
+    }
+  }
+
+  // final fallback: first numeric key found
+  const firstNumericKey = Object.entries(s.stageScores ?? {}).find(
+    ([, v]) => typeof v === "number" && !isNaN(v)
+  )?.[0];
+  if (firstNumericKey) {
+    const prettyLabel = firstNumericKey
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .trim();
+    return { value: read(firstNumericKey), label: prettyLabel || "Score" };
+  }
+
+  // nothing available
+  return { value: 0, label: "Score" };
+};
 
   const defenseStudentIds = useMemo(() => {
     if (!Array.isArray(students) || !selectedDefense) return [];
