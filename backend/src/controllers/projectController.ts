@@ -27,7 +27,7 @@ export default class ProjectController {
         return;
       }
       const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
-      //const fileUrl = `/uploads/${req.file.filename}`;
+      // const fileUrl = `/uploads/${req.file.filename}`;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
