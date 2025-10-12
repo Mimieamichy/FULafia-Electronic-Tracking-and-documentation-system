@@ -8,6 +8,13 @@ const projectRoot = process.env.NODE_ENV === 'production'
 
 const uploadDir = path.join(projectRoot, 'uploads');
 
+console.log('=== UPLOAD CONFIG ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('__dirname:', __dirname);
+console.log('Project root:', projectRoot);
+console.log('Upload directory:', uploadDir);
+console.log('=====================');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
