@@ -65,7 +65,10 @@ app.use('/api/auth', limiter);
 
 //Static files
 //app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+const projectRoot = process.env.NODE_ENV === 'production' 
+  ? path.join(__dirname, '..', '..') // From dist/src/config to backend root
+  : process.cwd()
+app.use('/uploads', express.static(path.join(projectRoot, 'uploads')));
 
 //Routes
 app.use('/api/auth', authRoutes);

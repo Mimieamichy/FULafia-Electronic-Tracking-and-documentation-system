@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 const projectRoot = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '..', '..') // From dist/src/config to backend root
+  ? path.join(__dirname, '..', '..', '..', '..') // From dist/src/config to backend root
   : process.cwd();
 
 const uploadDir = path.join(projectRoot, 'uploads');
