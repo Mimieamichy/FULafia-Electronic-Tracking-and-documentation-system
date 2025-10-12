@@ -21,7 +21,12 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file?.filename}`;
+      const fileName = req.file?.filename;
+       if (!fileName) {
+        res.status(400).json({ success: false, error: 'No file uploaded' });
+        return;
+      }
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
       //const fileUrl = `/uploads/${req.file.filename}`;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
@@ -106,9 +111,11 @@ export default class ProjectController {
 
     // Extract filename from the stored URL
     const fileName = path.basename(project.fileUrl);
-    
-    // Use the same upload directory that multer uses
     const absolutePath = path.join(uploadDir, fileName);
+
+     // Debug logging
+    console.log('Looking for file:', absolutePath);
+    console.log('Stored fileUrl:', project.fileUrl);
     
     // Check if file exists
     if (!fs.existsSync(absolutePath)) {
@@ -144,9 +151,12 @@ export default class ProjectController {
       }
 
       const fileName = path.basename(project.fileUrl);
-    
-    // Use the same upload directory
-    const absolutePath = path.join(uploadDir, fileName);
+      const absolutePath = path.join(uploadDir, fileName);
+
+      
+     // Debug logging
+    console.log('Looking for file:', absolutePath);
+    console.log('Stored fileUrl:', project.fileUrl);
 
     if (!fs.existsSync(absolutePath)) {
       console.log(`File not found: ${absolutePath}`);
