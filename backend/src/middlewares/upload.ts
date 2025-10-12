@@ -2,7 +2,11 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const uploadDir = path.join(process.cwd(), 'uploads');
+const projectRoot = process.env.NODE_ENV === 'production' 
+  ? path.join(__dirname, '..', '..') // From dist/src/config to backend root
+  : process.cwd();
+
+const uploadDir = path.join(projectRoot, 'uploads');
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
