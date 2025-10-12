@@ -67,7 +67,7 @@ app.use('/api/auth', limiter);
 const getProjectRoot = () => {
   if (process.env.NODE_ENV === 'production') {
     // Match your multer config - go up 4 levels from dist/src
-    return path.join(__dirname, '..', '..', '..', '..');
+    return path.join(__dirname, '..', '..', '..');
   }
   return process.cwd();
 };
