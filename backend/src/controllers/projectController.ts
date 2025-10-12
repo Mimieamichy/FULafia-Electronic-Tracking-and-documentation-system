@@ -21,8 +21,8 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      // const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
-      const fileUrl = `/uploads/projects/${req.file.filename}`;
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file?.filename}`;
+      //const fileUrl = `/uploads/${req.file.filename}`;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
@@ -37,7 +37,6 @@ export default class ProjectController {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
       }
-
       
       const project = await ProjectService.uploadProject(userId, fileUrl);
       await ActivityLogService.logActivity(userId, userName, role, 'Uploaded', 'a new Project version', studentData.department);
