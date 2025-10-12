@@ -63,12 +63,26 @@ const limiter = rateLimit({
 });
 app.use('/api/auth', limiter);
 
-//Static files
-//app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-const projectRoot = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '..', '..') // From dist/src/config to backend root
-  : process.cwd()
-app.use('/uploads', express.static(path.join(projectRoot, 'uploads')));
+// Static files - FIXED PATH
+const getProjectRoot = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Match your multer config - go up 4 levels from dist/src
+    return path.join(__dirname, '..', '..', '..', '..');
+  }
+  return process.cwd();
+};
+
+const projectRoot = getProjectRoot();
+const uploadsPath = path.join(projectRoot, 'uploads');
+
+console.log('=== EXPRESS STATIC CONFIG ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('__dirname:', __dirname);
+console.log('Project root:', projectRoot);
+console.log('Uploads path:', uploadsPath);
+console.log('=============================');
+
+app.use('/uploads', express.static(uploadsPath));
 
 //Routes
 app.use('/api/auth', authRoutes);
