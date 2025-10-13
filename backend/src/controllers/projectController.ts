@@ -21,8 +21,20 @@ export interface AuthenticatedRequest extends Request {
 export default class ProjectController {
   static async uploadProject(req: AuthenticatedRequest, res: Response) {
     try {
-      // const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
-      const fileUrl = `/uploads/projects/${req.file.filename}`;
+      const fileName = req.file?.filename;
+       if (!fileName) {
+        res.status(400).json({ success: false, error: 'No file uploaded' });
+        return;
+      }
+      let fileUrl: string;
+    
+      if (process.env.NODE_ENV === 'production') {
+      // Use environment variable or consistent production URL
+        fileUrl = `${process.env.FRONTEND_URL}/uploads/${fileName}`;
+      } else {
+      // Development URL
+        fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
+      }
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
@@ -37,7 +49,6 @@ export default class ProjectController {
         res.status(404).json({ success: false, error: 'Student not found' });
         return 
       }
-
       
       const project = await ProjectService.uploadProject(userId, fileUrl);
       await ActivityLogService.logActivity(userId, userName, role, 'Uploaded', 'a new Project version', studentData.department);
@@ -107,8 +118,6 @@ export default class ProjectController {
 
     // Extract filename from the stored URL
     const fileName = path.basename(project.fileUrl);
-    
-    // Use the same upload directory that multer uses
     const absolutePath = path.join(uploadDir, fileName);
     
     // Check if file exists
@@ -127,16 +136,12 @@ export default class ProjectController {
 
   static async downloadLatestProject(req: AuthenticatedRequest, res: Response) {
     try {
+      console.log('latest')
       const { studentId } = req.params;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
-      const project = await ProjectService.downloadLatestProject(studentId);
-      if (!project || !project.fileUrl) {
-      res.status(404).json({ success: false, error: 'Project not found' });
-       return 
-    }
 
     const studentData = await StudentService.getOneStudent(studentId);
       if (!studentData) {
@@ -144,21 +149,24 @@ export default class ProjectController {
       return 
       }
 
-      const fileName = path.basename(project.fileUrl);
-    
-    // Use the same upload directory
-    const absolutePath = path.join(uploadDir, fileName);
-
-    if (!fs.existsSync(absolutePath)) {
-      console.log(`File not found: ${absolutePath}`);
-      res.status(404).json({ success: false, error: 'File not found on server' });
+      const project = await ProjectService.downloadLatestProject(studentId);
+      if (!project || !project.fileUrl) {
+      res.status(404).json({ success: false, error: 'Project not found' });
       return 
-    }
+      }
 
+       // Extract filename from the stored URL
+    const fileName = path.basename(project.fileUrl);
+    const absolutePath = path.join(uploadDir, fileName);
     
-      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
-      // return res.download(absolutePath);
-      return res.download(absolutePath, path.basename(absolutePath))
+    // Check if file exists
+    if (!fs.existsSync(absolutePath)) {
+      console.log(`File not found heelo: ${absolutePath}`);
+      res.status(404).json({ success: false, error: 'File not found on server' });
+      return;
+    }
+      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo}`, studentData.department)
+      return res.download(absolutePath)
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });
@@ -167,9 +175,22 @@ export default class ProjectController {
 
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {
+      const fileName = req.file?.filename;
+       if (!fileName) {
+        res.status(400).json({ success: false, error: 'No file uploaded' });
+        return;
+      }
+      let fileUrl: string;
+    
+      if (process.env.NODE_ENV === 'production') {
+      // Use environment variable or consistent production URL
+        fileUrl = `${process.env.FRONTEND_URL}/uploads/${fileName}`;
+      } else {
+      // Development URL
+        fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
+      }
       const userId = req.user?.id || ''
       const { studentId } = req.params;
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;

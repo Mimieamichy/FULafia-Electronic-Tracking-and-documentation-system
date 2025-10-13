@@ -308,6 +308,7 @@ export default class DefenceService {
     if (!defence) throw new Error("Defence not found");
 
     if (defence.ended == true) throw new Error("Defence has ended no score can be submitted");
+    if (defence.started == false) throw new Error("Defence has not started no score can be submitted");
 
     // Get the appropriate score sheet
     let scoreSheet: any;

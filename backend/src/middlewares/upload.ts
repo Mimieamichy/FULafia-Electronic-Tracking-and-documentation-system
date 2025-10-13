@@ -2,50 +2,52 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+const projectRoot = process.env.NODE_ENV === 'production' 
+  ? path.join(__dirname, '..', '..', '..', '..') // From dist/src/config to backend root
+  : process.cwd();
 
-// Use absolute path consistent with your static serving
-const uploadDir = path.join(process.cwd(), 'uploads');
+const uploadDir = path.join(projectRoot, 'uploads');
 
+console.log('=== UPLOAD CONFIG ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('__dirname:', __dirname);
+console.log('Project root:', projectRoot);
+console.log('Upload directory:', uploadDir);
+console.log('=====================');
 
-// Create directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
-// Set storage engine
+
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../../uploads');
-    fs.mkdirSync(uploadPath, { recursive: true }); // Ensure folder exists
-    cb(null, uploadPath);
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
-    const timestamp = Date.now();
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext);
-    cb(null, `${baseName}-${timestamp}${ext}`);
+    cb(null, `project-${uniqueSuffix}${ext}`);
   },
 });
 
+const fileFilter = (req: any, file: any, cb: any) => {
+  const allowedMimeTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
 
-
-
-// File filter (optional)
-function fileFilter(req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) {
-  const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  if (allowedTypes.includes(file.mimetype)) {
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only .pdf, .doc, and .docx formats are allowed'));
+    cb(new Error('Only PDF, DOC, and DOCX files are allowed'), false);
   }
-}
+};
 
-// 10 MB size limit
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-  },
+const upload = multer({ 
+  storage, 
+  fileFilter, 
+  limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
 export default upload;
