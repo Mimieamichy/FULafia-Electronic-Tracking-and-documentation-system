@@ -26,8 +26,15 @@ export default class ProjectController {
         res.status(400).json({ success: false, error: 'No file uploaded' });
         return;
       }
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
-      // const fileUrl = `/uploads/${req.file.filename}`;
+      let fileUrl: string;
+    
+      if (process.env.NODE_ENV === 'production') {
+      // Use environment variable or consistent production URL
+        fileUrl = `${process.env.FRONTEND_URL}/uploads/${fileName}`;
+      } else {
+      // Development URL
+        fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
+      }
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
@@ -100,11 +107,13 @@ export default class ProjectController {
       const user = await UserService.getUserProfile(author)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const studentData = await StudentService.getOneStudent(studentId);
+        console.log('student ',studentData, studentId)
       if (!studentData) {
         res.status(404).json({ success: false, error: 'Student not found' });
         return
       }
       const project = await ProjectService.downloadProjectVersion(studentId, parseInt(versionNumber));
+        console.log('Project',project)
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
     }
@@ -112,6 +121,12 @@ export default class ProjectController {
     // Extract filename from the stored URL
     const fileName = path.basename(project.fileUrl);
     const absolutePath = path.join(uploadDir, fileName);
+
+    console.log('=== DOWNLOAD DEBUG ===');
+    console.log('Looking for file:', absolutePath);
+    console.log('Stored fileUrl:', project.fileUrl);
+    console.log('Upload directory:', uploadDir);
+    console.log('File exists:', fs.existsSync(absolutePath));
 
      // Debug logging
     console.log('Looking for file:', absolutePath);
@@ -139,6 +154,7 @@ export default class ProjectController {
       const user = await UserService.getUserProfile(userId)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;
       const project = await ProjectService.downloadLatestProject(studentId);
+      console.log('Project',project)
       if (!project || !project.fileUrl) {
       res.status(404).json({ success: false, error: 'Project not found' });
        return 
@@ -152,6 +168,12 @@ export default class ProjectController {
 
       const fileName = path.basename(project.fileUrl);
       const absolutePath = path.join(uploadDir, fileName);
+
+      console.log('=== DOWNLOAD DEBUG ===');
+    console.log('Looking for file:', absolutePath);
+    console.log('Stored fileUrl:', project.fileUrl);
+    console.log('Upload directory:', uploadDir);
+    console.log('File exists:', fs.existsSync(absolutePath));
 
       
      // Debug logging
