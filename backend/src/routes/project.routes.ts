@@ -13,7 +13,7 @@ router.post('/upload/:studentId', authenticate, checkPermission(Permission.UPLOA
 router.post('/upload', authenticate, checkPermission(Permission.UPLOAD_PROJECT), upload.single('project'), ProjectController.uploadProject);
 router.get('/comments/:studentId/:versionNumber', authenticate, checkPermission(Permission.VIEW_COMMENTS), ProjectController.viewComments);
 router.get('/:studentId/download/:versionNumber', authenticate, checkPermission(Permission.DOWNLOAD_PROJECT), ProjectController.downloadProject);
-router.get('/download/:studentId/:versionNumber', authenticate, checkPermission(Permission.DOWNLOAD_PROJECT), ProjectController.downloadLatestProject);
+router.get('/download/:studentId', authenticate, checkPermission(Permission.DOWNLOAD_PROJECT), ProjectController.downloadLatestProject);
 router.post('/comment/:studentId/:versionNumber', authenticate, checkPermission(Permission.COMMENT), ProjectController.commentOnProject);
 router.post('/defence-comments/:studentId/:defenceId', authenticate, checkPermission(Permission.COMMENT), ProjectController.commentOnDefenceDay);   
 router.get('/defence-comments/:studentId/:defenceId', authenticate, checkPermission(Permission.COMMENT), ProjectController.getCommentsByUserForStudent); 
