@@ -295,7 +295,7 @@ export default class ProjectController {
   static async getDefenceDayComments(req: Request, res: Response) {
     try {
       const { studentId } = req.params;
-
+      
       const comments = await ProjectService.getDefenceDayComments(studentId);
       res.status(200).json({ success: true, message: 'Comments retrieved', data: comments });
     } catch (err: any) {

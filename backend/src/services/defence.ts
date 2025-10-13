@@ -562,8 +562,6 @@ export default class DefenceService {
 
 
 
-
-
   /**Finds students and move student to next stage in the proram type  */
   static async approveStudentDefence(studentId: string) {
     const student = await Student.findById(studentId);

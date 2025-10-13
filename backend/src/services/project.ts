@@ -302,6 +302,7 @@ export default class ProjectService {
   static async getDefenceDayComments(studentId: string) {
     const defence = await Defence.findOne({
       students: studentId,
+      ended: true,
     }).sort({ createdAt: -1 })
 
     if (!defence) {
