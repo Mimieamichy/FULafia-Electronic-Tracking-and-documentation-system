@@ -350,7 +350,7 @@ export default function MyStudentsPage() {
   const handleDownload = async (studentId: string, versionNumber: number) => {
     try {
       const res = await fetch(
-        `${baseUrl}/project/download/${studentId}/${versionNumber}`,
+        `${baseUrl}/project/download/${studentId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`, // 👈 token included
