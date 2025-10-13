@@ -9,6 +9,46 @@ import { Role } from '../utils/permissions';
 
 export default class DefenceService {
 
+    // Helper method to check if lecturer has any active defences
+  static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
+  const lecturer = await Lecturer.findById(lecturerId).populate("user");
+  if (!lecturer) throw new Error("Lecturer not found");
+
+  const userRoles = (lecturer.user as any)?.roles || [];
+ 
+  const isHodOrProvost =
+    Array.isArray(userRoles) &&
+    (userRoles.includes("hod") || userRoles.includes("provost"));
+
+  // Base query: all defences the lecturer is part of
+  const query: any = { panelMembers: lecturerId };
+
+  // For non-HOD/Provost, only consider ongoing defences
+  if (!isHodOrProvost) {
+    query.ended = false;
+  }
+
+  // Fetch defences with students
+  const defences = await Defence.find(query).populate("students");
+
+  if (isHodOrProvost) {
+    // Filter defences that still have at least one unmarked student
+    const activeDefences = defences.filter((def) => {
+      if (!Array.isArray(def.students)) return true;
+      const allMarked = def.students.every(
+        (student: any) => student.defenceMarked === true
+      );
+      console.log(activeDefences, def.students)
+      return !allMarked; // still active if not all marked
+    });
+    
+    return activeDefences.length > 0;
+  }
+
+  
+
+  return defences.length > 0;
+}
   /** Get all defences with student details
   */
   static async getAllDefenses() {
@@ -409,7 +449,7 @@ export default class DefenceService {
    */
   static async endDefence(defenceId: string) {
     const defence = await Defence.findById(defenceId);
-    console.log(defenceId)
+
     if (!defence) throw new Error("Defence not found");
     if (!defence.started) throw new Error("Defence has not started");
     if (defence.ended) throw new Error("Defence already ended");
@@ -519,46 +559,7 @@ export default class DefenceService {
     return defence;
   }
 
-  // Helper method to check if lecturer has any active defences
-  static async hasActiveDefences(lecturerId: string | Types.ObjectId) {
-  const lecturer = await Lecturer.findById(lecturerId).populate("user");
-  if (!lecturer) throw new Error("Lecturer not found");
 
-  const userRoles = (lecturer.user as any)?.roles || [];
- 
-  const isHodOrProvost =
-    Array.isArray(userRoles) &&
-    (userRoles.includes("hod") || userRoles.includes("provost"));
-
-  // Base query: all defences the lecturer is part of
-  const query: any = { panelMembers: lecturerId };
-
-  // For non-HOD/Provost, only consider ongoing defences
-  if (!isHodOrProvost) {
-    query.ended = false;
-  }
-
-  // Fetch defences with students
-  const defences = await Defence.find(query).populate("students");
-
-  if (isHodOrProvost) {
-    // Filter defences that still have at least one unmarked student
-    const activeDefences = defences.filter((def) => {
-      if (!Array.isArray(def.students)) return true;
-      const allMarked = def.students.every(
-        (student: any) => student.defenceMarked === true
-      );
-      console.log(activeDefences, def.students)
-      return !allMarked; // still active if not all marked
-    });
-    
-    return activeDefences.length > 0;
-  }
-
-  
-
-  return defences.length > 0;
-}
 
 
 

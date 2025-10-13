@@ -136,7 +136,6 @@ export default class ProjectController {
 
   static async downloadLatestProject(req: AuthenticatedRequest, res: Response) {
     try {
-      console.log('latest')
       const { studentId } = req.params;
       const userId = req.user?.id || ''
       const role = req.user?.role[0] || ''
