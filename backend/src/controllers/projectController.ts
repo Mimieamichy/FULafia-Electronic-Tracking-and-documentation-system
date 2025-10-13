@@ -160,13 +160,12 @@ export default class ProjectController {
     
     // Check if file exists
     if (!fs.existsSync(absolutePath)) {
-      console.log(`File not found: ${absolutePath}`);
+      console.log(`File not found heelo: ${absolutePath}`);
       res.status(404).json({ success: false, error: 'File not found on server' });
       return;
     }
-      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo}`, studentData.department);
-      // return res.download(absolutePath);
-      return res.download(absolutePath, path.basename(absolutePath))
+      await ActivityLogService.logActivity(userId, userName, role, 'Downloaded', `Latest Project version of ${studentData.user.firstName} ${studentData.user.lastName} with matric No: ${studentData.matricNo}`, studentData.department)
+      return res.download(absolutePath)
     } catch (err: any) {
       console.log(err)
       res.status(400).json({ success: false, error: 'Failed to download project', message: err.message });
@@ -175,9 +174,22 @@ export default class ProjectController {
 
   static async supervisorUploadCorrection(req: AuthenticatedRequest, res: Response) {
     try {
+      const fileName = req.file?.filename;
+       if (!fileName) {
+        res.status(400).json({ success: false, error: 'No file uploaded' });
+        return;
+      }
+      let fileUrl: string;
+    
+      if (process.env.NODE_ENV === 'production') {
+      // Use environment variable or consistent production URL
+        fileUrl = `${process.env.FRONTEND_URL}/uploads/${fileName}`;
+      } else {
+      // Development URL
+        fileUrl = `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
+      }
       const userId = req.user?.id || ''
       const { studentId } = req.params;
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/projects/${req.file?.filename}`;
       const role = req.user?.role[0] || ''
       const user = await UserService.getUserProfile(userId)
       const userName = `${user.user.title || ''} ${user.user.firstName || ''} ${user.user.lastName || ''}`;

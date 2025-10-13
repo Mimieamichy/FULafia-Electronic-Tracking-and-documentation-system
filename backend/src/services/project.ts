@@ -122,31 +122,6 @@ export default class ProjectService {
     return await project.save();
   }
 
-  static async downloadProjectVersion(
-    studentId: string,
-    versionNumber: number
-  ) {
-    const project = await Project.findOne({ student: studentId });
-
-    if (!project) throw new Error("Project not found");
-
-    const version = project.versions.find(
-      (v) => v.versionNumber === versionNumber
-    );
-    if (!version) throw new Error("Version not found");
-
-    //Get student project toopic
-    const student = await Student.findById(studentId);
-    if (!student) throw new Error("Student not found");
-
-    return {
-      fileUrl: version.fileUrl,
-      topic: student.projectTopic,
-      uploadedAt: version.uploadedAt,
-      uploadedBy: version.uploadedBy,
-    };
-  }
-
 
   static async approveProject(studentId: string) {
     const project = await Project.findOne({ student: studentId });
@@ -232,6 +207,31 @@ export default class ProjectService {
     };
   }
 
+  static async downloadProjectVersion(
+    studentId: string,
+    versionNumber: number
+  ) {
+    const project = await Project.findOne({ student: studentId });
+
+    if (!project) throw new Error("Project not found");
+
+    const version = project.versions.find(
+      (v) => v.versionNumber === versionNumber
+    );
+    if (!version) throw new Error("Version not found");
+
+    //Get student project toopic
+    const student = await Student.findById(studentId);
+    if (!student) throw new Error("Student not found");
+
+    return {
+      fileUrl: version.fileUrl,
+      topic: student.projectTopic,
+      uploadedAt: version.uploadedAt,
+      uploadedBy: version.uploadedBy,
+    };
+  }
+
   static async downloadLatestProject(studentId: string) {
     const project = await Project.findOne({ student: studentId });
 
@@ -251,7 +251,6 @@ export default class ProjectService {
       topic: latestVersion.topic,
     }
   }
-
 
   // Add a comment on defnce day
   static async commentOnDefenceDay(studentId: string, defenceId: string, authorId: string, text: string): Promise<IDefenceComment> {
@@ -299,7 +298,6 @@ export default class ProjectService {
 
     return userComments;
   }
-
 
   static async getDefenceDayComments(studentId: string) {
     const defence = await Defence.findOne({
