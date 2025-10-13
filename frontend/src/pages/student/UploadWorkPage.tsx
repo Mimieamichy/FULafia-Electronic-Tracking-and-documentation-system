@@ -45,7 +45,7 @@ export default function UploadWorkPage() {
   const [loadingProject, setLoadingProject] = useState(false);
 
   // PANEL comments (read-only)
- 
+
   const [panelComments, setPanelComments] = useState<CommentItem[]>([]);
   const [loadingPanelComments, setLoadingPanelComments] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
@@ -77,8 +77,6 @@ export default function UploadWorkPage() {
     };
   };
 
-  
-
   // Fetch canonical project and aggregate all comments across versions
   const fetchProject = async () => {
     if (!user) return;
@@ -102,7 +100,7 @@ export default function UploadWorkPage() {
         setProjectVersions([]);
         setLatestVersionIndex(-1);
         setComments([]);
-        setDefenceId(null);
+
         return;
       }
 
@@ -113,7 +111,7 @@ export default function UploadWorkPage() {
         setProjectVersions([]);
         setLatestVersionIndex(-1);
         setComments([]);
-        setDefenceId(null);
+
         return;
       }
 
@@ -128,9 +126,6 @@ export default function UploadWorkPage() {
       // first try payload.student._id, then fallback to payload.project.student
       const studentIdFromApi = projectObj.student ?? payload?.student ?? null;
       setStuId(String(studentIdFromApi ?? user.id ?? ""));
-
-     
-      
 
       const mappedVersions = versions.map((v: any) => {
         const verNum = v.versionNumber ?? v.version ?? 0;
@@ -172,7 +167,6 @@ export default function UploadWorkPage() {
       setProjectVersions([]);
       setLatestVersionIndex(-1);
       setComments([]);
-      setDefenceId(null);
     } finally {
       setLoadingProject(false);
     }
@@ -201,16 +195,18 @@ export default function UploadWorkPage() {
 
       const payload = await res.json().catch(() => null);
       // payload might be array or { data: [...] } or { comments: [...] }
+      // payload might be one of several shapes; handle the common cases.
       const arr: any[] = Array.isArray(payload)
         ? payload
-        : Array.isArray(payload?.data)
-        ? payload.data
+        : Array.isArray(payload?.data?.comments)
+        ? payload.data.comments
+        : Array.isArray(payload?.data?.comment)
+        ? payload.data.comment
         : Array.isArray(payload?.comments)
         ? payload.comments
         : [];
 
-        
-        
+      console.log("payloader", payload);
 
       const mapped = arr.map((c) => mapComment(c, undefined));
       // sort oldest -> newest
@@ -391,7 +387,7 @@ export default function UploadWorkPage() {
     const extOk = allowedExtensions.has(getExtension(file.name));
     const MAX_FILE_BYTES = 1024 ** 3;
     console.log("Max file size (bytes):", MAX_FILE_BYTES);
-    
+
     if (!mimeOk && !extOk) {
       toast({
         title: "Invalid File Type",
@@ -695,12 +691,7 @@ export default function UploadWorkPage() {
               ) : (
                 // Panel comments (read-only)
                 <>
-                  {!stuId ? (
-                    <div className="text-sm text-gray-500 italic">
-                      Panel comments are not available — no defence selected for
-                      this project.
-                    </div>
-                  ) : loadingPanelComments ? (
+                  {loadingPanelComments ? (
                     <div className="text-sm text-gray-500">
                       Loading panel comments…
                     </div>
