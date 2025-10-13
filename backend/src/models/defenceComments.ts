@@ -34,8 +34,7 @@ const defenceCommentSchema = new Schema(
   { timestamps: true }
 );
 
-// Ensure one defenceId + studentId record only
-// defenceCommentSchema.index({ defence: 1, student: 1 }, { unique: true });
+
 
 export interface IComment {
   author: Types.ObjectId;
