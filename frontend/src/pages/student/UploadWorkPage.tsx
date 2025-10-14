@@ -193,9 +193,7 @@ export default function UploadWorkPage() {
         throw new Error(`Failed to load panel comments: ${res.status} ${txt}`);
       }
 
-      const payload = await res.json().catch(() => null);
-      // payload might be array or { data: [...] } or { comments: [...] }
-      // payload might be one of several shapes; handle the common cases.
+      const payload = await res.json().catch(() => null);     
       const arr: any[] = Array.isArray(payload)
         ? payload
         : Array.isArray(payload?.data?.comments)

@@ -103,11 +103,11 @@ export default function ProvostDashboardOverview({
             <Calendar className="w-10 h-10 text-amber-700" />
           </div>
           <div className="flex-1">
-            <div className="text-sm text-gray-500">Final Defenses</div>
+            <div className="text-sm text-gray-500">Scheduled Defenses</div>
             <div className="text-xl font-semibold text-gray-800">
               {loadingCounts ? "…" : upcomingDefencesCount ?? "-"}
             </div>
-            <div className="text-sm text-gray-400">scheduled for last stage</div>
+            <div className="text-sm text-gray-400">scheduled defence</div>
           </div>
         </div>
 
