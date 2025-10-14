@@ -2,49 +2,86 @@ import { ActivityLog } from '../models/index';
 
 
 export default class ActivityLogService {
-    static async getAllLogs() {
-        const logs = await ActivityLog.find()
-            .populate("actor", "firstName lastName email") // include actor details
-            .sort({ timestamp: -1 });
-
-        return logs.map(log => {
-            const actor = log.actor as any;
-            const name = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim();
-            const time = log.timestamp
-
-            return {
-                message: `${name} ${log.action} ${log.entity} on ${time}`,
-                actor: {
-                    name,
-                    email: actor?.email,
-                },
-                time
-            };
-        });
+    static async getAllLogs(search?: string) {
+    // Build search condition
+    let match: any = {};
+    if (search) {
+        match = {
+            $or: [
+                { "actor.firstName": { $regex: search, $options: "i" } },
+                { "actor.lastName": { $regex: search, $options: "i" } },
+                { "actor.matricNo": { $regex: search, $options: "i" } }
+            ]
+        };
     }
 
+    const logs = await ActivityLog.find()
+        .populate({
+            path: "actor",
+            select: "firstName lastName email matricNo",
+            match
+        })
+        .sort({ timestamp: -1 });
 
-    static async getLogsForHOD(department: string) {
-        const logs = await ActivityLog.find({department})
-            .populate("actor", "firstName lastName email") 
-            .sort({ timestamp: -1 });
+    // Filter out logs with no matched actor after population
+    const filteredLogs = logs.filter(log => log.actor);
 
-        return logs.map(log => {
-            const actor = log.actor as any;
-            const name = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim();
-            const time = log.timestamp
+    return filteredLogs.map(log => {
+        const actor = log.actor as any;
+        const name = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim();
+        const time = log.timestamp;
 
-            return {
-                message: `${name} ${log.action} ${log.entity} on ${time}`,
-                actor: {
-                    name,
-                    email: actor?.email,
-                },
-                time
-            };
-        });
+        return {
+            message: `${name} ${log.action} ${log.entity} on ${time}`,
+            actor: {
+                name,
+                email: actor?.email,
+                matricNo: actor?.matricNo,
+            },
+            time
+        };
+    });
+}
+
+
+static async getLogsForHOD(department: string, search?: string) {
+    let match: any = {};
+    if (search) {
+        match = {
+            $or: [
+                { "actor.firstName": { $regex: search, $options: "i" } },
+                { "actor.lastName": { $regex: search, $options: "i" } },
+                { "actor.matricNo": { $regex: search, $options: "i" } }
+            ]
+        };
     }
 
+    const logs = await ActivityLog.find({ department })
+        .populate({
+            path: "actor",
+            select: "firstName lastName email matricNo",
+            match
+        })
+        .sort({ timestamp: -1 });
+
+    const filteredLogs = logs.filter(log => log.actor);
+
+    return filteredLogs.map(log => {
+        const actor = log.actor as any;
+        const name = `${actor?.firstName || ''} ${actor?.lastName || ''}`.trim();
+        const time = log.timestamp;
+
+        return {
+            message: `${name} ${log.action} ${log.entity} on ${time}`,
+            actor: {
+                name,
+                email: actor?.email,
+                matricNo: actor?.matricNo,
+            },
+            time
+        };
+    });
+}
 
 
     static async logActivity(userId: string, name: string, role: string, action: string, entity: string, department: string  ) {

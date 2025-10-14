@@ -40,15 +40,16 @@ export default class UserController {
   static async getAllLogs(req: AuthenticatedRequest, res: Response) {
     try {
       let logs;
+      const { search } = req.query
       if (req.user?.role?.includes("provost")) {
-        logs = await ActivityLogService.getAllLogs();
+        logs = await ActivityLogService.getAllLogs(search as string);
       } else if (req.user?.role?.includes("hod")) {
         const lecturer = await Lecturer.findOne({ user: req.user?.id }).select("department");
         if (!lecturer?.department) {
           res.status(400).json({ success: false, error: "No department found for this HOD" });
           return
         }
-        logs = await ActivityLogService.getLogsForHOD(lecturer.department);
+        logs = await ActivityLogService.getLogsForHOD(lecturer.department, search as string);
       } else {
         res.status(403).json({ success: false, error: "Unauthorized" });
         return
