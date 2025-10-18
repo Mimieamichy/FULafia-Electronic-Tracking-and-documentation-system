@@ -1,4 +1,3 @@
-// src/yourpath/MyStudentsPage.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -52,6 +51,9 @@ type Student = {
   stageKey?: string; // raw key from backend, e.g. "proposal_defense"
   stageLabel?: string; // human-friendly label, e.g. "Proposal Defense"
   department?: string;
+
+  majorSupervisor?: string | { _id?: string };
+  minorSupervisor?: string | { _id?: string };
 
   scores: {
     proposal: number | null;
@@ -130,6 +132,21 @@ export default function MyStudentsPage() {
       .some((s: string) => s.includes("supervisor"));
   })();
 
+  // helper: check if current user is the major supervisor for a student
+  const isMajorSupervisorOf = (stu: Student | null | undefined) => {
+    if (!stu || !user) return false;
+   
+    const maj = stu.majorSupervisor;
+    const majId =
+      typeof maj === "string"
+        ? maj
+        : maj && (maj as any)._id
+        ? (maj as any)._id
+        : "";
+    return Boolean(majId && String(majId) === majId);
+  };
+ 
+ 
   // fetching my students
 
   const fetchMyStudentsByDegree = async (degree: "msc" | "phd") => {
@@ -235,6 +252,15 @@ export default function MyStudentsPage() {
           stage: (studentObj.currentStage ?? "").toLowerCase(),
           stageKey: (studentObj.currentStage ?? "").toLowerCase(),
           stageLabel: formatStage(studentObj.currentStage),
+
+          majorSupervisor:
+            studentObj.majorSupervisor ??
+            studentObj.majorSupervisorId ??
+            undefined,
+          minorSupervisor:
+            studentObj.minorSupervisor ??
+            studentObj.minorSupervisorId ??
+            undefined,
 
           approvalStatus: (studentObj.approvalStatus ?? "").toLowerCase(),
           scores: {
@@ -349,14 +375,11 @@ export default function MyStudentsPage() {
 
   const handleDownload = async (studentId: string, versionNumber: number) => {
     try {
-      const res = await fetch(
-        `${baseUrl}/project/download/${studentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // 👈 token included
-          },
-        }
-      );
+      const res = await fetch(`${baseUrl}/project/download/${studentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`, // 👈 token included
+        },
+      });
 
       if (!res.ok) {
         throw new Error(`Failed to download: ${res.status}`);
@@ -675,15 +698,20 @@ export default function MyStudentsPage() {
                       disabled={
                         approvingIds.has(stu.id) ||
                         // enabled ONLY when stage is exactly "start"
-                        String(stu.stage).toLowerCase() !== "start"
+                        String(stu.stage).toLowerCase() !== "start" ||
+                        // only major supervisor may approve
+                        !isMajorSupervisorOf(stu)
                       }
                     >
                       {approvingIds.has(stu.id)
                         ? "Approving..."
+                        : !isMajorSupervisorOf(stu)
+                        ? "Cant Approve"
                         : String(stu.stage).toLowerCase() === "start"
                         ? "Approve to Proposal"
                         : "Approved"}
                     </Button>
+
                   </td>
                 </tr>
               ))}

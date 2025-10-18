@@ -67,9 +67,8 @@ export default function Admin() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 space-y-8">
-        <AdminStaffManagement />
 
-        <div className="flex justify-end">
+          <div className="flex justify-end">
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="bg-amber-700 text-white"
@@ -77,6 +76,9 @@ export default function Admin() {
             Add HOD, Dean or Provost
           </Button>
         </div>
+        <AdminStaffManagement />
+
+      
       </main>
 
       {/* Add HOD/Provost/Dean Modal */}

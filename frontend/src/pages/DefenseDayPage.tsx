@@ -139,20 +139,26 @@ export default function DefenseDayPage() {
     [rolesArray.join("|")]
   );
 
-  const isHodOrProvost = React.useMemo(
-    () =>
-      rolesArray.some(
-        (r) =>
-          r === "hod" ||
-          r === "provost" ||
-          r.includes("hod") ||
-          r.includes("provost") ||
-          r.startsWith("hod") ||
-          r.startsWith("provost")
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rolesArray.join("|")]
-  );
+  // ...existing code...
+  const isHodOrProvost = React.useMemo(() => {
+    // include user.role as a fallback in case roles[] arrives late
+    const fallback = user?.role ? String(user.role).toLowerCase() : "";
+    const all = [...rolesArray, ...(fallback ? [fallback] : [])];
+    return all.some(
+      (r) =>
+        r === "hod" ||
+        r === "provost" ||
+        r.includes("hod") ||
+        r.includes("provost") ||
+        r.startsWith("hod") ||
+        r.startsWith("provost")
+    );
+  }, 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [rolesArray.join("|"), user?.role]);
+// ...existing code...
+
+  console.log("isHodOrProvost", isHodOrProvost);
 
   // --- hooks (always declared, never conditional) ---
   const [defenseCache, setDefenseCache] = useState<Record<Level, DefenseDay[]>>(
