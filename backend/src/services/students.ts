@@ -451,7 +451,7 @@ export default class StudentService {
     );
     
     // Create new roles array with COLLEGE_REP as first role
-    const newRoles = [Role.COLLEGE_REP, Role.PANEL_MEMBER, ...filteredRoles];
+    const newRoles = [...filteredRoles, Role.COLLEGE_REP, Role.PANEL_MEMBER];
 
     // Update the user roles with specific order
     const updatedLecturer = await User.findByIdAndUpdate(

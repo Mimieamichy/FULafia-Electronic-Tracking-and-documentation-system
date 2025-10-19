@@ -83,8 +83,6 @@ export default class DefenceService {
       throw new Error("No students found for the provided IDs.");
     }
 
-
-
     // 2. Collect all associated lecturers IDs from student documents
     const allStudentLecturers: Set<Types.ObjectId | string> = new Set();
     students.forEach((s) => {
@@ -101,6 +99,10 @@ export default class DefenceService {
       throw new Error("Department or Faculty not found for students");
     }
 
+    const existingDefence = await Defence.findOne({program: program, stage: stage, department: departmentName, ended: false})
+    if (existingDefence) {
+      throw new Error("Defence has already been scheduled for this Department, stage and level");
+    }
     // 4. Find role-based panel members (HOD, Dean, PGCord)
     const extraPanelMembers: string[] = [];
 
@@ -570,43 +572,43 @@ export default class DefenceService {
     const defence = await Defence.findOne({ students: studentId, ended: true });
     if (!defence) throw new Error("No ended defence found for this student");
 
-    const stage = defence.stage;
-    const program = defence.program;
+    // const stage = defence.stage;
+    // const program = defence.program;
 
-    if (program === "MSC") {
-      switch (stage) {
-        case STAGES.MSC.PROPOSAL:
-          student.currentStage = STAGES.MSC.INTERNAL;
-          break;
-        case STAGES.MSC.INTERNAL:
-          student.currentStage = STAGES.MSC.EXTERNAL;
-          break;
-        case STAGES.MSC.EXTERNAL:
-          student.currentStage = STAGES.MSC.COMPLETED;
-          break;
-        default:
-          throw new Error(`Invalid stage for MSC student: ${stage}`);
-      }
-    } else if (program === "PHD") {
-      switch (stage) {
-        case STAGES.PHD.PROPOSAL_DEFENSE:
-          student.currentStage = STAGES.PHD.SECOND_SEMINAR;
-          break;
-        case STAGES.PHD.SECOND_SEMINAR:
-          student.currentStage = STAGES.PHD.INTERNAL_DEFENSE;
-          break;
-        case STAGES.PHD.INTERNAL_DEFENSE:
-          student.currentStage = STAGES.PHD.EXTERNAL_SEMINAR;
-          break;
-        case STAGES.PHD.EXTERNAL_SEMINAR:
-          student.currentStage = STAGES.PHD.COMPLETED;
-          break;
-        default:
-          throw new Error(`Invalid stage for PHD student: ${stage}`);
-      }
-    } else {
-      throw new Error(`Unknown program: ${program}`);
-    }
+    // if (program === "MSC") {
+    //   switch (stage) {
+    //     case STAGES.MSC.PROPOSAL:
+    //       student.currentStage = STAGES.MSC.INTERNAL;
+    //       break;
+    //     case STAGES.MSC.INTERNAL:
+    //       student.currentStage = STAGES.MSC.EXTERNAL;
+    //       break;
+    //     case STAGES.MSC.EXTERNAL:
+    //       student.currentStage = STAGES.MSC.COMPLETED;
+    //       break;
+    //     default:
+    //       throw new Error(`Invalid stage for MSC student: ${stage}`);
+    //   }
+    // } else if (program === "PHD") {
+    //   switch (stage) {
+    //     case STAGES.PHD.PROPOSAL_DEFENSE:
+    //       student.currentStage = STAGES.PHD.SECOND_SEMINAR;
+    //       break;
+    //     case STAGES.PHD.SECOND_SEMINAR:
+    //       student.currentStage = STAGES.PHD.INTERNAL_DEFENSE;
+    //       break;
+    //     case STAGES.PHD.INTERNAL_DEFENSE:
+    //       student.currentStage = STAGES.PHD.EXTERNAL_SEMINAR;
+    //       break;
+    //     case STAGES.PHD.EXTERNAL_SEMINAR:
+    //       student.currentStage = STAGES.PHD.COMPLETED;
+    //       break;
+    //     default:
+    //       throw new Error(`Invalid stage for PHD student: ${stage}`);
+    //   }
+    // } else {
+    //   throw new Error(`Unknown program: ${program}`);
+    // }
 
     student.defenceMarked = true
     await student.save();
