@@ -151,6 +151,7 @@ export default class ProjectService {
 
     // Update student stage
     student.currentStage = nextStage;
+    student.defenceMarked = false;
 
     await Promise.all([project.save(), student.save()]);
 

@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IStageScores {
   // PHD stages
-  firstSeminarScore?: number;
+  proposalDefenceScore?: number;
   secondSeminarScore?: number;
   thirdSeminarScore?: number;
   externalDefenseScore?: number;
@@ -36,7 +36,7 @@ export interface IStudent extends Document {
 const stageScoresSchema = new Schema<IStageScores>(
   {
     // PHD stages
-    firstSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
+    proposalDefenceScore: { type: Number, min: 0, max: 100, default: 0 },
     secondSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
     thirdSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
     externalDefenseScore: { type: Number, min: 0, max: 100, default: 0 },

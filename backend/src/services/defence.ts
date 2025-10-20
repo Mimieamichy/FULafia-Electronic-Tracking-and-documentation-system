@@ -70,11 +70,11 @@ export default class DefenceService {
   }) {
     const { stage, session, date, time, studentIds, panelMemberIds = [], program } = options;
 
-    //0. Set students defenceMarked == false
-    await Student.updateMany(
-    { _id: { $in: studentIds } },
-    { $set: { defenceMarked: false } }
-    );
+    // //0. Set students defenceMarked == false
+    // await Student.updateMany(
+    // { _id: { $in: studentIds } },
+    // { $set: { defenceMarked: false } }
+    // );
 
     // 1. Fetch students and their projects 
     const students = await Student.find({ _id: { $in: studentIds } }).lean();
@@ -500,10 +500,10 @@ export default class DefenceService {
     };
 
     const PHD_STAGE_MAP: Record<string, keyof IStageScores> = {
-      [STAGES.PHD.PROPOSAL_DEFENSE]: "firstSeminarScore",
+      [STAGES.PHD.PROPOSAL_DEFENSE]: "proposalDefenceScore",
       [STAGES.PHD.SECOND_SEMINAR]: "secondSeminarScore",
-      [STAGES.PHD.INTERNAL_DEFENSE]: "thirdSeminarScore",
-      [STAGES.PHD.EXTERNAL_SEMINAR]: "externalDefenseScore",
+      [STAGES.PHD.THIRD_SEMINAR]: "thirdSeminarScore",
+      [STAGES.PHD.EXTERNAL_DEFENCE]: "externalDefenseScore",
     };
 
     // === Update student.stageScores ===
@@ -652,15 +652,15 @@ export default class DefenceService {
     } else if (student.level === "phd") {
       switch (defence.stage) {
         case STAGES.PHD.PROPOSAL_DEFENSE:
-          student.stageScores.firstSeminarScore = 0;
+          student.stageScores.proposalDefenceScore = 0;
           break;
         case STAGES.PHD.SECOND_SEMINAR:
           student.stageScores.secondSeminarScore = 0;
           break;
-        case STAGES.PHD.INTERNAL_DEFENSE:
+        case STAGES.PHD.THIRD_SEMINAR:
           student.stageScores.thirdSeminarScore = 0;
           break;
-        case STAGES.PHD.EXTERNAL_SEMINAR:
+        case STAGES.PHD.EXTERNAL_DEFENCE:
           student.stageScores.externalDefenseScore = 0;
           break;
         default:

@@ -10,15 +10,15 @@ export const STAGES = {
     START: 'start',
     PROPOSAL_DEFENSE: 'proposal_defense',
     SECOND_SEMINAR: 'second_seminar',
-    INTERNAL_DEFENSE: 'internal_defense',
-    EXTERNAL_SEMINAR: 'external_defense',
+    THIRD_SEMINAR: 'third_seminar',
+    EXTERNAL_DEFENCE: 'external_defense',
     COMPLETED: 'completed'
   }
 };
 
 export const PROVOST_STAGES = {
   MSC: ['external'],
-  PHD: ['second_seminar', 'internal_defense', 'external_defense']
+  PHD: ['second_seminar', 'third_seminar', 'external_defense']
 };
 
 

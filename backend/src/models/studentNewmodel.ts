@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IStageScores {
   // PHD stages
-  firstSeminarScore?: number;
+  proposalDefenceScore?: number;
   secondSeminarScore?: number;
   thirdSeminarScore?: number;
   externalDefenseScore?: number;
@@ -36,7 +36,7 @@ export interface IStudent extends Document {
 const stageScoresSchema = new Schema<IStageScores>(
   {
     // PHD stages
-    firstSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
+    proposalDefenceScore: { type: Number, min: 0, max: 100, default: 0 },
     secondSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
     thirdSeminarScore: { type: Number, min: 0, max: 100, default: 0 },
     externalDefenseScore: { type: Number, min: 0, max: 100, default: 0 },
@@ -63,7 +63,7 @@ const studentSchema = new Schema<IStudent>(
     internalExaminer: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     collegeRep: { type: Schema.Types.ObjectId, ref: 'Lecturer', default: null },
     projectTopic: { type: String, default: '' },
-    defenceMarked: {type: Boolean, default: false},
+    defenceMarked: {type: Boolean, default: true},
     stageScores: { type: stageScoresSchema, default: () => ({}) },
   },
   { timestamps: true }
@@ -81,7 +81,7 @@ studentSchema.pre<IStudent>('validate', function (next) {
   } else if (this.level === 'phd') {
     // Keep only PhD fields
     this.stageScores = {
-      firstSeminarScore: this.stageScores?.firstSeminarScore ?? 0,
+      proposalDefenceScore: this.stageScores?.proposalDefenceScore ?? 0,
       secondSeminarScore: this.stageScores?.secondSeminarScore ?? 0,
       thirdSeminarScore: this.stageScores?.thirdSeminarScore ?? 0,
       externalDefenseScore: this.stageScores?.externalDefenseScore ?? 0,
