@@ -298,6 +298,7 @@ export default class DefenceService {
         fileUrl: latestVersion?.fileUrl || student.latestFile || "",
         currentStage: student.currentStage || "",
         level: student.level,
+        defenceMarked: student.defenceMarked,
         stageScores: {}
       };
 
