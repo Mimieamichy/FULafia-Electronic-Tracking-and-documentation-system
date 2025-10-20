@@ -22,7 +22,6 @@ export default class AuthService {
     let department = "none"
     let faculty = "none"
     let lecturerId = "none"
-    let studentId = "none"
 
     if (roles.includes(Role.STUDENT)) {
       const student = await Student.findOne({ user: user._id });
@@ -31,7 +30,6 @@ export default class AuthService {
       }
       department = student.department;
       faculty = student.faculty;
-      studentId = String(student._id) || "none"
     }
 
     if (roles.includes(Role.LECTURER) || roles.includes(Role.HOD) ||  roles.includes(Role.PROVOST) || roles.includes(Role.PGCOORD || Role.DEAN)) {
@@ -49,8 +47,7 @@ export default class AuthService {
         roles,
         permissions,
         department,
-        faculty,
-        lecturer: lecturerId
+        faculty
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -66,6 +63,7 @@ export default class AuthService {
         isPanelMember: user.isPanelMember,
         department,
         faculty,
+        lecturer: lecturerId
       },
       token,
     };
