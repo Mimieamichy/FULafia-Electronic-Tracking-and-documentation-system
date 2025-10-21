@@ -74,6 +74,7 @@ interface Student {
   comments: { by: string; text: string }[];
   scores: Record<string, number | null>;
   approved?: boolean;
+  defenceMarked?: boolean;
 }
 
 interface DefenseDay {
@@ -87,12 +88,13 @@ interface DefenseDay {
   currentStage: string;
   criteria?: Criterion[];
   time?: string;
+  defenceMarked?: boolean;
 }
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL ?? "";
 
 export default function DefenseDayPage() {
-  const { user, token, roles } = useAuth();
+  const { user, token, roles, } = useAuth();
   const { toast } = useToast();
   const userName = user?.userName;
 
@@ -139,24 +141,20 @@ export default function DefenseDayPage() {
     [rolesArray.join("|")]
   );
 
-  // ...existing code...
+
   const isHodOrProvost = React.useMemo(() => {
-    // include user.role as a fallback in case roles[] arrives late
-    const fallback = user?.role ? String(user.role).toLowerCase() : "";
-    const all = [...rolesArray, ...(fallback ? [fallback] : [])];
-    return all.some(
-      (r) =>
-        r === "hod" ||
-        r === "provost" ||
-        r.includes("hod") ||
-        r.includes("provost") ||
-        r.startsWith("hod") ||
-        r.startsWith("provost")
+    const role = String(user?.role ?? "").toLowerCase().trim();
+    if (!role) return false;
+    return (
+      role === "hod" ||
+      role === "provost" ||
+      role.includes("hod") ||
+      role.includes("provost") ||
+      role.startsWith("hod") ||
+      role.startsWith("provost")
     );
-  }, 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [rolesArray.join("|"), user?.role]);
-// ...existing code...
+  }, [user?.role]);
+
 
   console.log("isHodOrProvost", isHodOrProvost);
 
@@ -239,6 +237,10 @@ export default function DefenseDayPage() {
     const currentStage =
       def?.stage ?? def?.currentStage ?? def?.defenseStage ?? "";
 
+    const defLevelMarked =
+      def?.defenceMarked === true ||
+      String(def?.defenceMarked).toLowerCase() === "true";
+
     // students: try def.students first, then extraData.students
     const rawStudents = Array.isArray(def?.students)
       ? def.students
@@ -278,6 +280,7 @@ export default function DefenseDayPage() {
       sessionActive: Boolean(sessionActive),
       students,
       currentStage: String(currentStage),
+      defenceMarked: defLevelMarked,
       criteria: criteriaMapped.length ? criteriaMapped : undefined,
       time: String(time),
     };
@@ -933,7 +936,6 @@ export default function DefenseDayPage() {
       return;
     }
 
-
     try {
       const results = await Promise.all(
         payloads.map(async (pl) => {
@@ -1012,7 +1014,7 @@ export default function DefenseDayPage() {
           err?.message || "Network or server error while submitting scores.",
         variant: "destructive",
       });
-    } 
+    }
   };
 
   return (

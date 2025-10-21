@@ -55,10 +55,16 @@ type Student = {
   majorSupervisor?: string | { _id?: string };
   minorSupervisor?: string | { _id?: string };
 
+  defenceMarked?: boolean;
+
   scores: {
     proposal: number | null;
     internal: number | null;
     external: number | null;
+    proposalDefense: number | null;
+    secondSeminar: number | null;
+    thirdSeminar: number | null;
+    externalDefense: number | null;
   };
   approvalStatus?: string;
   // project-specific:
@@ -133,22 +139,20 @@ export default function MyStudentsPage() {
   })();
 
   // helper: check if current user is the major supervisor for a student
-  const isMajorSupervisorOf = (stu: Student | null | undefined) => {
+ const isMajorSupervisorOf = (stu: Student | null | undefined) => {
     if (!stu || !user) return false;
-   
+    const myId = String((user as any).lecturerId ?? (user as any).id ?? "");
     const maj = stu.majorSupervisor;
     const majId =
       typeof maj === "string"
         ? maj
-        : maj && (maj as any)._id
-        ? (maj as any)._id
+        : maj && (maj as any).stu.majorSupervisor
+        ? (maj as any).stu.majorSupervisor
         : "";
-    return Boolean(majId && String(majId) === majId);
+    return Boolean(myId && majId && String(majId) === myId);
   };
- 
- 
-  // fetching my students
 
+  // fetching my students
   const fetchMyStudentsByDegree = async (degree: "msc" | "phd") => {
     const controller = new AbortController(); // local controller for this call
     try {
@@ -192,11 +196,21 @@ export default function MyStudentsPage() {
 
         const stageScores = studentObj.stageScores ?? studentObj.scores ?? {};
         const proposal =
-          stageScores.proposal ?? stageScores.proposalDefense ?? null;
+          stageScores.proposalScore ?? stageScores.proposalDefense ?? null;
         const internal =
-          stageScores.internal ?? stageScores.internalDefense ?? null;
+          stageScores.internalScore ?? stageScores.internalDefense ?? null;
         const external =
-          stageScores.external ?? stageScores.externalDefense ?? null;
+          stageScores.externalScore ?? stageScores.externalDefense ?? null;
+        const proposalDefense =
+          stageScores.proposalDefenceScore ?? stageScores.proposalDefense ?? null;
+        const secondSeminar =
+          stageScores.secondSeminarScore ?? stageScores.secondSeminar ?? null;
+        const thirdSeminar =
+          stageScores.thirdSeminarScore ?? stageScores.thirdSeminar ?? null;
+        const externalDefense =
+          stageScores.externalDefenseScore ??
+          stageScores.externalDefense ??
+          null;
 
         const first = studentObj.user?.firstName ?? studentObj.firstName ?? "";
         const last = studentObj.user?.lastName ?? studentObj.lastName ?? "";
@@ -262,11 +276,24 @@ export default function MyStudentsPage() {
             studentObj.minorSupervisorId ??
             undefined,
 
+          defenceMarked: Boolean(
+            studentObj.defenceMarked === true ||
+              studentObj.defenceMarked === "true"
+          ),
+
           approvalStatus: (studentObj.approvalStatus ?? "").toLowerCase(),
           scores: {
             proposal: typeof proposal === "number" ? proposal : null,
             internal: typeof internal === "number" ? internal : null,
             external: typeof external === "number" ? external : null,
+            proposalDefense:
+              typeof proposalDefense === "number" ? proposalDefense : null,
+            secondSeminar:
+              typeof secondSeminar === "number" ? secondSeminar : null,
+            thirdSeminar:
+              typeof thirdSeminar === "number" ? thirdSeminar : null,
+            externalDefense:
+              typeof externalDefense === "number" ? externalDefense : null,
           },
           projectId: projectObj?._id ?? projectObj?.id ?? undefined,
           projectVersions: versions.map((v: any) => ({
@@ -651,10 +678,21 @@ export default function MyStudentsPage() {
                 <th className="p-3 border">Matric No</th>
                 <th className="p-3 border">Topic</th>
                 <th className="p-3 border">Stage</th>
-                <th className="p-3 border">Proposal</th>
-                <th className="p-3 border">Internal</th>
-                <th className="p-3 border">External</th>
-                <th className="p-3 border">Depertment</th>
+                {selectedDegree === "PhD" ? (
+                  <>
+                    <th className="p-3 border">Proposal Defense</th>
+                    <th className="p-3 border">2nd Seminar</th>
+                    <th className="p-3 border">3rd Seminar</th>
+                    <th className="p-3 border">External Defense</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="p-3 border">Proposal</th>
+                    <th className="p-3 border">Internal</th>
+                    <th className="p-3 border">External</th>
+                  </>
+                )}
+                <th className="p-3 border">Department</th>
                 <th className="p-3 border">Action</th>
               </tr>
             </thead>
@@ -673,15 +711,34 @@ export default function MyStudentsPage() {
                     {stu.topic}
                   </td>
                   <td className="p-3 border text-sm">{stu.stageLabel}</td>
-                  <td className="p-3 border text-sm">
-                    {stu.scores.proposal ?? "—"}
-                  </td>
-                  <td className="p-3 border text-sm">
-                    {stu.scores.internal ?? "—"}
-                  </td>
-                  <td className="p-3 border text-sm">
-                    {stu.scores.external ?? "—"}
-                  </td>
+                  {selectedDegree === "PhD" ? (
+                    <>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.proposalDefense ?? "—"}
+                      </td>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.secondSeminar ?? "—"}
+                      </td>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.thirdSeminar ?? "—"}
+                      </td>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.externalDefense ?? "—"}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.proposal ?? "—"}
+                      </td>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.internal ?? "—"}
+                      </td>
+                      <td className="p-3 border text-sm">
+                        {stu.scores.external ?? "—"}
+                      </td>
+                    </>
+                  )}
                   <td className="p-3 border text-sm">
                     {stu.department ?? "—"}
                   </td>
@@ -697,21 +754,18 @@ export default function MyStudentsPage() {
                       }
                       disabled={
                         approvingIds.has(stu.id) ||
-                        // enabled ONLY when stage is exactly "start"
-                        String(stu.stage).toLowerCase() !== "start" ||
-                        // only major supervisor may approve
-                        !isMajorSupervisorOf(stu)
+                        !isMajorSupervisorOf(stu) ||
+                        !stu.defenceMarked
                       }
                     >
                       {approvingIds.has(stu.id)
                         ? "Approving..."
                         : !isMajorSupervisorOf(stu)
                         ? "Cant Approve"
-                        : String(stu.stage).toLowerCase() === "start"
-                        ? "Approve to Proposal"
-                        : "Approved"}
+                        : !stu.defenceMarked
+                        ? "Awaiting"
+                        : "Approve"}
                     </Button>
-
                   </td>
                 </tr>
               ))}

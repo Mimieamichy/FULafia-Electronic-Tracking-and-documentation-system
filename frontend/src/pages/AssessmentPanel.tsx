@@ -1,5 +1,4 @@
 // src/defense/AssessmentPanel.tsx
-import React from "react";
 import { Button } from "@/components/ui/button";
 
 interface Criterion {
@@ -17,6 +16,7 @@ interface Student {
   comments?: { by: string; text: string }[];
   scores: Record<string, number | null>;
   approved?: boolean;
+  defenceMarked?: boolean;
 }
 
 type Props = {
@@ -39,6 +39,7 @@ export default function AssessmentPanel({
   defenseStage,
   defense,
   defenseStageLabel
+  
 }: Props) {
   // Simple stage -> score lookup (no weighted computation)
   const getStageScore = (s: Student): { value: number; label: string } => {
@@ -158,19 +159,11 @@ export default function AssessmentPanel({
     return { value: 0, label: "Score" };
   };
 
-  // Normalize defenseStage for comparison
-  const normalizedDefenseStage = (defenseStage ?? "").toLowerCase().trim();
-  console.log("Current defense stage:", normalizedDefenseStage);
+ 
+  
 
   // Filter out students that have been approved for the current defense stage
-  const visibleStudents = students.filter((s) => {
-    if (
-      (s.currentStage ?? "").toLowerCase().trim() !== normalizedDefenseStage
-    ) {
-      return false; // hide this student
-    }
-    return true;
-  });
+  const visibleStudents = students.filter((s) => s.defenceMarked !== true);
 
   const canShow = (() => {
     const defenseDate = new Date(defense.date);

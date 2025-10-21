@@ -55,7 +55,7 @@ const normalizeStage = (s?: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const stageLabelToApiKeyMap: Record<string, string> = {
+ const stageLabelToApiKeyMap: Record<string, string> = {
   start: "start",
   proposal: "proposal",
   "internal defense": "internal",
@@ -63,6 +63,8 @@ const stageLabelToApiKeyMap: Record<string, string> = {
   "proposal defense": "proposal_defense",
   "2nd seminar": "second_seminar",
   "3rd seminar": "third_seminar",
+  completed: "completed",
+  external: "external",
 };
 
 const getStageKey = (label: string) => {
@@ -73,6 +75,7 @@ const getStageKey = (label: string) => {
 };
 
 const START_KEY = getStageKey("Start");
+const COMPLETED_KEY = getStageKey("Completed");
 
 
 const getLabelFromKey = (key: string, labels: string[]) => {
@@ -105,13 +108,14 @@ const StudentSessionManagement = () => {
 
   const defenseOptions = useMemo<string[]>(() => {
     return degreeTab === "MSc"
-      ? ["Start", "Proposal", "Internal Defense", "External Defense"]
+      ? ["Start", "Proposal", "Internal Defense", "External", "Completed"]
       : [
           "Start",
           "Proposal Defense",
           "2nd Seminar",
           "3rd Seminar",
           "External Defense",
+          "Completed",
         ];
   }, [degreeTab]);
 
@@ -382,7 +386,8 @@ const StudentSessionManagement = () => {
       )}?page=${page}&limit=${itemsPerPage}${
         stageSeg ? `&stage=${encodeURIComponent(stageSeg)}` : ""
       }`;
-
+ console.log("url", url);
+ 
       try {
         const res = await fetch(url, {
           method: "GET",
@@ -1144,7 +1149,7 @@ const StudentSessionManagement = () => {
         <div className="mt-4 flex items-center justify-between">
           <div />
           <div className="flex items-center gap-3">
-            {!isProvost && selectedDefense !== START_KEY && !isDean && (
+            {!isProvost && selectedDefense !== START_KEY && selectedDefense !== COMPLETED_KEY && !isDean && (
               <Button
                 className="bg-amber-700 hover:bg-amber-800 text-white"
                 onClick={() => {

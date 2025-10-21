@@ -178,16 +178,13 @@ export default function StudentCommentModal({
   }
 
   // Polling: start immediate fetch and poll every 3s while modal open
-  useEffect(() => {
-    if (!openItem) return;
-    // immediately fetch once
-    void fetchComments();
-    const id = window.setInterval(() => {
-      void fetchComments();
-    }, 3000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openItem?.student?.id, openItem?.defenseId, token, baseUrl]);
+ useEffect(() => {
+   if (!openItem) return;
+   // fetch once when modal opens / when student or defense id changes
+   void fetchComments();
+   // no polling — only re-run when dependencies change
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [openItem?.student?.id, openItem?.defenseId, token, baseUrl]);
 
   async function handleDownload(studentId: string) {
     try {

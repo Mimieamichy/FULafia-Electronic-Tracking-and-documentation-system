@@ -4,7 +4,6 @@ import { useAuth } from "../AuthProvider";
 import { CalendarCheck, Users, Calendar1 } from "lucide-react";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
-import { log } from "console";
 
 export default function SupervisorDashboard() {
   const { user, token } = useAuth(); // token optional depending on your provider

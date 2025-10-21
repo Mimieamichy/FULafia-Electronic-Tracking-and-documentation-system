@@ -18,6 +18,7 @@ interface UserProfile {
   department: string;
   faculty?: string;
   roles: string;
+  lecturerId?: string;
 }
 
 interface AuthContextProps {
@@ -99,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: rawUser.id,
         department: rawUser.department,
         faculty: rawUser.faculty,
+        lecturerId: rawUser.lecturer,
       };
 
       // update state + persistence
