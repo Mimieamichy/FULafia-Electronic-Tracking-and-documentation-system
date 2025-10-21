@@ -33,7 +33,7 @@ export interface IScoreSheet extends Document {
   entries: IScoreEntry[];
 }
 
-// ✅ criteria sub-schema with auto _id enabled
+// riteria sub-schema with auto _id enabled
 const criterionSchema = new Schema<{ name: string; weight: number }>(
   {
     name: { type: String, required: true },

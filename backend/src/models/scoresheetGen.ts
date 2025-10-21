@@ -4,7 +4,7 @@ import mongoose, { Document, Schema } from 'mongoose';
  * Represents a single score on a specific criterion by a panel member
  */
 export interface ICriterionScore {
-  criterion: mongoose.Types.ObjectId; // now references criterion._id
+  criterion: string; // now references criterion._id
   score: number; // 0-100
 }
 
@@ -44,7 +44,7 @@ const criterionSchema = new Schema<{ name: string; weight: number }>(
 // ✅ scores now reference criterion by its id
 const criterionScoreSchema = new Schema<ICriterionScore>(
   {
-    criterion: { type: Schema.Types.ObjectId, required: true }, // reference criterion._id
+    criterion: { type: String, required: true }, // reference criterion._id
     score: { type: Number, required: true, min: 0, max: 100 },
   },
   { _id: false }
