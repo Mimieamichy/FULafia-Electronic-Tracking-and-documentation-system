@@ -614,6 +614,18 @@ export default class DefenceService {
     student.defenceMarked = true
     await student.save();
 
+
+    const allMarked = await Student.countDocuments({
+  _id: { $in: defence.students },
+  defenceMarked: false,
+}) === 0;
+
+if (allMarked) {
+  defence.closedForReview = true;
+  await defence.save();
+  console.log(`Defence ${defence._id} is now closed for review`);
+}
+
     const message = `Your project has been approved, you can proceed to prepare for next stage.`;
 
     await NotificationService.createNotifications({
@@ -670,6 +682,17 @@ export default class DefenceService {
 
     student.defenceMarked = true
     await student.save();
+
+    const allMarked = await Student.countDocuments({
+       _id: { $in: defence.students },
+        defenceMarked: false,
+    }) === 0;
+
+if (allMarked) {
+  defence.closedForReview = true;
+  await defence.save();
+  console.log(`Defence ${defence._id} is now closed for review`);
+}
     
 
     // notify student
@@ -693,53 +716,48 @@ static async getDefenceForPanelMember(program: string, userId: string) {
 
   const lecturerId = lecturer._id;
 
-  // Check if user is HOD or PROVOST
   const isHodOrProvost =
     lecturer.user &&
-    typeof lecturer.user === "object" &&
     Array.isArray((lecturer.user as any).roles) &&
     ((lecturer.user as any).roles.includes("hod") ||
       (lecturer.user as any).roles.includes("provost"));
 
-  // Build base query
-  const query: any = {
+  const baseQuery: any = {
     program,
     panelMembers: lecturerId,
+    closedForReview: { $ne: true }, // exclude closed defences
   };
 
-  // Regular lecturers only see ongoing defences
   if (!isHodOrProvost) {
-    query.ended = false;
+    // Regular panel members only see ongoing defences
+    baseQuery.ended = false;
   }
 
-  // Fetch defences with students
-  const defences = await Defence.find(query)
-    .select("_id stage program department date time started ended students")
+  const defences = await Defence.find(baseQuery)
+    .select("_id stage program department date time started ended students closedForReview")
     .populate("students", "name matricNo defenceMarked")
     .lean();
 
-  if (!defences || defences.length === 0) {
+  if (!defences.length) {
     throw new Error(`No ${program} defences found where you are a panel member`);
   }
 
   if (isHodOrProvost) {
-    const activeDefences = defences.filter((def) => {
+    const visibleDefences = defences.filter((def) => {
       if (!Array.isArray(def.students) || def.students.length === 0) return false;
 
-      const allMarked = def.students.every(
-        (student: any) => student.defenceMarked === true
-      );
+      const allMarked = def.students.every((s: any) => s.defenceMarked === true);
 
-      // Return if defence not ended OR ended but not all students marked
-      return def.ended === false || (def.ended === true && !allMarked);
+      // Show if not ended OR ended but not all students marked
+      return def.ended === false || !allMarked;
     });
 
-    return activeDefences;
+    return visibleDefences;
   }
 
-  // For other lecturers — only active defences
   return defences;
 }
+
 
 
 

@@ -11,6 +11,7 @@ export interface IDefence extends Document {
   ended: boolean;
   students: mongoose.Types.ObjectId[];       // Student IDs
   panelMembers: mongoose.Types.ObjectId[];   // User IDs (panel members)
+  closedForReview: boolean; // Check if anyone can still access it
 }
 
 const defenceSchema = new Schema<IDefence>(
@@ -31,6 +32,7 @@ const defenceSchema = new Schema<IDefence>(
     panelMembers: [
       { type: Schema.Types.ObjectId, ref: 'User', required: true }
     ],
+    closedForReview: {type: Boolean, default: false }
   },
   { timestamps: true }
 );
