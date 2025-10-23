@@ -110,7 +110,7 @@ export default function AdminStaffManagement() {
       }
     };
     load();
-  }, [token, toast, deans, hods, provosts]);
+  }, [token, toast,]);
 
   const handleDelete = async (id: string) => {
     if (!token) {
