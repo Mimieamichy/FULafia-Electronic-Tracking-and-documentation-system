@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import cron from 'node-cron';
 
@@ -52,7 +53,7 @@ app.use(cors({
   credentials: true,
 }));
 
-
+app.use(morgan("dev")); // logging middleware
 app.use(express.json({ limit: '10kb' })); // prevent huge payload attacks
 
 //Rate limiting (apply only to auth routes, you can add per route if needed)

@@ -38,7 +38,6 @@ export default class DefenceService {
       const allMarked = def.students.every(
         (student: any) => student.defenceMarked === true
       );
-      console.log(activeDefences, def.students)
       return !allMarked; // still active if not all marked
     });
     
@@ -238,6 +237,8 @@ export default class DefenceService {
 
     if (!defence) throw new Error("Defence not found");
 
+    console.log("Defence:", defence)
+
     // authorization
     const isPanelMember = defence.panelMembers.some((m: any) => {
       // Handle both ObjectId and string types
@@ -320,6 +321,8 @@ export default class DefenceService {
 
       return studentData;
     });
+
+
 
     const combinedData = {
       id: defence._id.toString(),
@@ -754,6 +757,7 @@ static async getDefenceForPanelMember(program: string, userId: string) {
 
     return visibleDefences;
   }
+  console.log(defences)
 
   return defences;
 }
